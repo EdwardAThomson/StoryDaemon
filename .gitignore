@@ -1,0 +1,26 @@
+
+# Compiled Python files
+__pycache__/
+*.py[cod]
+
+# Environment variables
+.env
+
+# Virtual environments
+venv/
+.venv/
+
+# Editor directories and files
+.vscode/
+.idea/
+current_work/
+temp/
+tests/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Reference material
+reference/
+reference_analysis.md
