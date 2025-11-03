@@ -1,0 +1,2 @@
+[console_scripts]
+novel = novel_agent.cli.main:main
