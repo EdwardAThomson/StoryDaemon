@@ -8,9 +8,14 @@ novel_agent/cli/project.py
 novel_agent/configs/__init__.py
 novel_agent/configs/config.py
 novel_agent/memory/__init__.py
+novel_agent/memory/entities.py
+novel_agent/memory/manager.py
+novel_agent/memory/summarizer.py
+novel_agent/memory/vector_store.py
 novel_agent/tools/__init__.py
 novel_agent/tools/codex_interface.py
 novel_agent/tools/llm_interface.py
+novel_agent/tools/memory_tools.py
 novel_agent/utils/__init__.py
 novel_agent/utils/file_ops.py
 storydaemon.egg-info/PKG-INFO
@@ -20,3 +25,5 @@ storydaemon.egg-info/entry_points.txt
 storydaemon.egg-info/requires.txt
 storydaemon.egg-info/top_level.txt
 tests/__init__.py
+tests/test_entities.py
+tests/test_memory_manager.py

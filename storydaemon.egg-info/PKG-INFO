@@ -224,7 +224,7 @@ MIT License - See [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
 
-- Inspired by [NovelWriter](https://github.com/EdwardAThomson/NovelWriter)
+- Inspired by my own [NovelWriter](https://github.com/EdwardAThomson/NovelWriter)
 - Built with Codex CLI for GPT-5 access
 - Uses Typer for CLI, Chroma for vector storage
 

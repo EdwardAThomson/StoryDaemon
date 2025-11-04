@@ -143,21 +143,31 @@ Project-specific configuration in `<project>/config.yaml`.
 
 ## Development Status
 
-**Phase 1: Core Framework** ✅ (Current)
+**Phase 1: Core Framework** ✅ Complete
 - [x] Project structure
 - [x] File I/O utilities
 - [x] Codex CLI interface
 - [x] Configuration management
 - [x] Basic CLI commands
-- [ ] Integration tests
+- [x] Tool base classes
 
-**Phase 2: Memory System** (Next)
-- [ ] Character/Location dataclasses
-- [ ] Memory manager with CRUD
-- [ ] Vector database integration
-- [ ] Tool implementations
+**Phase 2: Memory System** ✅ Complete
+- [x] Character/Location/Scene/OpenLoop dataclasses
+- [x] Relationship graph with bidirectional perspectives
+- [x] Memory manager with CRUD operations
+- [x] ChromaDB vector database integration
+- [x] Memory tools (search, character.generate, location.generate)
+- [x] Relationship tools (create, update, query)
+- [x] Scene summarization
+- [x] 39 tests passing
 
-**Phase 3-7:** See [docs/plan.md](docs/plan.md) for full roadmap.
+**Phase 3: Planner and Execution Loop** (Next)
+- [ ] Planner LLM prompt template
+- [ ] Plan JSON schema validation
+- [ ] Tool execution runtime
+- [ ] Plan storage and logging
+
+**Phase 4-7:** See [docs/plan.md](docs/plan.md) for full roadmap.
 
 ## Testing
 
@@ -176,8 +186,9 @@ pytest tests/unit/test_file_ops.py
 
 - [Technical Specification](docs/spec.md) - Detailed system design
 - [Implementation Plan](docs/plan.md) - Phase-by-phase roadmap
-- [Phase 1 Guide](docs/phase1_implementation.md) - Detailed implementation steps
-- [Reference Analysis](docs/reference_analysis.md) - Reusable code from NovelWriter
+- [Phase 1 Guide](docs/phase1_implementation.md) - Core framework implementation
+- [Phase 2 Detailed Plan](docs/phase2_detailed.md) - Memory system design
+- [Phase 2 Completion](docs/phase2_completion.md) - Implementation summary
 
 ## Philosophy
 
