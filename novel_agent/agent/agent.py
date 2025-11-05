@@ -11,9 +11,14 @@ from .prompts import format_planner_prompt
 from .schemas import validate_plan
 from .runtime import PlanExecutor
 from .plan_manager import PlanManager
+from .writer_context import WriterContextBuilder
+from .writer import SceneWriter
+from .evaluator import SceneEvaluator
+from .scene_committer import SceneCommitter
 from ..tools.registry import ToolRegistry
 from ..memory.manager import MemoryManager
 from ..memory.vector_store import VectorStore
+from ..memory.summarizer import SceneSummarizer
 
 
 class StoryAgent:
@@ -24,6 +29,10 @@ class StoryAgent:
     2. Generate plan with LLM
     3. Execute plan
     4. Store results
+    5. Write scene prose (Phase 4)
+    6. Evaluate scene (Phase 4)
+    7. Commit scene (Phase 4)
+    8. Update state
     """
     
     def __init__(
@@ -57,6 +66,22 @@ class StoryAgent:
         )
         self.executor = PlanExecutor(self.tools, self.memory, self.vector)
         self.plan_manager = PlanManager(self.project_path)
+        
+        # Phase 4 components
+        self.writer_context_builder = WriterContextBuilder(
+            self.memory,
+            self.vector,
+            config
+        )
+        self.writer = SceneWriter(llm_interface, config)
+        self.evaluator = SceneEvaluator(self.memory, config)
+        self.summarizer = SceneSummarizer(llm_interface)
+        self.committer = SceneCommitter(
+            self.memory,
+            self.vector,
+            self.summarizer,
+            project_path
+        )
         
         # Load state
         self.state = self._load_state()
@@ -94,7 +119,33 @@ class StoryAgent:
                 context
             )
             
-            # Step 6: Update state
+            # Step 6: Write scene prose (Phase 4)
+            writer_context = self.writer_context_builder.build_writer_context(
+                plan,
+                execution_results,
+                self.state
+            )
+            scene_data = self.writer.write_scene(writer_context)
+            
+            # Step 7: Evaluate scene (Phase 4)
+            eval_result = self.evaluator.evaluate_scene(
+                scene_data["text"],
+                writer_context
+            )
+            
+            # Log evaluation warnings (non-blocking)
+            if eval_result["warnings"]:
+                # Warnings are logged but don't fail the tick
+                pass
+            
+            # Fail if critical issues found
+            if not eval_result["passed"]:
+                raise ValueError(f"Scene evaluation failed: {eval_result['issues']}")
+            
+            # Step 8: Commit scene (Phase 4)
+            scene_id = self.committer.commit_scene(scene_data, tick, plan)
+            
+            # Step 9: Update state
             self.state["current_tick"] += 1
             self._save_state()
             
@@ -102,7 +153,11 @@ class StoryAgent:
                 "success": True,
                 "tick": tick,
                 "plan_file": str(plan_file),
-                "actions_executed": len(execution_results.get("actions_executed", []))
+                "scene_id": scene_id,
+                "scene_file": f"scenes/scene_{tick:03d}.md",
+                "word_count": scene_data["word_count"],
+                "actions_executed": len(execution_results.get("actions_executed", [])),
+                "eval_warnings": eval_result.get("warnings", [])
             }
         
         except RuntimeError as e:

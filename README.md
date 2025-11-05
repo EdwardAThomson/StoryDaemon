@@ -83,7 +83,14 @@ Each novel maintains its own working directory with:
 ```
 StoryDaemon/
 ├── novel_agent/          # Python package (code)
-│   ├── agent/           # Agent runtime
+│   ├── agent/           # Agent runtime and orchestration
+│   │   ├── agent.py            # StoryAgent orchestrator
+│   │   ├── context.py          # Context builder
+│   │   ├── writer_context.py   # Writer context builder
+│   │   ├── writer.py           # Scene prose generator
+│   │   ├── evaluator.py        # Scene quality evaluator
+│   │   ├── scene_committer.py  # Scene persistence
+│   │   └── prompts.py          # LLM prompt templates
 │   ├── tools/           # LLM interface and tools
 │   ├── memory/          # Memory management
 │   ├── cli/             # Command-line interface
@@ -93,12 +100,16 @@ StoryDaemon/
 ├── docs/                # Documentation
 │   ├── spec.md         # Technical specification
 │   ├── plan.md         # Implementation plan
-│   └── phase1_implementation.md
+│   ├── phase1_implementation.md
+│   ├── phase2_detailed.md
+│   ├── phase3_detailed.md
+│   └── phase4_detailed.md
 └── ~/novels/            # Generated novels (separate)
     └── my-story/
-        ├── memory/
-        ├── scenes/
-        └── plans/
+        ├── memory/      # Entity storage
+        ├── scenes/      # Generated scene markdown files
+        ├── plans/       # Plan JSON files
+        └── errors/      # Error logs
 ```
 
 ## CLI Commands
@@ -174,12 +185,22 @@ Project-specific configuration in `<project>/config.yaml`.
 - [x] CLI integration
 - [x] 52 tests passing
 
-**Phase 4: Writer and Evaluator** (Next)
-- [ ] Writer LLM prompt template
-- [ ] Scene text generation
-- [ ] Evaluator for continuity/POV checks
-- [ ] Scene commit and summarization
-- [ ] Memory updates from scenes
+**Phase 4: Writer and Evaluator** ✅ Complete
+- [x] Writer LLM prompt template with deep POV instructions
+- [x] WriterContextBuilder for gathering scene context
+- [x] SceneWriter for generating 500-900 word prose
+- [x] SceneEvaluator for quality checks (word count, POV, continuity)
+- [x] SceneCommitter for persisting scenes to disk and memory
+- [x] Full integration into StoryAgent tick cycle
+- [x] Enhanced CLI output with scene generation steps
+- [x] Complete end-to-end scene generation pipeline
+
+**Phase 5: Dynamic Memory Updates** (Next)
+- [ ] Fact extraction from scene prose
+- [ ] Character emotional state updates
+- [ ] Location state changes
+- [ ] Open loop creation/resolution from text
+- [ ] Advanced continuity checking
 
 **Phase 5-7:** See [docs/plan.md](docs/plan.md) for full roadmap.
 
@@ -205,6 +226,8 @@ pytest tests/unit/test_file_ops.py
 - [Phase 2 Completion](docs/phase2_completion.md) - Implementation summary
 - [Phase 3 Detailed Plan](docs/phase3_detailed.md) - Planner and execution loop design
 - [Phase 3 Completion](docs/phase3_completion.md) - Implementation summary
+- [Phase 4 Detailed Plan](docs/phase4_detailed.md) - Writer and evaluator design
+- [Phase 4 Implementation Summary](docs/phase4_implementation_summary.md) - Implementation summary
 
 ## Philosophy
 

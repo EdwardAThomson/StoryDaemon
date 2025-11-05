@@ -76,8 +76,12 @@ def tick(
 ):
     """Run one story generation tick.
     
-    Executes the planner → tools → execution loop to generate a plan
-    for the next scene. (Phase 3: Planning only, Phase 4 will add writing)
+    Executes the full story generation pipeline:
+    - Planning with LLM
+    - Tool execution
+    - Scene prose generation
+    - Quality evaluation
+    - Scene commit to disk and memory
     
     Example:
         novel tick
@@ -133,14 +137,26 @@ def tick(
         typer.echo(f"   2. Generating plan with LLM...")
         typer.echo(f"   3. Validating plan...")
         typer.echo(f"   4. Executing tool calls...")
-        typer.echo(f"   5. Storing results...")
+        typer.echo(f"   5. Storing plan...")
+        typer.echo(f"   6. Writing scene prose...")
+        typer.echo(f"   7. Evaluating scene...")
+        typer.echo(f"   8. Committing scene...")
         
         result = agent.tick()
         
         typer.echo(f"\n✅ Tick {current_tick} completed successfully!")
-        typer.echo(f"   Plan saved: {result['plan_file']}")
-        typer.echo(f"   Actions executed: {result['actions_executed']}")
-        typer.echo(f"   Next tick: {current_tick + 1}")
+        typer.echo(f"   📋 Plan: {result['plan_file']}")
+        typer.echo(f"   📝 Scene: {result['scene_file']}")
+        typer.echo(f"   📊 Word count: {result['word_count']}")
+        typer.echo(f"   🔧 Actions: {result['actions_executed']}")
+        
+        # Show warnings if any
+        if result.get('eval_warnings'):
+            typer.echo(f"   ⚠️  Warnings: {len(result['eval_warnings'])}")
+            for warning in result['eval_warnings']:
+                typer.echo(f"      - {warning}")
+        
+        typer.echo(f"   ⏭️  Next tick: {current_tick + 1}")
         
     except RuntimeError as e:
         # Tool execution error - details saved to /errors/

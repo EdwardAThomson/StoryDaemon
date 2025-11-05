@@ -78,6 +78,60 @@ Respond with a JSON object following this structure:
 Generate your plan now:"""
 
 
+WRITER_PROMPT_TEMPLATE = """You are a creative fiction writer specializing in deep POV narrative.
+
+## Story Context
+
+**Novel:** {novel_name}
+**Tick:** {current_tick}
+
+## Recent Story
+
+{recent_context}
+
+## This Scene's Plan
+
+**Intention:** {scene_intention}
+
+**Tool Results:** {tool_results_summary}
+
+## POV Character
+
+{pov_character_details}
+
+## Location
+
+{location_details}
+
+## Your Task
+
+Write a scene passage from {pov_character_name}'s deep POV.
+
+**CRITICAL RULES:**
+
+1. **Deep POV only** - Everything filtered through {pov_character_name}'s perception
+2. **No omniscient narration** - Don't reveal what the character can't know
+3. **Show don't tell** - Use actions, dialogue, and sensory details
+4. **Sensory details** - Engage sight, sound, smell, touch, taste
+5. **Internal thoughts and reactions** - Show character's mental state
+6. **Word count:** {target_word_count_min}-{target_word_count_max} words
+
+**AVOID:**
+- Phrases like "unknown to them", "little did they know", "meanwhile"
+- Head-hopping to other characters' thoughts
+- Future foreshadowing the POV character couldn't know
+- Telling emotions instead of showing them
+
+**FOCUS ON:**
+- What {pov_character_name} sees, hears, feels, thinks
+- Immediate sensory experience
+- Character voice and personality
+- Concrete actions and dialogue
+- Subtext and implication
+
+Generate the scene now:"""
+
+
 def format_planner_prompt(context: dict) -> str:
     """Format the planner prompt with context variables.
     
@@ -88,3 +142,15 @@ def format_planner_prompt(context: dict) -> str:
         Formatted prompt string
     """
     return PLANNER_PROMPT_TEMPLATE.format(**context)
+
+
+def format_writer_prompt(context: dict) -> str:
+    """Format the writer prompt with context variables.
+    
+    Args:
+        context: Dictionary with all context variables
+    
+    Returns:
+        Formatted prompt string
+    """
+    return WRITER_PROMPT_TEMPLATE.format(**context)
