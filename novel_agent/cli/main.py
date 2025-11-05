@@ -1,5 +1,6 @@
 """Main CLI entry point for StoryDaemon."""
 import typer
+from pathlib import Path
 from typing import Optional
 from .project import (
     create_novel_project,
@@ -9,6 +10,19 @@ from .project import (
     get_project_config
 )
 from ..tools.llm_interface import initialize_llm, send_prompt
+from ..tools.codex_interface import CodexInterface
+from ..tools.registry import ToolRegistry
+from ..tools.memory_tools import (
+    MemorySearchTool,
+    CharacterGenerateTool,
+    LocationGenerateTool,
+    RelationshipCreateTool,
+    RelationshipUpdateTool,
+    RelationshipQueryTool
+)
+from ..memory.manager import MemoryManager
+from ..memory.vector_store import VectorStore
+from ..agent.agent import StoryAgent
 
 
 app = typer.Typer(
@@ -62,8 +76,8 @@ def tick(
 ):
     """Run one story generation tick.
     
-    Generates a single scene passage (500-900 words) using the
-    planner → tools → writer → evaluator loop.
+    Executes the planner → tools → execution loop to generate a plan
+    for the next scene. (Phase 3: Planning only, Phase 4 will add writing)
     
     Example:
         novel tick
@@ -71,49 +85,82 @@ def tick(
     """
     try:
         # Find project directory
-        project_dir = find_project_dir(project)
+        project_dir = Path(find_project_dir(project))
         typer.echo(f"📖 Running tick for project: {project_dir}")
         
         # Load project state and config
         state = load_project_state(project_dir)
         config = get_project_config(project_dir)
         
-        typer.echo(f"   Current tick: {state['current_tick']}")
+        current_tick = state['current_tick']
+        typer.echo(f"   Current tick: {current_tick}")
         
         # Initialize LLM
         codex_bin = config.get('llm.codex_bin_path', 'codex')
         try:
             initialize_llm(codex_bin)
+            llm = CodexInterface(codex_bin)
             typer.echo(f"✅ Codex CLI initialized")
         except RuntimeError as e:
             typer.echo(f"❌ {e}", err=True)
             raise typer.Exit(1)
         
-        # TODO: Implement actual tick logic (Phase 3-4)
-        # For now, just test Codex CLI connection
-        typer.echo(f"\n🧪 Testing Codex CLI connection...")
-        try:
-            response = send_prompt(
-                "Write a single creative sentence about a mysterious character.",
-                max_tokens=50
-            )
-            typer.echo(f"✅ Test generation successful:")
-            typer.echo(f"   {response}\n")
-        except RuntimeError as e:
-            typer.echo(f"❌ Generation failed: {e}", err=True)
-            raise typer.Exit(1)
+        # Initialize tool registry
+        typer.echo(f"🔧 Registering tools...")
+        tool_registry = ToolRegistry()
         
-        # Update state
-        state['current_tick'] += 1
-        save_project_state(project_dir, state)
+        # Initialize memory components
+        memory_manager = MemoryManager(project_dir)
+        vector_store = VectorStore(project_dir)
         
-        typer.echo(f"✅ Tick complete. Next tick: {state['current_tick']}")
+        # Register all tools
+        tool_registry.register(MemorySearchTool(memory_manager, vector_store))
+        tool_registry.register(CharacterGenerateTool(memory_manager, vector_store))
+        tool_registry.register(LocationGenerateTool(memory_manager, vector_store))
+        tool_registry.register(RelationshipCreateTool(memory_manager))
+        tool_registry.register(RelationshipUpdateTool(memory_manager))
+        tool_registry.register(RelationshipQueryTool(memory_manager))
         
-    except ValueError as e:
-        typer.echo(f"❌ Error: {e}", err=True)
+        typer.echo(f"   Registered {len(tool_registry)} tools")
+        
+        # Create agent
+        typer.echo(f"🤖 Initializing story agent...")
+        agent = StoryAgent(project_dir, llm, tool_registry, config)
+        
+        # Execute tick
+        typer.echo(f"\n⚙️  Executing tick {current_tick}...")
+        typer.echo(f"   1. Gathering context...")
+        typer.echo(f"   2. Generating plan with LLM...")
+        typer.echo(f"   3. Validating plan...")
+        typer.echo(f"   4. Executing tool calls...")
+        typer.echo(f"   5. Storing results...")
+        
+        result = agent.tick()
+        
+        typer.echo(f"\n✅ Tick {current_tick} completed successfully!")
+        typer.echo(f"   Plan saved: {result['plan_file']}")
+        typer.echo(f"   Actions executed: {result['actions_executed']}")
+        typer.echo(f"   Next tick: {current_tick + 1}")
+        
+    except RuntimeError as e:
+        # Tool execution error - details saved to /errors/
+        typer.echo(f"\n❌ Tick execution failed", err=True)
+        typer.echo(f"   Error: {str(e)}", err=True)
+        typer.echo(f"\n📋 Error details saved to {project_dir}/errors/", err=True)
+        typer.echo(f"\n🔧 Recovery options:", err=True)
+        typer.echo(f"   1. Fix the issue and run 'novel tick' again", err=True)
+        typer.echo(f"   2. Manually edit the plan file", err=True)
+        typer.echo(f"   3. Skip this tick (edit state.json)", err=True)
         raise typer.Exit(1)
+    
+    except ValueError as e:
+        typer.echo(f"❌ Validation error: {e}", err=True)
+        raise typer.Exit(1)
+    
     except Exception as e:
         typer.echo(f"❌ Unexpected error: {e}", err=True)
+        import traceback
+        typer.echo(traceback.format_exc(), err=True)
         raise typer.Exit(1)
 
 

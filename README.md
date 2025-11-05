@@ -137,6 +137,8 @@ generation:
   target_word_count_min: 500
   target_word_count_max: 900
   max_tools_per_tick: 3
+  recent_scenes_count: 3           # Context for planner
+  include_overall_summary: true    # Include story-wide summary
 ```
 
 Project-specific configuration in `<project>/config.yaml`.
@@ -161,13 +163,25 @@ Project-specific configuration in `<project>/config.yaml`.
 - [x] Scene summarization
 - [x] 39 tests passing
 
-**Phase 3: Planner and Execution Loop** (Next)
-- [ ] Planner LLM prompt template
-- [ ] Plan JSON schema validation
-- [ ] Tool execution runtime
-- [ ] Plan storage and logging
+**Phase 3: Planner and Execution Loop** ✅ Complete
+- [x] Tool base class and ToolRegistry
+- [x] Planner LLM prompt template
+- [x] Plan JSON schema validation
+- [x] Context builder for story state
+- [x] Plan executor with error handling
+- [x] Plan storage and error logging
+- [x] StoryAgent orchestrator
+- [x] CLI integration
+- [x] 52 tests passing
 
-**Phase 4-7:** See [docs/plan.md](docs/plan.md) for full roadmap.
+**Phase 4: Writer and Evaluator** (Next)
+- [ ] Writer LLM prompt template
+- [ ] Scene text generation
+- [ ] Evaluator for continuity/POV checks
+- [ ] Scene commit and summarization
+- [ ] Memory updates from scenes
+
+**Phase 5-7:** See [docs/plan.md](docs/plan.md) for full roadmap.
 
 ## Testing
 
@@ -189,6 +203,8 @@ pytest tests/unit/test_file_ops.py
 - [Phase 1 Guide](docs/phase1_implementation.md) - Core framework implementation
 - [Phase 2 Detailed Plan](docs/phase2_detailed.md) - Memory system design
 - [Phase 2 Completion](docs/phase2_completion.md) - Implementation summary
+- [Phase 3 Detailed Plan](docs/phase3_detailed.md) - Planner and execution loop design
+- [Phase 3 Completion](docs/phase3_completion.md) - Implementation summary
 
 ## Philosophy
 
