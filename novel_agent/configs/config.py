@@ -17,8 +17,6 @@ DEFAULT_CONFIG = {
         'novels_dir': os.path.expanduser('~/novels'),
     },
     'generation': {
-        'target_word_count_min': 500,
-        'target_word_count_max': 900,
         'max_tools_per_tick': 3,
         'recent_scenes_count': 3,
         'include_overall_summary': True,

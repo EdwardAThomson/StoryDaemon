@@ -14,11 +14,11 @@ PLAN_SCHEMA = {
             "description": "What should happen in this scene"
         },
         "pov_character": {
-            "type": "string",
+            "type": ["string", "null"],
             "description": "Character ID for POV (optional, can be inferred)"
         },
         "target_location": {
-            "type": "string",
+            "type": ["string", "null"],
             "description": "Location ID where scene takes place (optional)"
         },
         "actions": {

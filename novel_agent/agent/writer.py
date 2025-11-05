@@ -35,7 +35,7 @@ class SceneWriter:
         max_tokens = self.config.get('llm.writer_max_tokens', 3000)
         
         # Call LLM
-        response = self.llm.send_prompt(prompt, max_tokens=max_tokens)
+        response = self.llm.generate(prompt, max_tokens=max_tokens)
         
         # Parse and return scene data
         return self._parse_scene_response(response, writer_context)

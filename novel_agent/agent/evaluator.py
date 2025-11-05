@@ -34,18 +34,7 @@ class SceneEvaluator:
         warnings = []
         checks = {}
         
-        # 1. Word count check
-        word_count = len(scene_text.split())
-        min_words = self.config.get('generation.target_word_count_min', 500)
-        max_words = self.config.get('generation.target_word_count_max', 900)
-        
-        checks["word_count"] = min_words <= word_count <= max_words
-        if not checks["word_count"]:
-            issues.append(
-                f"Word count {word_count} outside target range {min_words}-{max_words}"
-            )
-        
-        # 2. POV check (heuristic)
+        # 1. POV check (heuristic)
         checks["pov"] = self._check_pov(scene_text, scene_context)
         if not checks["pov"]:
             warnings.append("Possible POV violations detected (omniscient narration)")

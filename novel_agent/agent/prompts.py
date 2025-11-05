@@ -61,7 +61,10 @@ Respond with a JSON object following this structure:
   "expected_outcomes": [
     "Outcome 1",
     "Outcome 2"
-  ]
+  ],
+  "metadata": {{
+    "scene_length": "brief|short|long|extended (optional - only if you want to guide scene length)"
+  }}
 }}
 ```
 
@@ -74,6 +77,7 @@ Respond with a JSON object following this structure:
 - Use relationship.update to track relationship changes
 - Scene intention should be specific and actionable
 - Expected outcomes should be concrete story developments
+- Scene length is optional: use "brief" for quick transitions, "short" for focused moments, "long" for developed scenes, "extended" for major events. Omit if the scene should be whatever length it needs.
 
 Generate your plan now:"""
 
@@ -105,7 +109,7 @@ WRITER_PROMPT_TEMPLATE = """You are a creative fiction writer specializing in de
 
 ## Your Task
 
-Write a scene passage from {pov_character_name}'s deep POV.
+Write a scene passage from {pov_character_name}'s deep POV.{scene_length_guidance}
 
 **CRITICAL RULES:**
 
@@ -114,7 +118,7 @@ Write a scene passage from {pov_character_name}'s deep POV.
 3. **Show don't tell** - Use actions, dialogue, and sensory details
 4. **Sensory details** - Engage sight, sound, smell, touch, taste
 5. **Internal thoughts and reactions** - Show character's mental state
-6. **Word count:** {target_word_count_min}-{target_word_count_max} words
+6. **Length:** Write as much as the scene needs - no arbitrary limits
 
 **AVOID:**
 - Phrases like "unknown to them", "little did they know", "meanwhile"

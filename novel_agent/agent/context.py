@@ -171,7 +171,7 @@ class ContextBuilder:
         Returns:
             Formatted open loops list
         """
-        open_loops = self.memory.list_open_loops()
+        open_loops = self.memory.get_open_loops()
         
         if not open_loops:
             return "No open loops."

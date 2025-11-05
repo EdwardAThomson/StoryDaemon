@@ -56,9 +56,8 @@ class WriterContextBuilder:
         # Format tool results
         tool_results_summary = self._format_tool_results(execution_results)
         
-        # Get word count targets from config
-        target_word_count_min = self.config.get('generation.target_word_count_min', 500)
-        target_word_count_max = self.config.get('generation.target_word_count_max', 900)
+        # Get optional length guidance from plan metadata
+        scene_length_guidance = self._get_length_guidance(plan)
         
         return {
             "novel_name": novel_name,
@@ -70,8 +69,7 @@ class WriterContextBuilder:
             "location_details": location_details,
             "recent_context": recent_context,
             "tool_results_summary": tool_results_summary,
-            "target_word_count_min": target_word_count_min,
-            "target_word_count_max": target_word_count_max
+            "scene_length_guidance": scene_length_guidance
         }
     
     def _get_character_details(self, character_id: str) -> tuple[str, str]:
@@ -232,3 +230,28 @@ class WriterContextBuilder:
             return "No significant tool results to report."
         
         return "\n".join(summary_parts)
+    
+    def _get_length_guidance(self, plan: Dict[str, Any]) -> str:
+        """Get optional length guidance from plan.
+        
+        Args:
+            plan: The plan dictionary
+        
+        Returns:
+            Formatted length guidance string (may be empty)
+        """
+        # Check if plan has scene_length metadata
+        metadata = plan.get("metadata", {})
+        scene_length = metadata.get("scene_length", "").lower()
+        
+        if scene_length == "brief":
+            return "\n\n**Length Guidance:** Keep this scene brief and focused - a quick moment or transition."
+        elif scene_length == "short":
+            return "\n\n**Length Guidance:** Write a short scene - establish the key moment without extensive detail."
+        elif scene_length == "long":
+            return "\n\n**Length Guidance:** Take your time with this scene - develop it fully with rich detail and depth."
+        elif scene_length == "extended":
+            return "\n\n**Length Guidance:** This is a major scene - write extensively, exploring all nuances and implications."
+        else:
+            # No guidance - let the scene be whatever length it needs
+            return ""

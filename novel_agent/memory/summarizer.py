@@ -27,7 +27,7 @@ class SceneSummarizer:
         prompt = self._build_summary_prompt(scene_text, max_bullets)
         
         # Call LLM
-        response = self.llm.send_prompt(prompt)
+        response = self.llm.generate(prompt)
         
         # Parse bullet points
         bullets = self._parse_bullets(response)
@@ -110,5 +110,5 @@ Scenes:
         
         prompt += "\nOverall Summary:"
         
-        response = self.llm.send_prompt(prompt)
+        response = self.llm.generate(prompt)
         return response.strip()

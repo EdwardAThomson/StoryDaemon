@@ -63,6 +63,7 @@ class CodexInterface:
                     self.codex_bin,
                     'exec',
                     '--dangerously-bypass-approvals-and-sandbox',
+                    '--skip-git-repo-check',
                     prompt
                 ],
                 capture_output=True,

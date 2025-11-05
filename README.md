@@ -59,12 +59,12 @@ novel run --n 5
 
 ## How It Works
 
-StoryDaemon uses a **story tick loop** where each tick produces one scene passage (500-900 words):
+StoryDaemon uses a **story tick loop** where each tick produces one scene passage:
 
 1. **Summarize State** - Collect context from previous passages and memory
-2. **Plan** - Planner LLM decides which tools to use and scene intention
+2. **Plan** - Planner LLM decides which tools to use, scene intention, and optional length guidance
 3. **Execute Tools** - Run character generation, memory search, etc.
-4. **Write** - Writer LLM generates prose in deep POV
+4. **Write** - Writer LLM generates prose in deep POV (flexible length based on scene needs)
 5. **Evaluate** - Check continuity and POV integrity
 6. **Commit** - Save scene and update memory
 
@@ -145,11 +145,10 @@ paths:
   novels_dir: ~/novels
 
 generation:
-  target_word_count_min: 500
-  target_word_count_max: 900
   max_tools_per_tick: 3
   recent_scenes_count: 3           # Context for planner
   include_overall_summary: true    # Include story-wide summary
+  # Scene length is flexible - planner can optionally suggest "brief", "short", "long", or "extended"
 ```
 
 Project-specific configuration in `<project>/config.yaml`.

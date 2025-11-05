@@ -2,6 +2,16 @@ README.md
 setup.py
 novel_agent/__init__.py
 novel_agent/agent/__init__.py
+novel_agent/agent/agent.py
+novel_agent/agent/context.py
+novel_agent/agent/evaluator.py
+novel_agent/agent/plan_manager.py
+novel_agent/agent/prompts.py
+novel_agent/agent/runtime.py
+novel_agent/agent/scene_committer.py
+novel_agent/agent/schemas.py
+novel_agent/agent/writer.py
+novel_agent/agent/writer_context.py
 novel_agent/cli/__init__.py
 novel_agent/cli/main.py
 novel_agent/cli/project.py
@@ -13,9 +23,11 @@ novel_agent/memory/manager.py
 novel_agent/memory/summarizer.py
 novel_agent/memory/vector_store.py
 novel_agent/tools/__init__.py
+novel_agent/tools/base.py
 novel_agent/tools/codex_interface.py
 novel_agent/tools/llm_interface.py
 novel_agent/tools/memory_tools.py
+novel_agent/tools/registry.py
 novel_agent/utils/__init__.py
 novel_agent/utils/file_ops.py
 storydaemon.egg-info/PKG-INFO
@@ -27,3 +39,4 @@ storydaemon.egg-info/top_level.txt
 tests/__init__.py
 tests/test_entities.py
 tests/test_memory_manager.py
+tests/test_phase3_basic.py
