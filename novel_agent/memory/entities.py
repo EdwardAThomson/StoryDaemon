@@ -64,6 +64,7 @@ class CurrentState:
     physical_state: str = ""
     inventory: List[str] = field(default_factory=list)
     goals: List[str] = field(default_factory=list)
+    beliefs: List[str] = field(default_factory=list)
     
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)

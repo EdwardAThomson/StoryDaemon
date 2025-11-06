@@ -95,17 +95,14 @@ class WriterContextBuilder:
         if character.description:
             details += f"**Description:** {character.description}\n\n"
         
-        if character.personality:
-            details += f"**Personality:** {character.personality}\n\n"
+        if character.personality and character.personality.core_traits:
+            details += f"**Personality:** {', '.join(character.personality.core_traits)}\n\n"
         
-        if character.background:
-            details += f"**Background:** {character.background}\n\n"
+        if character.backstory:
+            details += f"**Backstory:** {character.backstory}\n\n"
         
-        if character.goals:
-            details += f"**Goals:** {', '.join(character.goals)}\n\n"
-        
-        if character.traits:
-            details += f"**Traits:** {', '.join(character.traits)}\n\n"
+        if character.current_state.goals:
+            details += f"**Goals:** {', '.join(character.current_state.goals)}\n\n"
         
         return character.name, details.strip()
     

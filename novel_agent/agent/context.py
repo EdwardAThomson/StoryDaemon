@@ -105,8 +105,8 @@ class ContextBuilder:
         if character.current_state.emotional_state:
             parts.append(f"Emotional State: {character.current_state.emotional_state}")
         
-        if character.current_state.location:
-            parts.append(f"Current Location: {character.current_state.location}")
+        if character.current_state.location_id:
+            parts.append(f"Current Location: {character.current_state.location_id}")
         
         return "\n".join(parts)
     

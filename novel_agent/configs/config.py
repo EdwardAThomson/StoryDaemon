@@ -11,6 +11,7 @@ DEFAULT_CONFIG = {
         'default_max_tokens': 2000,
         'planner_max_tokens': 1000,
         'writer_max_tokens': 3000,
+        'extractor_max_tokens': 2000,
         'timeout': 120,
     },
     'paths': {
@@ -20,6 +21,8 @@ DEFAULT_CONFIG = {
         'max_tools_per_tick': 3,
         'recent_scenes_count': 3,
         'include_overall_summary': True,
+        'enable_fact_extraction': True,
+        'enable_entity_updates': True,
     }
 }
 

@@ -133,14 +133,6 @@ def tick(
         
         # Execute tick
         typer.echo(f"\n⚙️  Executing tick {current_tick}...")
-        typer.echo(f"   1. Gathering context...")
-        typer.echo(f"   2. Generating plan with LLM...")
-        typer.echo(f"   3. Validating plan...")
-        typer.echo(f"   4. Executing tool calls...")
-        typer.echo(f"   5. Storing plan...")
-        typer.echo(f"   6. Writing scene prose...")
-        typer.echo(f"   7. Evaluating scene...")
-        typer.echo(f"   8. Committing scene...")
         
         result = agent.tick()
         
@@ -150,13 +142,28 @@ def tick(
         typer.echo(f"   📊 Word count: {result['word_count']}")
         typer.echo(f"   🔧 Actions: {result['actions_executed']}")
         
+        # Show entity updates if any
+        entities = result.get('entities_updated', {})
+        if entities and any(entities.values()):
+            typer.echo(f"\n   📊 Entity Updates:")
+            if entities.get('characters_updated'):
+                typer.echo(f"      👤 Characters: {entities['characters_updated']}")
+            if entities.get('locations_updated'):
+                typer.echo(f"      📍 Locations: {entities['locations_updated']}")
+            if entities.get('loops_created'):
+                typer.echo(f"      🔄 Loops created: {entities['loops_created']}")
+            if entities.get('loops_resolved'):
+                typer.echo(f"      ✓ Loops resolved: {entities['loops_resolved']}")
+            if entities.get('relationships_updated'):
+                typer.echo(f"      🤝 Relationships: {entities['relationships_updated']}")
+        
         # Show warnings if any
         if result.get('eval_warnings'):
-            typer.echo(f"   ⚠️  Warnings: {len(result['eval_warnings'])}")
+            typer.echo(f"\n   ⚠️  Warnings: {len(result['eval_warnings'])}")
             for warning in result['eval_warnings']:
                 typer.echo(f"      - {warning}")
         
-        typer.echo(f"   ⏭️  Next tick: {current_tick + 1}")
+        typer.echo(f"\n   ⏭️  Next tick: {current_tick + 1}")
         
     except RuntimeError as e:
         # Tool execution error - details saved to /errors/

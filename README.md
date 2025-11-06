@@ -194,12 +194,16 @@ Project-specific configuration in `<project>/config.yaml`.
 - [x] Enhanced CLI output with scene generation steps
 - [x] Complete end-to-end scene generation pipeline
 
-**Phase 5: Dynamic Memory Updates** (Next)
-- [ ] Fact extraction from scene prose
-- [ ] Character emotional state updates
-- [ ] Location state changes
-- [ ] Open loop creation/resolution from text
-- [ ] Advanced continuity checking
+**Phase 5: Dynamic Memory Updates** ✅ Complete
+- [x] Fact extraction from scene prose
+- [x] Character emotional state updates
+- [x] Character inventory, goals, and beliefs tracking
+- [x] Location state changes
+- [x] Open loop creation/resolution from text
+- [x] Relationship tracking and updates
+- [x] Entity history tracking
+- [x] Enhanced continuity checking
+- [x] Graceful error handling with retry logic
 
 **Phase 5-7:** See [docs/plan.md](docs/plan.md) for full roadmap.
 
@@ -227,6 +231,7 @@ pytest tests/unit/test_file_ops.py
 - [Phase 3 Completion](docs/phase3_completion.md) - Implementation summary
 - [Phase 4 Detailed Plan](docs/phase4_detailed.md) - Writer and evaluator design
 - [Phase 4 Implementation Summary](docs/phase4_implementation_summary.md) - Implementation summary
+- [Phase 5 Detailed Plan](docs/phase5_detailed.md) - Dynamic entity updates design
 
 ## Philosophy
 

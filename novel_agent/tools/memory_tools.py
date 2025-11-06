@@ -146,6 +146,10 @@ class CharacterGenerateTool(Tool):
         # Index in vector store
         self.vector_store.index_character(character)
         
+        # Set as active character if no active character exists
+        if self.memory_manager.get_active_character() is None:
+            self.memory_manager.set_active_character(character_id)
+        
         return {
             "success": True,
             "character_id": character_id,

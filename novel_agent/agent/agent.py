@@ -15,6 +15,8 @@ from .writer_context import WriterContextBuilder
 from .writer import SceneWriter
 from .evaluator import SceneEvaluator
 from .scene_committer import SceneCommitter
+from .fact_extractor import FactExtractor
+from .entity_updater import EntityUpdater
 from ..tools.registry import ToolRegistry
 from ..memory.manager import MemoryManager
 from ..memory.vector_store import VectorStore
@@ -32,7 +34,10 @@ class StoryAgent:
     5. Write scene prose (Phase 4)
     6. Evaluate scene (Phase 4)
     7. Commit scene (Phase 4)
-    8. Update state
+    8. Extract facts (Phase 5)
+    9. Update entities (Phase 5)
+    10. Re-index entities (Phase 5)
+    11. Update state
     """
     
     def __init__(
@@ -83,6 +88,10 @@ class StoryAgent:
             project_path
         )
         
+        # Phase 5 components
+        self.fact_extractor = FactExtractor(llm_interface, self.memory, config)
+        self.entity_updater = EntityUpdater(self.memory, config)
+        
         # Load state
         self.state = self._load_state()
     
@@ -100,18 +109,33 @@ class StoryAgent:
         
         try:
             # Step 1: Gather context
+            print("   1. Gathering context...")
             context = self.context_builder.build_planner_context(self.state)
             
             # Step 2: Generate plan with LLM
+            print("   2. Generating plan with LLM...")
             plan = self._generate_plan(context)
             
             # Step 3: Validate plan
+            print("   3. Validating plan...")
             validate_plan(plan)
             
             # Step 4: Execute plan
+            print("   4. Executing tool calls...")
             execution_results = self.executor.execute_plan(plan, tick)
             
+            # Step 4.5: Set active character if none exists and a character was created
+            if self.state.get("active_character") is None:
+                # Check if a character was created in this tick
+                for action in execution_results.get("actions_executed", []):
+                    if action.get("tool") == "character.generate" and action.get("success"):
+                        char_id = action.get("result", {}).get("character_id")
+                        if char_id:
+                            self.state["active_character"] = char_id
+                            break
+            
             # Step 5: Store plan and results
+            print("   5. Storing plan...")
             plan_file = self.plan_manager.save_plan(
                 tick,
                 plan,
@@ -120,6 +144,7 @@ class StoryAgent:
             )
             
             # Step 6: Write scene prose (Phase 4)
+            print("   6. Writing scene prose...")
             writer_context = self.writer_context_builder.build_writer_context(
                 plan,
                 execution_results,
@@ -128,6 +153,7 @@ class StoryAgent:
             scene_data = self.writer.write_scene(writer_context)
             
             # Step 7: Evaluate scene (Phase 4)
+            print("   7. Evaluating scene...")
             eval_result = self.evaluator.evaluate_scene(
                 scene_data["text"],
                 writer_context
@@ -143,9 +169,27 @@ class StoryAgent:
                 raise ValueError(f"Scene evaluation failed: {eval_result['issues']}")
             
             # Step 8: Commit scene (Phase 4)
+            print("   8. Committing scene...")
             scene_id = self.committer.commit_scene(scene_data, tick, plan)
             
-            # Step 9: Update state
+            # Step 9: Extract facts (Phase 5)
+            print("   9. Extracting facts...")
+            facts = self._extract_facts_with_retry(
+                scene_data["text"],
+                writer_context
+            )
+            
+            # Step 10: Update entities (Phase 5)
+            print("   10. Updating entities...")
+            update_stats = {}
+            if facts:  # Only update if extraction succeeded
+                update_stats = self.entity_updater.apply_updates(facts, tick, scene_id)
+                
+                # Step 11: Re-index updated entities (Phase 5)
+                print("   11. Syncing vector database...")
+                self._reindex_updated_entities(facts)
+            
+            # Step 12: Update state
             self.state["current_tick"] += 1
             self._save_state()
             
@@ -157,7 +201,8 @@ class StoryAgent:
                 "scene_file": f"scenes/scene_{tick:03d}.md",
                 "word_count": scene_data["word_count"],
                 "actions_executed": len(execution_results.get("actions_executed", [])),
-                "eval_warnings": eval_result.get("warnings", [])
+                "eval_warnings": eval_result.get("warnings", []),
+                "entities_updated": update_stats
             }
         
         except RuntimeError as e:
@@ -253,3 +298,70 @@ class StoryAgent:
         self.state["last_updated"] = datetime.utcnow().isoformat() + "Z"
         with open(state_file, 'w') as f:
             json.dump(self.state, f, indent=2)
+    
+    def _extract_facts_with_retry(self, scene_text: str, scene_context: dict) -> dict:
+        """Extract facts with retry logic for graceful degradation.
+        
+        Args:
+            scene_text: Scene prose
+            scene_context: Scene context
+        
+        Returns:
+            Extracted facts dict, or None if extraction failed
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        # Check if fact extraction is enabled
+        if not self.config.get('generation.enable_fact_extraction', True):
+            logger.info("Fact extraction disabled in config")
+            return None
+        
+        try:
+            # First attempt
+            facts = self.fact_extractor.extract_facts(scene_text, scene_context)
+            return facts
+            
+        except Exception as e:
+            logger.warning(f"Fact extraction failed (attempt 1): {e}")
+            
+            try:
+                # Retry once
+                logger.info("Retrying fact extraction...")
+                facts = self.fact_extractor.extract_facts(scene_text, scene_context)
+                return facts
+                
+            except Exception as e2:
+                # Second failure - log error and continue without updates
+                logger.error(f"Fact extraction failed (attempt 2): {e2}")
+                logger.error("Continuing without entity updates")
+                return None
+    
+    def _reindex_updated_entities(self, facts: dict):
+        """Re-index entities that were updated.
+        
+        Args:
+            facts: Extracted facts dictionary
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        try:
+            # Re-index characters
+            for char_update in facts.get("character_updates", []):
+                char_id = char_update["id"]
+                character = self.memory.load_character(char_id)
+                if character:
+                    self.vector.index_character(character)
+                    logger.debug(f"Re-indexed character {char_id}")
+            
+            # Re-index locations
+            for loc_update in facts.get("location_updates", []):
+                loc_id = loc_update["id"]
+                location = self.memory.load_location(loc_id)
+                if location:
+                    self.vector.index_location(location)
+                    logger.debug(f"Re-indexed location {loc_id}")
+                    
+        except Exception as e:
+            logger.error(f"Error re-indexing entities: {e}")

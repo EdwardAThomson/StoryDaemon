@@ -113,12 +113,13 @@ Write a scene passage from {pov_character_name}'s deep POV.{scene_length_guidanc
 
 **CRITICAL RULES:**
 
-1. **Deep POV only** - Everything filtered through {pov_character_name}'s perception
-2. **No omniscient narration** - Don't reveal what the character can't know
-3. **Show don't tell** - Use actions, dialogue, and sensory details
-4. **Sensory details** - Engage sight, sound, smell, touch, taste
-5. **Internal thoughts and reactions** - Show character's mental state
-6. **Length:** Write as much as the scene needs - no arbitrary limits
+1. **Use exact character name** - The POV character is named "{pov_character_name}" - use this exact name, do not invent nicknames or alternate names
+2. **Deep POV only** - Everything filtered through {pov_character_name}'s perception
+3. **No omniscient narration** - Don't reveal what the character can't know
+4. **Show don't tell** - Use actions, dialogue, and sensory details
+5. **Sensory details** - Engage sight, sound, smell, touch, taste
+6. **Internal thoughts and reactions** - Show character's mental state
+7. **Length:** Write as much as the scene needs - no arbitrary limits
 
 **AVOID:**
 - Phrases like "unknown to them", "little did they know", "meanwhile"
@@ -148,6 +149,80 @@ def format_planner_prompt(context: dict) -> str:
     return PLANNER_PROMPT_TEMPLATE.format(**context)
 
 
+FACT_EXTRACTION_PROMPT_TEMPLATE = """Extract structured updates from this scene.
+
+Scene: {scene_text}
+
+POV: {pov_character_id} | Location: {location_id}
+
+Open Loops: {existing_open_loops}
+
+Return ONLY JSON with these updates:
+
+```json
+{{
+  "character_updates": [
+    {{
+      "id": "C0",
+      "changes": {{
+        "emotional_state": "string or null",
+        "physical_state": "string or null",
+        "inventory": ["item1", "item2"] or null,
+        "goals": ["goal1", "goal2"] or null,
+        "beliefs": ["belief1", "belief2"] or null
+      }}
+    }}
+  ],
+  "location_updates": [
+    {{
+      "id": "L0",
+      "changes": {{
+        "description": "string or null",
+        "atmosphere": "string or null",
+        "features": ["feature1", "feature2"] or null
+      }}
+    }}
+  ],
+  "open_loops_created": [
+    {{
+      "description": "string",
+      "importance": "low|medium|high|critical",
+      "category": "mystery|relationship|goal|threat|etc",
+      "related_characters": ["C0"],
+      "related_locations": ["L0"]
+    }}
+  ],
+  "open_loops_resolved": ["OL1", "OL2"],
+  "relationship_changes": [
+    {{
+      "character_a": "C0",
+      "character_b": "C1",
+      "changes": {{
+        "status": "string or null",
+        "perspective_a": "string or null",
+        "perspective_b": "string or null",
+        "intensity": 0-10 or null
+      }}
+    }}
+  ]
+}}
+```
+
+Rules: Use null for no change. Only extract what's clearly shown. For lists, only include NEW items."""
+
+
+def format_planner_prompt(context: dict) -> str:
+    """Format the planner prompt with context variables.
+    
+    Args:
+        context: Dictionary with all context variables
+    
+    Returns:
+        Formatted prompt string
+    """
+    return PLANNER_PROMPT_TEMPLATE.format(**context)
+
+
 def format_writer_prompt(context: dict) -> str:
     """Format the writer prompt with context variables.
     
@@ -158,3 +233,15 @@ def format_writer_prompt(context: dict) -> str:
         Formatted prompt string
     """
     return WRITER_PROMPT_TEMPLATE.format(**context)
+
+
+def format_fact_extraction_prompt(context: dict) -> str:
+    """Format the fact extraction prompt with context variables.
+    
+    Args:
+        context: Dictionary with all context variables
+    
+    Returns:
+        Formatted prompt string
+    """
+    return FACT_EXTRACTION_PROMPT_TEMPLATE.format(**context)

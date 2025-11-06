@@ -399,3 +399,40 @@ class MemoryManager:
                 rel.updated_at = datetime.utcnow().isoformat() + "Z"
                 break
         self.save_relationships(relationships)
+    
+    # ========================================================================
+    # State Management
+    # ========================================================================
+    
+    def set_active_character(self, character_id: str):
+        """Set the active character in state.json.
+        
+        Args:
+            character_id: Character ID to set as active
+        """
+        state_file = self.project_path / "state.json"
+        
+        # Load current state
+        with open(state_file, 'r') as f:
+            state = json.load(f)
+        
+        # Update active character
+        state["active_character"] = character_id
+        state["last_updated"] = datetime.utcnow().isoformat() + "Z"
+        
+        # Save state
+        with open(state_file, 'w') as f:
+            json.dump(state, f, indent=2)
+    
+    def get_active_character(self) -> Optional[str]:
+        """Get the active character ID from state.json.
+        
+        Returns:
+            Active character ID or None
+        """
+        state_file = self.project_path / "state.json"
+        
+        with open(state_file, 'r') as f:
+            state = json.load(f)
+        
+        return state.get("active_character")
