@@ -12,6 +12,9 @@ StoryDaemon is a Python-based system that generates long-form fiction through an
 - 🎯 **Emergent Structure** - No pre-outlining; story develops organically
 - 💰 **Zero Additional Cost** - Uses Codex CLI for GPT-5 access (included in subscription)
 - 🔧 **Tool-Based System** - Extensible tool registry for character generation, memory search, etc.
+- 🔍 **Rich Inspection Tools** - Status, list, inspect commands for full project visibility
+- 💾 **Automatic Checkpointing** - Snapshot and restore project state at any point
+- 📝 **Manuscript Compilation** - Export to Markdown or HTML with scene filtering
 
 ## Quick Start
 
@@ -53,8 +56,18 @@ novel tick
 # Check project status
 novel status
 
-# Generate multiple scenes
-novel run --n 5
+# Generate multiple scenes with automatic checkpointing
+novel run --n 10 --checkpoint-interval 10
+
+# List what was created
+novel list characters
+novel list locations
+
+# Inspect a character
+novel inspect --id C0
+
+# Compile a manuscript
+novel compile --output draft.md
 ```
 
 ## How It Works
@@ -93,26 +106,39 @@ StoryDaemon/
 │   │   └── prompts.py          # LLM prompt templates
 │   ├── tools/           # LLM interface and tools
 │   ├── memory/          # Memory management
+│   │   ├── manager.py          # MemoryManager
+│   │   ├── entities.py         # Entity dataclasses
+│   │   ├── vector_store.py     # ChromaDB integration
+│   │   └── checkpoint.py       # Checkpoint system
 │   ├── cli/             # Command-line interface
+│   │   ├── main.py             # CLI entry point
+│   │   ├── project.py          # Project management
+│   │   └── commands/           # Phase 6 commands
+│   │       ├── status.py       # Status command
+│   │       ├── list.py         # List commands
+│   │       ├── inspect.py      # Inspect command
+│   │       ├── plan.py         # Plan preview
+│   │       ├── compile.py      # Manuscript compilation
+│   │       └── checkpoint.py   # Checkpoint management
 │   ├── configs/         # Configuration
 │   └── utils/           # Utilities
 ├── tests/               # Test suite
 ├── docs/                # Documentation
 │   ├── spec.md         # Technical specification
 │   ├── plan.md         # Implementation plan
-│   ├── phase1_implementation.md
-│   ├── phase2_detailed.md
-│   ├── phase3_detailed.md
-│   └── phase4_detailed.md
+│   └── phase*_*.md     # Phase-specific documentation
 └── ~/novels/            # Generated novels (separate)
     └── my-story/
         ├── memory/      # Entity storage
         ├── scenes/      # Generated scene markdown files
         ├── plans/       # Plan JSON files
+        ├── checkpoints/ # Project snapshots
         └── errors/      # Error logs
 ```
 
 ## CLI Commands
+
+### Core Generation Commands
 
 ```bash
 # Create new novel project
@@ -121,14 +147,40 @@ novel new <name> [--dir <path>]
 # Generate one scene
 novel tick [--project <path>]
 
-# Generate multiple scenes
-novel run --n <count> [--project <path>]
-
-# Show project status
-novel status [--project <path>]
+# Generate multiple scenes with automatic checkpointing
+novel run --n <count> [--checkpoint-interval 10] [--project <path>]
 
 # Compile scene summaries
 novel summarize [--project <path>]
+```
+
+### Inspection & Management Commands (Phase 6)
+
+```bash
+# Show project overview
+novel status [--json] [--project <path>]
+
+# List entities
+novel list characters [-v] [--json] [--project <path>]
+novel list locations [-v] [--json] [--project <path>]
+novel list loops [-v] [--json] [--project <path>]
+novel list scenes [-v] [--json] [--project <path>]
+
+# Inspect entity details
+novel inspect --id <ID> [--history-limit 5] [--raw] [--project <path>]
+novel inspect --file <path> [--raw]
+
+# Preview next plan without executing
+novel plan [--save <file>] [-v] [--project <path>]
+
+# Compile scenes into manuscript
+novel compile [--output <file>] [--format markdown|html] [--scenes <range>] [--project <path>]
+
+# Manage checkpoints
+novel checkpoint create [--message <msg>] [--project <path>]
+novel checkpoint list [--project <path>]
+novel checkpoint restore --id <checkpoint_id> [--project <path>]
+novel checkpoint delete --id <checkpoint_id> [--project <path>]
 ```
 
 ## Configuration
@@ -205,7 +257,18 @@ Project-specific configuration in `<project>/config.yaml`.
 - [x] Enhanced continuity checking
 - [x] Graceful error handling with retry logic
 
-**Phase 5-7:** See [docs/plan.md](docs/plan.md) for full roadmap.
+**Phase 6: CLI Enhancements and Workflow** ✅ Complete
+- [x] Enhanced status command with statistics
+- [x] List commands (characters, locations, loops, scenes)
+- [x] Inspect command for deep entity examination
+- [x] Plan preview command (non-destructive)
+- [x] Compile command (Markdown/HTML export)
+- [x] Checkpoint system (create, list, restore, delete)
+- [x] Automatic checkpointing in `novel run`
+- [x] JSON output support for all commands
+- [x] 10 tests passing
+
+**Phase 7:** See [docs/plan.md](docs/plan.md) for future enhancements.
 
 ## Testing
 
@@ -232,6 +295,11 @@ pytest tests/unit/test_file_ops.py
 - [Phase 4 Detailed Plan](docs/phase4_detailed.md) - Writer and evaluator design
 - [Phase 4 Implementation Summary](docs/phase4_implementation_summary.md) - Implementation summary
 - [Phase 5 Detailed Plan](docs/phase5_detailed.md) - Dynamic entity updates design
+- [Phase 6 Detailed Plan](docs/phase6_detailed_plan.md) - CLI enhancements design
+- [Phase 6 Implementation Summary](docs/phase6_implementation_summary.md) - Implementation summary
+- [Phase 6 Quick Reference](docs/phase6_quick_reference.md) - Command reference guide
+- [Phase 6 Complete](docs/PHASE6_COMPLETE.md) - Completion summary
+- [Agent vs CLI Tools](docs/agent_vs_cli_tools.md) - Understanding tool layers
 
 ## Philosophy
 
