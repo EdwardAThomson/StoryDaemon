@@ -200,30 +200,114 @@ def run(
         "--project",
         "-p",
         help="Path to novel project"
+    ),
+    checkpoint_interval: int = typer.Option(
+        10,
+        "--checkpoint-interval",
+        help="Create checkpoint every N ticks (0 to disable)"
     )
 ):
     """Run multiple story generation ticks.
     
     Runs N consecutive ticks, generating multiple scenes.
+    Automatically creates checkpoints at specified intervals.
     
     Example:
         novel run --n 10
         novel run --n 5 --project ~/novels/my-story
+        novel run --n 20 --checkpoint-interval 5
     """
+    from ..memory.checkpoint import create_checkpoint, should_create_checkpoint
+    
     try:
-        project_dir = find_project_dir(project)
-        typer.echo(f"📖 Running {n} ticks for project: {project_dir}\n")
+        project_dir = Path(find_project_dir(project))
+        typer.echo(f"📖 Running {n} ticks for project: {project_dir}")
+        
+        if checkpoint_interval > 0:
+            typer.echo(f"💾 Checkpoints enabled (every {checkpoint_interval} ticks)\n")
+        else:
+            typer.echo(f"💾 Checkpoints disabled\n")
+        
+        # Track last checkpoint
+        state = load_project_state(project_dir)
+        last_checkpoint_tick = None
+        
+        # Find last checkpoint if any
+        from ..memory.checkpoint import list_checkpoints
+        checkpoints = list_checkpoints(project_dir)
+        if checkpoints:
+            last_checkpoint_tick = max(c.tick for c in checkpoints)
+        
+        successful_ticks = 0
         
         for i in range(n):
             typer.echo(f"--- Tick {i+1}/{n} ---")
-            # Call tick command (reuse logic)
-            # TODO: Refactor tick logic into separate function
-            typer.echo(f"TODO: Implement multi-tick execution\n")
+            
+            # Execute single tick by calling tick() logic
+            # We need to import and reuse the tick logic here
+            try:
+                # Load fresh state
+                state = load_project_state(project_dir)
+                config = get_project_config(project_dir)
+                current_tick = state['current_tick']
+                
+                # Initialize LLM
+                codex_bin = config.get('llm.codex_bin_path', 'codex')
+                initialize_llm(codex_bin)
+                llm = CodexInterface(codex_bin)
+                
+                # Initialize tool registry
+                tool_registry = ToolRegistry()
+                memory_manager = MemoryManager(project_dir)
+                vector_store = VectorStore(project_dir)
+                
+                tool_registry.register(MemorySearchTool(memory_manager, vector_store))
+                tool_registry.register(CharacterGenerateTool(memory_manager, vector_store))
+                tool_registry.register(LocationGenerateTool(memory_manager, vector_store))
+                tool_registry.register(RelationshipCreateTool(memory_manager))
+                tool_registry.register(RelationshipUpdateTool(memory_manager))
+                tool_registry.register(RelationshipQueryTool(memory_manager))
+                
+                # Create agent
+                agent = StoryAgent(project_dir, llm, tool_registry, config)
+                
+                # Execute tick
+                result = agent.tick()
+                
+                typer.echo(f"   ✅ Tick {current_tick} completed")
+                typer.echo(f"   📝 Scene: {result['scene_file']}")
+                typer.echo(f"   📊 Words: {result['word_count']}\n")
+                
+                successful_ticks += 1
+                
+                # Check if we should create checkpoint
+                if checkpoint_interval > 0:
+                    new_tick = current_tick + 1  # Tick was incremented
+                    if should_create_checkpoint(new_tick, checkpoint_interval, last_checkpoint_tick):
+                        typer.echo(f"   💾 Creating checkpoint...")
+                        try:
+                            checkpoint_path = create_checkpoint(
+                                project_dir, 
+                                new_tick, 
+                                f"auto (novel run --n {n})"
+                            )
+                            typer.echo(f"   ✅ Checkpoint created: {checkpoint_path.name}\n")
+                            last_checkpoint_tick = new_tick
+                        except Exception as e:
+                            typer.echo(f"   ⚠️  Checkpoint failed: {e}\n")
+                
+            except Exception as e:
+                typer.echo(f"   ❌ Tick failed: {e}\n")
+                typer.echo(f"   Stopping after {successful_ticks} successful ticks")
+                break
         
-        typer.echo(f"✅ Completed {n} ticks")
+        typer.echo(f"\n✅ Completed {successful_ticks}/{n} ticks")
         
     except ValueError as e:
         typer.echo(f"❌ Error: {e}", err=True)
+        raise typer.Exit(1)
+    except Exception as e:
+        typer.echo(f"❌ Unexpected error: {e}", err=True)
         raise typer.Exit(1)
 
 
@@ -263,6 +347,11 @@ def status(
         "--project",
         "-p",
         help="Path to novel project"
+    ),
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help="Output as JSON"
     )
 ):
     """Show current project status.
@@ -271,19 +360,324 @@ def status(
     
     Example:
         novel status
+        novel status --json
     """
+    from .commands.status import get_status_info, display_status, display_status_json
+    
     try:
-        project_dir = find_project_dir(project)
+        project_dir = Path(find_project_dir(project))
         state = load_project_state(project_dir)
         
-        typer.echo(f"\n📖 Project: {state['novel_name']}")
-        typer.echo(f"📍 Location: {project_dir}")
-        typer.echo(f"🎬 Current tick: {state['current_tick']}")
-        typer.echo(f"👤 Active character: {state.get('active_character', 'None')}")
-        typer.echo(f"📅 Created: {state.get('created_at', 'Unknown')}")
-        typer.echo(f"🔄 Last updated: {state.get('last_updated', 'Unknown')}\n")
+        info = get_status_info(project_dir, state)
+        
+        if json_output:
+            display_status_json(info)
+        else:
+            display_status(info)
         
     except ValueError as e:
+        typer.echo(f"❌ Error: {e}", err=True)
+        raise typer.Exit(1)
+
+
+@app.command(name="list")
+def list_entities(
+    entity_type: str = typer.Argument(
+        ...,
+        help="Entity type to list: characters, locations, loops, scenes"
+    ),
+    project: Optional[str] = typer.Option(
+        None,
+        "--project",
+        "-p",
+        help="Path to novel project"
+    ),
+    verbose: bool = typer.Option(
+        False,
+        "-v",
+        "--verbose",
+        help="Show detailed information"
+    ),
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help="Output as JSON"
+    )
+):
+    """List entities in the project.
+    
+    Examples:
+        novel list characters
+        novel list locations --verbose
+        novel list loops --json
+        novel list scenes
+    """
+    from .commands.list import (
+        list_characters, list_locations, list_open_loops, list_scenes,
+        display_characters, display_locations, display_loops, display_scenes,
+        display_json
+    )
+    
+    try:
+        project_dir = Path(find_project_dir(project))
+        
+        if entity_type == "characters":
+            items = list_characters(project_dir, verbose)
+            if json_output:
+                display_json(items)
+            else:
+                display_characters(items, verbose)
+        
+        elif entity_type == "locations":
+            items = list_locations(project_dir, verbose)
+            if json_output:
+                display_json(items)
+            else:
+                display_locations(items, verbose)
+        
+        elif entity_type == "loops":
+            items = list_open_loops(project_dir, verbose)
+            if json_output:
+                display_json(items)
+            else:
+                display_loops(items, verbose)
+        
+        elif entity_type == "scenes":
+            items = list_scenes(project_dir, verbose)
+            if json_output:
+                display_json(items)
+            else:
+                display_scenes(items, verbose)
+        
+        else:
+            typer.echo(f"❌ Unknown entity type: {entity_type}", err=True)
+            typer.echo("Valid types: characters, locations, loops, scenes", err=True)
+            raise typer.Exit(1)
+        
+    except ValueError as e:
+        typer.echo(f"❌ Error: {e}", err=True)
+        raise typer.Exit(1)
+
+
+@app.command()
+def inspect(
+    id: Optional[str] = typer.Option(
+        None,
+        "--id",
+        help="Entity ID (C0, L0, S001, etc.)"
+    ),
+    file: Optional[str] = typer.Option(
+        None,
+        "--file",
+        help="Direct file path"
+    ),
+    project: Optional[str] = typer.Option(
+        None,
+        "--project",
+        "-p",
+        help="Path to novel project"
+    ),
+    raw: bool = typer.Option(
+        False,
+        "--raw",
+        help="Output raw JSON"
+    ),
+    history_limit: int = typer.Option(
+        5,
+        "--history-limit",
+        help="Number of history entries to show"
+    )
+):
+    """Inspect detailed information about an entity.
+    
+    Examples:
+        novel inspect --id C0
+        novel inspect --id L3 --verbose
+        novel inspect --file memory/characters/C0.json --raw
+    """
+    from .commands.inspect import inspect_entity
+    
+    try:
+        project_dir = Path(find_project_dir(project))
+        
+        file_path = Path(file) if file else None
+        success = inspect_entity(project_dir, id, file_path, raw, history_limit)
+        
+        if not success:
+            raise typer.Exit(1)
+        
+    except ValueError as e:
+        typer.echo(f"❌ Error: {e}", err=True)
+        raise typer.Exit(1)
+
+
+@app.command()
+def compile(
+    project: Optional[str] = typer.Option(
+        None,
+        "--project",
+        "-p",
+        help="Path to novel project"
+    ),
+    output: str = typer.Option(
+        "manuscript.md",
+        "--output",
+        "-o",
+        help="Output file path"
+    ),
+    format: str = typer.Option(
+        "markdown",
+        "--format",
+        help="Output format: markdown, html"
+    ),
+    include_metadata: bool = typer.Option(
+        True,
+        "--include-metadata/--no-metadata",
+        help="Include metadata appendix"
+    ),
+    scenes: Optional[str] = typer.Option(
+        None,
+        "--scenes",
+        help="Scene range: 1-10 or 5,7,9"
+    )
+):
+    """Compile all scenes into a single manuscript.
+    
+    Examples:
+        novel compile
+        novel compile --output draft.md --scenes 1-10
+        novel compile --format html --output manuscript.html
+    """
+    from .commands.compile import compile_manuscript
+    
+    try:
+        project_dir = Path(find_project_dir(project))
+        output_path = Path(output)
+        
+        success = compile_manuscript(
+            project_dir,
+            output_path,
+            format,
+            include_metadata,
+            scenes
+        )
+        
+        if not success:
+            raise typer.Exit(1)
+        
+    except ValueError as e:
+        typer.echo(f"❌ Error: {e}", err=True)
+        raise typer.Exit(1)
+
+
+@app.command()
+def plan(
+    project: Optional[str] = typer.Option(
+        None,
+        "--project",
+        "-p",
+        help="Path to novel project"
+    ),
+    save: Optional[str] = typer.Option(
+        None,
+        "--save",
+        help="Save plan to file"
+    ),
+    verbose: bool = typer.Option(
+        False,
+        "-v",
+        "--verbose",
+        help="Show full context and prompts"
+    )
+):
+    """Preview the next plan without executing it.
+    
+    Examples:
+        novel plan
+        novel plan --save preview.json
+        novel plan --verbose
+    """
+    from .commands.plan import preview_plan
+    
+    try:
+        project_dir = Path(find_project_dir(project))
+        save_path = Path(save) if save else None
+        
+        success = preview_plan(project_dir, save_path, verbose)
+        
+        if not success:
+            raise typer.Exit(1)
+        
+    except ValueError as e:
+        typer.echo(f"❌ Error: {e}", err=True)
+        raise typer.Exit(1)
+
+
+@app.command()
+def checkpoint(
+    action: str = typer.Argument(
+        ...,
+        help="Action: create, list, restore, delete"
+    ),
+    checkpoint_id: Optional[str] = typer.Option(
+        None,
+        "--id",
+        help="Checkpoint ID (for restore/delete)"
+    ),
+    project: Optional[str] = typer.Option(
+        None,
+        "--project",
+        "-p",
+        help="Path to novel project"
+    ),
+    message: Optional[str] = typer.Option(
+        None,
+        "--message",
+        "-m",
+        help="Description for checkpoint creation"
+    )
+):
+    """Manage project checkpoints.
+    
+    Examples:
+        novel checkpoint create --message "Before major plot twist"
+        novel checkpoint list
+        novel checkpoint restore --id checkpoint_tick_010
+        novel checkpoint delete --id checkpoint_tick_005
+    """
+    from .commands.checkpoint import (
+        create_checkpoint_cmd,
+        list_checkpoints_cmd,
+        restore_checkpoint_cmd,
+        delete_checkpoint_cmd
+    )
+    
+    try:
+        project_dir = Path(find_project_dir(project))
+        
+        if action == "create":
+            create_checkpoint_cmd(project_dir, message)
+        elif action == "list":
+            list_checkpoints_cmd(project_dir)
+        elif action == "restore":
+            if not checkpoint_id:
+                typer.echo("❌ --id required for restore", err=True)
+                raise typer.Exit(1)
+            restore_checkpoint_cmd(project_dir, checkpoint_id)
+        elif action == "delete":
+            if not checkpoint_id:
+                typer.echo("❌ --id required for delete", err=True)
+                raise typer.Exit(1)
+            delete_checkpoint_cmd(project_dir, checkpoint_id)
+        else:
+            typer.echo(f"❌ Unknown action: {action}", err=True)
+            typer.echo("Valid actions: create, list, restore, delete", err=True)
+            raise typer.Exit(1)
+        
+    except ValueError as e:
+        typer.echo(f"❌ Error: {e}", err=True)
+        raise typer.Exit(1)
+    except IOError as e:
         typer.echo(f"❌ Error: {e}", err=True)
         raise typer.Exit(1)
 

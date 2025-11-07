@@ -132,6 +132,9 @@ class StoryAgent:
                         char_id = action.get("result", {}).get("character_id")
                         if char_id:
                             self.state["active_character"] = char_id
+                            # Also update the plan's POV character to use the real ID
+                            if plan.get("pov_character") and not plan["pov_character"].startswith("C"):
+                                plan["pov_character"] = char_id
                             break
             
             # Step 5: Store plan and results

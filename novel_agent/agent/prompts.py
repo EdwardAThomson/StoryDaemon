@@ -114,6 +114,8 @@ Write a scene passage from {pov_character_name}'s deep POV.{scene_length_guidanc
 **CRITICAL RULES:**
 
 1. **Use exact character name** - The POV character is named "{pov_character_name}" - use this exact name, do not invent nicknames or alternate names
+   - NEVER use placeholder formats like "char_name" or "character_name"
+   - ALWAYS use the actual name: "{pov_character_name}"
 2. **Deep POV only** - Everything filtered through {pov_character_name}'s perception
 3. **No omniscient narration** - Don't reveal what the character can't know
 4. **Show don't tell** - Use actions, dialogue, and sensory details
@@ -122,6 +124,7 @@ Write a scene passage from {pov_character_name}'s deep POV.{scene_length_guidanc
 7. **Length:** Write as much as the scene needs - no arbitrary limits
 
 **AVOID:**
+- Placeholder formats like "char_elliot" or "character_name" - use the real name!
 - Phrases like "unknown to them", "little did they know", "meanwhile"
 - Head-hopping to other characters' thoughts
 - Future foreshadowing the POV character couldn't know

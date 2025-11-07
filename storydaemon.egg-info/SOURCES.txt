@@ -4,7 +4,9 @@ novel_agent/__init__.py
 novel_agent/agent/__init__.py
 novel_agent/agent/agent.py
 novel_agent/agent/context.py
+novel_agent/agent/entity_updater.py
 novel_agent/agent/evaluator.py
+novel_agent/agent/fact_extractor.py
 novel_agent/agent/plan_manager.py
 novel_agent/agent/prompts.py
 novel_agent/agent/runtime.py
@@ -15,9 +17,17 @@ novel_agent/agent/writer_context.py
 novel_agent/cli/__init__.py
 novel_agent/cli/main.py
 novel_agent/cli/project.py
+novel_agent/cli/commands/__init__.py
+novel_agent/cli/commands/checkpoint.py
+novel_agent/cli/commands/compile.py
+novel_agent/cli/commands/inspect.py
+novel_agent/cli/commands/list.py
+novel_agent/cli/commands/plan.py
+novel_agent/cli/commands/status.py
 novel_agent/configs/__init__.py
 novel_agent/configs/config.py
 novel_agent/memory/__init__.py
+novel_agent/memory/checkpoint.py
 novel_agent/memory/entities.py
 novel_agent/memory/manager.py
 novel_agent/memory/summarizer.py
@@ -40,3 +50,4 @@ tests/__init__.py
 tests/test_entities.py
 tests/test_memory_manager.py
 tests/test_phase3_basic.py
+tests/test_phase6_commands.py

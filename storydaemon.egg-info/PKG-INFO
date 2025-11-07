@@ -89,12 +89,12 @@ novel run --n 5
 
 ## How It Works
 
-StoryDaemon uses a **story tick loop** where each tick produces one scene passage (500-900 words):
+StoryDaemon uses a **story tick loop** where each tick produces one scene passage:
 
 1. **Summarize State** - Collect context from previous passages and memory
-2. **Plan** - Planner LLM decides which tools to use and scene intention
+2. **Plan** - Planner LLM decides which tools to use, scene intention, and optional length guidance
 3. **Execute Tools** - Run character generation, memory search, etc.
-4. **Write** - Writer LLM generates prose in deep POV
+4. **Write** - Writer LLM generates prose in deep POV (flexible length based on scene needs)
 5. **Evaluate** - Check continuity and POV integrity
 6. **Commit** - Save scene and update memory
 
@@ -175,11 +175,10 @@ paths:
   novels_dir: ~/novels
 
 generation:
-  target_word_count_min: 500
-  target_word_count_max: 900
   max_tools_per_tick: 3
   recent_scenes_count: 3           # Context for planner
   include_overall_summary: true    # Include story-wide summary
+  # Scene length is flexible - planner can optionally suggest "brief", "short", "long", or "extended"
 ```
 
 Project-specific configuration in `<project>/config.yaml`.
@@ -225,12 +224,16 @@ Project-specific configuration in `<project>/config.yaml`.
 - [x] Enhanced CLI output with scene generation steps
 - [x] Complete end-to-end scene generation pipeline
 
-**Phase 5: Dynamic Memory Updates** (Next)
-- [ ] Fact extraction from scene prose
-- [ ] Character emotional state updates
-- [ ] Location state changes
-- [ ] Open loop creation/resolution from text
-- [ ] Advanced continuity checking
+**Phase 5: Dynamic Memory Updates** ✅ Complete
+- [x] Fact extraction from scene prose
+- [x] Character emotional state updates
+- [x] Character inventory, goals, and beliefs tracking
+- [x] Location state changes
+- [x] Open loop creation/resolution from text
+- [x] Relationship tracking and updates
+- [x] Entity history tracking
+- [x] Enhanced continuity checking
+- [x] Graceful error handling with retry logic
 
 **Phase 5-7:** See [docs/plan.md](docs/plan.md) for full roadmap.
 
@@ -258,6 +261,7 @@ pytest tests/unit/test_file_ops.py
 - [Phase 3 Completion](docs/phase3_completion.md) - Implementation summary
 - [Phase 4 Detailed Plan](docs/phase4_detailed.md) - Writer and evaluator design
 - [Phase 4 Implementation Summary](docs/phase4_implementation_summary.md) - Implementation summary
+- [Phase 5 Detailed Plan](docs/phase5_detailed.md) - Dynamic entity updates design
 
 ## Philosophy
 
