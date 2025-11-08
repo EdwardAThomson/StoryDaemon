@@ -98,12 +98,29 @@ class StoryAgent:
     def tick(self) -> Dict[str, Any]:
         """Execute one story generation tick.
         
+        Uses two-phase execution for tick 0 (entity setup then scene writing)
+        and normal execution for subsequent ticks.
+        
         Returns:
             Result dictionary with tick info and success status
         
         Raises:
             RuntimeError: If tool execution fails
             ValueError: If plan validation fails
+        """
+        tick = self.state["current_tick"]
+        
+        # Use two-phase execution for first tick only
+        if tick == 0:
+            return self._first_tick()
+        else:
+            return self._normal_tick()
+    
+    def _normal_tick(self) -> Dict[str, Any]:
+        """Execute normal tick (tick 1+).
+        
+        Returns:
+            Result dictionary with tick info and success status
         """
         tick = self.state["current_tick"]
         
@@ -227,6 +244,240 @@ class StoryAgent:
             # Other errors (validation, LLM, etc.)
             self.plan_manager.save_error(tick, e, {}, {})
             raise
+    
+    def _first_tick(self) -> Dict[str, Any]:
+        """Execute first tick with two-phase entity generation.
+        
+        Phase 1: Generate entities (character, location)
+        Phase 2: Write scene with established entities
+        
+        Returns:
+            Result dictionary with tick info and success status
+        """
+        tick = 0
+        
+        print("   ⚙️  Executing tick 0 (two-phase initialization)...")
+        
+        try:
+            # PHASE 1: Entity Generation
+            print("   Phase 1: Generating entities...")
+            
+            # Step 1: Gather context
+            print("   1. Gathering context...")
+            context = self.context_builder.build_planner_context(self.state)
+            
+            # Step 2: Generate plan
+            print("   2. Generating plan with LLM...")
+            plan = self._generate_plan(context)
+            
+            # Step 3: Validate plan
+            print("   3. Validating plan...")
+            validate_plan(plan)
+            
+            # Step 4: Execute ONLY entity generation tools
+            print("   4. Pre-generating entities...")
+            entity_results = self._execute_entity_generation_only(plan, tick)
+            
+            # Step 5: Update plan with real entity IDs
+            print("   5. Updating plan with entity IDs...")
+            self._update_plan_with_entity_ids(plan, entity_results)
+            
+            # Step 6: Set active character
+            if self.state.get("active_character") is None:
+                for action in entity_results.get("actions_executed", []):
+                    if action.get("tool") == "character.generate" and action.get("success"):
+                        char_id = action.get("result", {}).get("character_id")
+                        if char_id:
+                            self.state["active_character"] = char_id
+                            plan["pov_character"] = char_id
+                            break
+            
+            # PHASE 2: Scene Writing
+            print("   Phase 2: Writing scene...")
+            
+            # Step 7: Execute remaining tools (if any)
+            print("   6. Executing remaining tools...")
+            remaining_results = self._execute_remaining_tools(plan, tick, entity_results)
+            
+            # Merge results
+            execution_results = self._merge_execution_results(entity_results, remaining_results)
+            
+            # Step 8: Store plan
+            print("   7. Storing plan...")
+            plan_file = self.plan_manager.save_plan(tick, plan, execution_results, context)
+            
+            # Step 9: Write scene (entities are now established)
+            print("   8. Writing scene prose...")
+            writer_context = self.writer_context_builder.build_writer_context(
+                plan,
+                execution_results,
+                self.state
+            )
+            scene_data = self.writer.write_scene(writer_context)
+            
+            # Step 10: Evaluate scene
+            print("   9. Evaluating scene...")
+            eval_result = self.evaluator.evaluate_scene(
+                scene_data["text"],
+                writer_context
+            )
+            
+            # Log evaluation warnings (non-blocking)
+            if eval_result["warnings"]:
+                pass
+            
+            # Fail if critical issues found
+            if not eval_result["passed"]:
+                raise ValueError(f"Scene evaluation failed: {eval_result['issues']}")
+            
+            # Step 11: Commit scene
+            print("   10. Committing scene...")
+            scene_id = self.committer.commit_scene(scene_data, tick, plan)
+            
+            # Step 12: Extract facts
+            print("   11. Extracting facts...")
+            facts = self._extract_facts_with_retry(
+                scene_data["text"],
+                writer_context
+            )
+            
+            # Step 13: Update entities
+            print("   12. Updating entities...")
+            update_stats = {}
+            if facts:
+                update_stats = self.entity_updater.apply_updates(facts, tick, scene_id)
+            
+            # Step 14: Sync vector database
+            print("   13. Syncing vector database...")
+            self.vector.index_scene(self.memory.load_scene(scene_id))
+            
+            # Increment tick
+            self.state["current_tick"] += 1
+            self._save_state()
+            
+            return {
+                "success": True,
+                "tick": tick,
+                "scene_id": scene_id,
+                "scene_file": f"scenes/scene_{tick:03d}.md",
+                "word_count": scene_data["word_count"],
+                "plan_file": str(plan_file),
+                "update_stats": update_stats,
+                "actions_executed": len(execution_results.get("actions_executed", []))
+            }
+        
+        except RuntimeError as e:
+            # Tool execution error
+            execution_results = getattr(e, 'execution_results', {
+                "tick": tick,
+                "actions_executed": [],
+                "errors": [str(e)],
+                "success": False
+            })
+            
+            plan = getattr(e, 'plan', {})
+            self.plan_manager.save_error(tick, e, plan, execution_results)
+            raise
+        
+        except Exception as e:
+            # Other errors
+            self.plan_manager.save_error(tick, e, {}, {})
+            raise
+    
+    def _execute_entity_generation_only(self, plan: Dict, tick: int) -> Dict:
+        """Execute only entity generation tools from plan.
+        
+        Args:
+            plan: The generated plan
+            tick: Current tick number
+        
+        Returns:
+            Execution results for entity generation tools only
+        """
+        entity_tools = ["character.generate", "location.generate"]
+        
+        filtered_actions = [
+            action for action in plan.get("actions", [])
+            if action.get("tool") in entity_tools
+        ]
+        
+        if not filtered_actions:
+            return {"actions_executed": [], "errors": [], "success": True}
+        
+        # Create temporary plan with only entity actions
+        entity_plan = {**plan, "actions": filtered_actions}
+        
+        return self.executor.execute_plan(entity_plan, tick)
+    
+    def _execute_remaining_tools(self, plan: Dict, tick: int, entity_results: Dict) -> Dict:
+        """Execute non-entity tools from plan.
+        
+        Args:
+            plan: The generated plan (with updated entity IDs)
+            tick: Current tick number
+            entity_results: Results from entity generation
+        
+        Returns:
+            Execution results for remaining tools
+        """
+        entity_tools = ["character.generate", "location.generate"]
+        
+        remaining_actions = [
+            action for action in plan.get("actions", [])
+            if action.get("tool") not in entity_tools
+        ]
+        
+        if not remaining_actions:
+            return {"actions_executed": [], "errors": [], "success": True}
+        
+        # Create temporary plan with only remaining actions
+        remaining_plan = {**plan, "actions": remaining_actions}
+        
+        return self.executor.execute_plan(remaining_plan, tick)
+    
+    def _update_plan_with_entity_ids(self, plan: Dict, entity_results: Dict):
+        """Update plan with real entity IDs after generation.
+        
+        Args:
+            plan: The plan to update (modified in place)
+            entity_results: Results from entity generation
+        """
+        for action in entity_results.get("actions_executed", []):
+            if action.get("tool") == "character.generate" and action.get("success"):
+                char_id = action.get("result", {}).get("character_id")
+                if char_id and plan.get("pov_character"):
+                    # Replace placeholder with real ID
+                    if not plan["pov_character"].startswith("C"):
+                        plan["pov_character"] = char_id
+            
+            elif action.get("tool") == "location.generate" and action.get("success"):
+                loc_id = action.get("result", {}).get("location_id")
+                if loc_id and plan.get("target_location"):
+                    # Replace placeholder with real ID
+                    if not plan["target_location"].startswith("L"):
+                        plan["target_location"] = loc_id
+    
+    def _merge_execution_results(self, entity_results: Dict, remaining_results: Dict) -> Dict:
+        """Merge entity and remaining execution results.
+        
+        Args:
+            entity_results: Results from entity generation
+            remaining_results: Results from remaining tools
+        
+        Returns:
+            Combined execution results
+        """
+        return {
+            "actions_executed": (
+                entity_results.get("actions_executed", []) +
+                remaining_results.get("actions_executed", [])
+            ),
+            "errors": (
+                entity_results.get("errors", []) +
+                remaining_results.get("errors", [])
+            ),
+            "success": entity_results.get("success", True) and remaining_results.get("success", True)
+        }
     
     def _generate_plan(self, context: dict) -> dict:
         """Generate a plan using the planner LLM.

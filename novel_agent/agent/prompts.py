@@ -91,6 +91,8 @@ WRITER_PROMPT_TEMPLATE = """You are a creative fiction writer specializing in de
 
 ## Recent Story
 
+The following context includes FULL TEXT from the most recent scenes to help you match prose style, voice, and atmosphere. Earlier scenes are summarized for plot continuity.
+
 {recent_context}
 
 ## This Scene's Plan
@@ -116,14 +118,18 @@ Write a scene passage from {pov_character_name}'s deep POV.{scene_length_guidanc
 1. **Use exact character name** - The POV character is named "{pov_character_name}" - use this exact name, do not invent nicknames or alternate names
    - NEVER use placeholder formats like "char_name" or "character_name"
    - ALWAYS use the actual name: "{pov_character_name}"
-2. **Deep POV only** - Everything filtered through {pov_character_name}'s perception
-3. **No omniscient narration** - Don't reveal what the character can't know
-4. **Show don't tell** - Use actions, dialogue, and sensory details
-5. **Sensory details** - Engage sight, sound, smell, touch, taste
-6. **Internal thoughts and reactions** - Show character's mental state
-7. **Length:** Write as much as the scene needs - no arbitrary limits
+2. **Third-person POV** - Write in third person using "{pov_character_name}" or pronouns (he/she)
+   - NEVER use first person ("I", "my", "me") unless in dialogue
+   - Example: "{pov_character_name} pressed a palm against..." NOT "I pressed my palm against..."
+3. **Deep POV only** - Everything filtered through {pov_character_name}'s perception
+4. **No omniscient narration** - Don't reveal what the character can't know
+5. **Show don't tell** - Use actions, dialogue, and sensory details
+6. **Sensory details** - Engage sight, sound, smell, touch, taste
+7. **Internal thoughts and reactions** - Show character's mental state
+8. **Length:** Write as much as the scene needs - no arbitrary limits
 
 **AVOID:**
+- First-person POV ("I", "my", "me") except in dialogue
 - Placeholder formats like "char_elliot" or "character_name" - use the real name!
 - Phrases like "unknown to them", "little did they know", "meanwhile"
 - Head-hopping to other characters' thoughts

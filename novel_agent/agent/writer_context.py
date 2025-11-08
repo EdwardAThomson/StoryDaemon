@@ -50,8 +50,13 @@ class WriterContextBuilder:
         # Get location details
         location_name, location_details = self._get_location_details(location_id)
         
-        # Format recent context
-        recent_context = self._format_recent_context(count=2)
+        # Format recent context with full text for immediate scenes
+        full_text_count = self.config.get('generation.full_text_scenes_count', 2)
+        summary_count = self.config.get('generation.summary_scenes_count', 3)
+        recent_context = self._format_recent_context(
+            full_text_count=full_text_count,
+            summary_count=summary_count
+        )
         
         # Format tool results
         tool_results_summary = self._format_tool_results(execution_results)
@@ -140,14 +145,15 @@ class WriterContextBuilder:
         
         return location.name, details.strip()
     
-    def _format_recent_context(self, count: int = 2) -> str:
-        """Format recent scene summaries for context.
+    def _format_recent_context(self, full_text_count: int = 2, summary_count: int = 3) -> str:
+        """Format recent context with full text for immediate scenes.
         
         Args:
-            count: Number of recent scenes to include
+            full_text_count: Number of recent scenes to include as full text
+            summary_count: Number of older scenes to include as summaries
         
         Returns:
-            Formatted string of recent scenes
+            Formatted context with full text + summaries
         """
         # Get all scene IDs
         scene_ids = self.memory.list_scenes()
@@ -155,22 +161,62 @@ class WriterContextBuilder:
         if not scene_ids:
             return "This is the first scene of the novel."
         
-        # Get last N scenes
-        recent_ids = scene_ids[-count:] if len(scene_ids) >= count else scene_ids
-        
         context_parts = []
-        for scene_id in recent_ids:
-            scene = self.memory.load_scene(scene_id)
-            if scene:
-                context_parts.append(f"**Scene {scene.tick}: {scene.title}**")
-                if scene.summary:
-                    # Format summary bullets
-                    if isinstance(scene.summary, list):
-                        for bullet in scene.summary:
-                            context_parts.append(f"- {bullet}")
+        
+        # Calculate which scenes get full text vs summaries
+        total_scenes = len(scene_ids)
+        
+        # Get scenes for summaries (older scenes)
+        summary_start = max(0, total_scenes - full_text_count - summary_count)
+        summary_end = max(0, total_scenes - full_text_count)
+        summary_ids = scene_ids[summary_start:summary_end] if summary_end > summary_start else []
+        
+        # Get scenes for full text (most recent)
+        full_text_ids = scene_ids[-full_text_count:] if total_scenes >= full_text_count else scene_ids
+        
+        # Add summary scenes first (if any)
+        if summary_ids:
+            context_parts.append("## Earlier Scenes (Summaries)\n")
+            for scene_id in summary_ids:
+                scene = self.memory.load_scene(scene_id)
+                if scene:
+                    context_parts.append(f"**Scene {scene.tick}: {scene.title}**")
+                    if scene.summary:
+                        # Format summary bullets
+                        if isinstance(scene.summary, list):
+                            for bullet in scene.summary:
+                                context_parts.append(f"- {bullet}")
+                        else:
+                            context_parts.append(scene.summary)
+                    context_parts.append("")  # Blank line
+            context_parts.append("")  # Extra blank line between sections
+        
+        # Add full text scenes (most recent)
+        if full_text_ids:
+            context_parts.append("## Recent Scenes (Full Text)\n")
+            for scene_id in full_text_ids:
+                scene = self.memory.load_scene(scene_id)
+                if scene:
+                    # Load the actual scene markdown file
+                    # Scene IDs are like "S000", "S001", etc.
+                    scene_number = scene_id[1:]  # Remove 'S' prefix
+                    scene_file = self.memory.project_path / "scenes" / f"scene_{scene_number}.md"
+                    
+                    if scene_file.exists():
+                        scene_text = scene_file.read_text(encoding='utf-8')
+                        context_parts.append(f"**Scene {scene.tick}: {scene.title}**\n")
+                        context_parts.append(scene_text.strip())
+                        context_parts.append("\n---\n")
                     else:
-                        context_parts.append(scene.summary)
-                context_parts.append("")  # Blank line
+                        # Fallback to summary if file doesn't exist
+                        context_parts.append(f"**Scene {scene.tick}: {scene.title}**")
+                        if scene.summary:
+                            if isinstance(scene.summary, list):
+                                for bullet in scene.summary:
+                                    context_parts.append(f"- {bullet}")
+                            else:
+                                context_parts.append(scene.summary)
+                        context_parts.append("")
         
         if not context_parts:
             return "This is the first scene of the novel."

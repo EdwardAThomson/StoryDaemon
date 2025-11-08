@@ -20,6 +20,8 @@ DEFAULT_CONFIG = {
     'generation': {
         'max_tools_per_tick': 3,
         'recent_scenes_count': 3,
+        'full_text_scenes_count': 2,  # Number of recent scenes to include as full text in writer context
+        'summary_scenes_count': 3,    # Number of older scenes to include as summaries in writer context
         'include_overall_summary': True,
         'enable_fact_extraction': True,
         'enable_entity_updates': True,
