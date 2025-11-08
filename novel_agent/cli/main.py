@@ -20,6 +20,7 @@ from ..tools.memory_tools import (
     RelationshipUpdateTool,
     RelationshipQueryTool
 )
+from ..tools.name_generator import NameGeneratorTool
 from ..memory.manager import MemoryManager
 from ..memory.vector_store import VectorStore
 from ..agent.agent import StoryAgent
@@ -118,8 +119,13 @@ def tick(
         vector_store = VectorStore(project_dir)
         
         # Register all tools
+        # Get data directory for name generator
+        data_dir = Path(__file__).parent.parent / "data" / "names"
+        name_gen_tool = NameGeneratorTool(data_dir)
+        
+        tool_registry.register(name_gen_tool)
         tool_registry.register(MemorySearchTool(memory_manager, vector_store))
-        tool_registry.register(CharacterGenerateTool(memory_manager, vector_store))
+        tool_registry.register(CharacterGenerateTool(memory_manager, vector_store, name_gen_tool.generator))
         tool_registry.register(LocationGenerateTool(memory_manager, vector_store))
         tool_registry.register(RelationshipCreateTool(memory_manager))
         tool_registry.register(RelationshipUpdateTool(memory_manager))
@@ -261,8 +267,13 @@ def run(
                 memory_manager = MemoryManager(project_dir)
                 vector_store = VectorStore(project_dir)
                 
+                # Get data directory for name generator
+                data_dir = Path(__file__).parent.parent / "data" / "names"
+                name_gen_tool = NameGeneratorTool(data_dir)
+                
+                tool_registry.register(name_gen_tool)
                 tool_registry.register(MemorySearchTool(memory_manager, vector_store))
-                tool_registry.register(CharacterGenerateTool(memory_manager, vector_store))
+                tool_registry.register(CharacterGenerateTool(memory_manager, vector_store, name_gen_tool.generator))
                 tool_registry.register(LocationGenerateTool(memory_manager, vector_store))
                 tool_registry.register(RelationshipCreateTool(memory_manager))
                 tool_registry.register(RelationshipUpdateTool(memory_manager))

@@ -72,7 +72,7 @@ Respond with a JSON object following this structure:
 
 - Keep actions focused (2-4 tools maximum per plan)
 - Use memory.search to recall relevant context
-- Use character.generate only when introducing new characters
+- Use character.generate to create characters - names will be auto-generated uniquely
 - Use relationship.create when characters first interact significantly
 - Use relationship.update to track relationship changes
 - Scene intention should be specific and actionable

@@ -394,7 +394,7 @@ class StoryAgent:
         Returns:
             Execution results for entity generation tools only
         """
-        entity_tools = ["character.generate", "location.generate"]
+        entity_tools = ["name.generate", "character.generate", "location.generate"]
         
         filtered_actions = [
             action for action in plan.get("actions", [])
@@ -420,7 +420,7 @@ class StoryAgent:
         Returns:
             Execution results for remaining tools
         """
-        entity_tools = ["character.generate", "location.generate"]
+        entity_tools = ["name.generate", "character.generate", "location.generate"]
         
         remaining_actions = [
             action for action in plan.get("actions", [])

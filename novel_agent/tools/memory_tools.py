@@ -1,8 +1,8 @@
-"""Memory-related tools for the agent."""
+"""Memory-related tools for the story agent."""
 
+import random
+from typing import Dict, List, Optional, Any
 from pathlib import Path
-from typing import Dict, Any, List, Optional
-
 from ..memory.manager import MemoryManager
 from ..memory.vector_store import VectorStore
 from ..memory.entities import (
@@ -78,14 +78,21 @@ class MemorySearchTool(Tool):
 class CharacterGenerateTool(Tool):
     """Create a new character."""
     
-    def __init__(self, memory_manager: MemoryManager, vector_store: VectorStore):
+    def __init__(self, memory_manager: MemoryManager, vector_store: VectorStore, name_generator=None):
         super().__init__(
             name="character.generate",
-            description="Create a new character with initial attributes",
+            description="Create a new character with initial attributes. Name will be auto-generated if not provided.",
             parameters={
                 "name": {
                     "type": "string",
-                    "description": "Character name"
+                    "description": "Character name (optional - will be auto-generated if omitted)",
+                    "optional": True
+                },
+                "gender": {
+                    "type": "string",
+                    "enum": ["male", "female"],
+                    "description": "Character gender for name generation (defaults to random 50/50 if not specified)",
+                    "optional": True
                 },
                 "role": {
                     "type": "string",
@@ -111,22 +118,36 @@ class CharacterGenerateTool(Tool):
         )
         self.memory_manager = memory_manager
         self.vector_store = vector_store
+        self.name_generator = name_generator
     
-    def execute(self, name: str, role: str, description: str,
+    def execute(self, role: str, description: str,
+                name: Optional[str] = None,
+                gender: Optional[str] = None,
                 traits: Optional[List[str]] = None, 
                 goals: Optional[List[str]] = None) -> Dict[str, Any]:
         """Create a new character.
         
         Args:
-            name: Character name
             role: Character role
             description: Character description
+            name: Character name (optional - will be auto-generated)
+            gender: Character gender for name generation
             traits: Optional personality traits
             goals: Optional initial goals
         
         Returns:
             Success status and character ID
         """
+        # Auto-generate name if not provided
+        if not name and self.name_generator:
+            # Random 50/50 if gender not specified (to avoid LLM bias)
+            char_gender = gender or random.choice(["male", "female"])
+            name_result = self.name_generator.generate_name(gender=char_gender, genre="scifi")
+            name = name_result["full_name"]
+        elif not name:
+            # Fallback if no generator available
+            name = f"Character_{self.memory_manager.generate_id('character')}"
+        
         # Generate ID
         character_id = self.memory_manager.generate_id("character")
         

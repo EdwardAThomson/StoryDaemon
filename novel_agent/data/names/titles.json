@@ -1,0 +1,29 @@
+{
+  "military": {
+    "high": ["Admiral", "General", "Commander", "Captain", "Colonel", "Marshal", "Commodore"],
+    "mid": ["Lieutenant", "Sergeant", "Major", "Ensign", "Commander", "Officer"],
+    "low": ["Private", "Corporal", "Cadet", "Recruit", "Specialist"]
+  },
+  "civilian": {
+    "high": ["Dr.", "Professor", "Director", "Chancellor", "Minister", "Chief", "President"],
+    "mid": ["Senior", "Manager", "Supervisor", "Coordinator", "Analyst"],
+    "low": ["Junior", "Assistant", "Technician", "Operator", "Clerk"]
+  },
+  "noble": {
+    "high": {
+      "male": ["Lord", "Duke", "Baron", "Count"],
+      "female": ["Lady", "Duchess", "Baroness", "Countess"]
+    },
+    "mid": {
+      "male": ["Knight", "Sir", "Viscount"],
+      "female": ["Dame", "Viscountess"]
+    },
+    "low": ["Squire", "Page"]
+  },
+  "specialized": {
+    "medical": ["Dr.", "Surgeon", "Medic", "Physician"],
+    "scientific": ["Dr.", "Professor", "Researcher", "Scientist"],
+    "engineering": ["Engineer", "Chief Engineer", "Technician"],
+    "diplomatic": ["Ambassador", "Envoy", "Consul", "Attaché"]
+  }
+}

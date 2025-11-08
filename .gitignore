@@ -16,6 +16,10 @@ venv/
 current_work/
 temp/
 
+# Working directory for test novels and experiments
+work/*
+!work/README.md
+
 # Operating system files
 .DS_Store
 Thumbs.db

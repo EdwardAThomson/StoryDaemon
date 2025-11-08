@@ -1,0 +1,49 @@
+{
+  "first_name": {
+    "male": {
+      "start": [
+        "Ar", "Bel", "Cael", "Dar", "El", "Fen", "Gal", "Hal", "Ir", "Jor",
+        "Kel", "Lir", "Mor", "Nar", "Or", "Pyr", "Quin", "Ren", "Syl", "Tar",
+        "Ul", "Vel", "Wyn", "Xar", "Yor", "Zel", "Ash", "Brix", "Cor", "Dex",
+        "Ev", "Fox", "Grim", "Hex", "Ix", "Jax", "Kyr", "Lux", "Max", "Nyx",
+        "Rax", "Sev", "Tyr", "Vex", "Zor", "Kael", "Thane", "Vor", "Zeph", "Drax"
+      ],
+      "end": [
+        "an", "ar", "en", "er", "on", "or", "us", "yn", "as", "es",
+        "is", "os", "el", "al", "il", "ol", "ul", "ex", "ax", "ix",
+        "ox", "ux", "eth", "ath", "oth", "uth"
+      ]
+    },
+    "female": {
+      "start": [
+        "Ar", "Bel", "Cael", "El", "Ir", "Lir", "Syl", "Vel", "Aer", "Cel",
+        "Ela", "Fir", "Gwen", "Isa", "Kira", "Lyra", "Nyx", "Ora", "Ria", "Sera",
+        "Talia", "Vela", "Xena", "Yara", "Zara", "Astra", "Cyra", "Dara", "Elara", "Faye",
+        "Gaia", "Hera", "Iona", "Jyn", "Kara", "Luna", "Nova", "Pris", "Quinn", "Rhea",
+        "Skye", "Thea", "Uma", "Vera", "Wren", "Xyla", "Yve", "Zena", "Kess", "Vira"
+      ],
+      "end": [
+        "a", "ia", "yn", "el", "il", "ex", "ix", "is", "ara", "ira",
+        "ora", "ura", "elle", "ine", "ene", "ane", "eth", "ith", "ath", "yss",
+        "ess", "iss", "oss"
+      ]
+    }
+  },
+  "last_name": {
+    "start": [
+      "Zar", "Vex", "Kyr", "Nyx", "Rax", "Dex", "Lyx", "Myr", "Pyx", "Qor",
+      "Syx", "Tyx", "Vyr", "Wyx", "Xar", "Yor", "Zyx", "Bex", "Cyr", "Fyx",
+      "Gex", "Hex", "Jyx", "Kex", "Lex", "Nex", "Rex", "Tex", "Vex", "Zex",
+      "Ash", "Bran", "Cor", "Drak", "Elg", "Fenn", "Gral", "Hask", "Iron", "Jorn",
+      "Karn", "Lorn", "Morn", "Norn", "Orn", "Pren", "Qarn", "Renn", "Sarn", "Tarn",
+      "Urn", "Vorn", "Wren", "Xorn", "Yorn", "Zorn", "Stark", "Vane", "Thorne", "Drake"
+    ],
+    "end": [
+      "an", "ar", "as", "ax", "en", "er", "es", "ex", "in", "ir",
+      "is", "ix", "on", "or", "os", "ox", "un", "ur", "us", "ux",
+      "yn", "yr", "ys", "yx", "ael", "iel", "oel", "uel", "aen", "ien",
+      "oen", "uen", "ath", "eth", "oth", "uth", "ane", "ine", "one", "une",
+      "ard", "erd", "ird", "ord", "urd", "orn", "arn", "ern", "irn", "urn"
+    ]
+  }
+}
