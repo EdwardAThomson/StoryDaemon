@@ -104,11 +104,22 @@ class SceneWriter:
         # Generate from scene intention
         intention = context.get('scene_intention', '')
         if intention:
-            # Take first few words and capitalize
-            words = intention.split()[:5]
-            title = ' '.join(words)
-            # Capitalize first letter
+            # Use full intention if it's short enough, otherwise truncate smartly
+            if len(intention) <= 60:
+                title = intention
+            else:
+                # Truncate at word boundary near 60 chars
+                words = intention.split()
+                title = ''
+                for word in words:
+                    if len(title) + len(word) + 1 <= 60:
+                        title += (' ' if title else '') + word
+                    else:
+                        break
+            
+            # Capitalize first letter and ensure no trailing punctuation
             if title:
+                title = title.rstrip('.,;:!?')
                 return title[0].upper() + title[1:]
         
         # Fallback to tick number

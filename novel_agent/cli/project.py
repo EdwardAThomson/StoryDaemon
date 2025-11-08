@@ -3,6 +3,7 @@
 Handles creation and discovery of novel working directories.
 """
 import os
+import uuid
 import yaml
 from datetime import datetime
 from typing import Optional
@@ -31,8 +32,13 @@ def create_novel_project(name: str, base_dir: Optional[str] = None) -> str:
     
     # Expand user path
     base_dir = os.path.expanduser(base_dir)
-    project_dir = os.path.join(base_dir, name)
     
+    # Generate unique project ID to prevent overwrites
+    project_id = str(uuid.uuid4())[:8]  # Use first 8 chars for readability
+    project_dirname = f"{name}_{project_id}"
+    project_dir = os.path.join(base_dir, project_dirname)
+    
+    # This should never happen with UUID, but check anyway
     if os.path.exists(project_dir):
         raise ValueError(f"Project already exists: {project_dir}")
     
@@ -49,6 +55,7 @@ def create_novel_project(name: str, base_dir: Optional[str] = None) -> str:
         # Create initial state file
         initial_state = {
             'novel_name': name,
+            'project_id': project_id,
             'current_tick': 0,
             'active_character': None,
             'created_at': datetime.now().isoformat(),

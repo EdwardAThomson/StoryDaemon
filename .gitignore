@@ -19,6 +19,7 @@ temp/
 # Working directory for test novels and experiments
 work/*
 !work/README.md
+!work/.gitkeep
 
 # Operating system files
 .DS_Store

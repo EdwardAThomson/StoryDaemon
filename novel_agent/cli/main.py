@@ -24,6 +24,7 @@ from ..tools.name_generator import NameGeneratorTool
 from ..memory.manager import MemoryManager
 from ..memory.vector_store import VectorStore
 from ..agent.agent import StoryAgent
+from .recent_projects import RecentProjects
 
 
 app = typer.Typer(
@@ -93,8 +94,12 @@ def tick(
         project_dir = Path(find_project_dir(project))
         typer.echo(f"📖 Running tick for project: {project_dir}")
         
-        # Load project state and config
+        # Track as recent project
+        recent = RecentProjects()
         state = load_project_state(project_dir)
+        recent.add_project(str(project_dir), state.get('novel_name'))
+        
+        # Load config
         config = get_project_config(project_dir)
         
         current_tick = state['current_tick']
@@ -228,6 +233,11 @@ def run(
     try:
         project_dir = Path(find_project_dir(project))
         typer.echo(f"📖 Running {n} ticks for project: {project_dir}")
+        
+        # Track as recent project
+        recent = RecentProjects()
+        state = load_project_state(project_dir)
+        recent.add_project(str(project_dir), state.get('novel_name'))
         
         if checkpoint_interval > 0:
             typer.echo(f"💾 Checkpoints enabled (every {checkpoint_interval} ticks)\n")
@@ -689,6 +699,156 @@ def checkpoint(
         typer.echo(f"❌ Error: {e}", err=True)
         raise typer.Exit(1)
     except IOError as e:
+        typer.echo(f"❌ Error: {e}", err=True)
+        raise typer.Exit(1)
+
+
+@app.command()
+def recent(
+    limit: int = typer.Option(
+        10,
+        "--limit",
+        "-n",
+        help="Number of recent projects to show"
+    )
+):
+    """Show recently accessed novel projects.
+    
+    Lists projects you've worked on recently, ordered by last access time.
+    Use this to find project paths with UUIDs.
+    
+    Example:
+        novel recent
+        novel recent --limit 5
+    """
+    try:
+        recent_tracker = RecentProjects()
+        projects = recent_tracker.get_recent(limit=limit)
+        
+        if not projects:
+            typer.echo("📚 No recent projects found")
+            typer.echo("\n💡 Tip: Run 'novel tick' or 'novel run' on a project to track it")
+            return
+        
+        typer.echo(f"📚 Recent Projects (last {len(projects)}):\n")
+        
+        for i, proj in enumerate(projects, 1):
+            path = Path(proj['path'])
+            name = proj.get('name', path.name)
+            last_accessed = proj.get('last_accessed', 'unknown')
+            
+            # Load state to get tick count and UUID
+            try:
+                state = load_project_state(path)
+                tick_count = state.get('current_tick', 0)
+                tick_info = f"{tick_count} scenes"
+                project_id = state.get('project_id', None)
+            except:
+                tick_info = "?"
+                project_id = None
+            
+            typer.echo(f"  {i}. {name}")
+            if project_id:
+                typer.echo(f"     UUID: {project_id}")
+            typer.echo(f"     Path: {path}")
+            typer.echo(f"     Scenes: {tick_info}")
+            typer.echo(f"     Last accessed: {last_accessed[:19]}")  # Trim milliseconds
+            typer.echo()
+        
+        typer.echo("💡 Tip: Use 'novel resume' or 'novel resume --uuid <UUID>'")
+        
+    except Exception as e:
+        typer.echo(f"❌ Error: {e}", err=True)
+        raise typer.Exit(1)
+
+
+@app.command()
+def resume(
+    n: int = typer.Option(
+        1,
+        "--n",
+        "-n",
+        help="Number of ticks to run"
+    ),
+    uuid: Optional[str] = typer.Option(
+        None,
+        "--uuid",
+        "-u",
+        help="Resume project by UUID (e.g., 'f9f163a7')"
+    )
+):
+    """Resume working on a recent project.
+    
+    Automatically finds and continues your most recently accessed project,
+    or a specific project by UUID.
+    
+    Example:
+        novel resume                    # Run 1 tick on most recent project
+        novel resume --n 5              # Run 5 ticks on most recent project
+        novel resume --uuid f9f163a7    # Resume specific project by UUID
+    """
+    try:
+        recent_tracker = RecentProjects()
+        
+        # If UUID specified, find project by UUID
+        if uuid:
+            projects = recent_tracker.get_recent()
+            matching_project = None
+            
+            for proj in projects:
+                path = Path(proj['path'])
+                # Check if path ends with UUID or state.json contains UUID
+                if uuid in str(path):
+                    matching_project = proj['path']
+                    break
+                # Also check state.json for project_id
+                try:
+                    state = load_project_state(path)
+                    if state.get('project_id') == uuid:
+                        matching_project = proj['path']
+                        break
+                except:
+                    continue
+            
+            if not matching_project:
+                typer.echo(f"❌ No recent project found with UUID: {uuid}")
+                typer.echo("\n💡 Tip: Use 'novel recent' to see available projects")
+                raise typer.Exit(1)
+            
+            recent_path = matching_project
+        else:
+            # Use most recent project
+            recent_path = recent_tracker.get_most_recent()
+            
+            if not recent_path:
+                typer.echo("❌ No recent projects found")
+                typer.echo("\n💡 Tip: Create a project with 'novel new <name>'")
+                raise typer.Exit(1)
+        
+        # Load project info
+        state = load_project_state(Path(recent_path))
+        project_name = state.get('novel_name', Path(recent_path).name)
+        project_id = state.get('project_id', 'unknown')
+        current_tick = state.get('current_tick', 0)
+        
+        typer.echo(f"📖 Resuming: {project_name}")
+        typer.echo(f"   Path: {recent_path}")
+        typer.echo(f"   Current progress: {current_tick} scenes")
+        typer.echo()
+        
+        # Run the ticks using the run command logic
+        if n == 1:
+            # Use tick command for single tick
+            from pathlib import Path as P
+            tick(project=str(recent_path))
+        else:
+            # Use run command for multiple ticks
+            run(n=n, project=str(recent_path))
+        
+    except ValueError as e:
+        typer.echo(f"❌ Error: {e}", err=True)
+        raise typer.Exit(1)
+    except Exception as e:
         typer.echo(f"❌ Error: {e}", err=True)
         raise typer.Exit(1)
 

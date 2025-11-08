@@ -6,9 +6,10 @@ This directory is for development work, test novels, and experiments. It's gitig
 
 ```
 work/
-├── novels/        # Test story projects generated during development
-├── experiments/   # Quick experiments and prototypes
-└── scratch/       # Temporary files and one-off tests
+├── recent_projects.json  # Tracks recently accessed projects (auto-generated)
+├── novels/               # Test story projects generated during development
+├── experiments/          # Quick experiments and prototypes
+└── scratch/              # Temporary files and one-off tests
 ```
 
 ## Usage

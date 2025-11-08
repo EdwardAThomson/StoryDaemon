@@ -15,6 +15,9 @@ StoryDaemon is a Python-based system that generates long-form fiction through an
 - 🔍 **Rich Inspection Tools** - Status, list, inspect commands for full project visibility
 - 💾 **Automatic Checkpointing** - Snapshot and restore project state at any point
 - 📝 **Manuscript Compilation** - Export to Markdown or HTML with scene filtering
+- 🎲 **Unique Name Generation** - Syllable-based name generator with 4M+ combinations
+- 🔄 **Resume Workflow** - Easily continue recent projects with `novel resume`
+- 🆔 **UUID Safety** - Automatic project IDs prevent accidental overwrites
 
 ## Quick Start
 
@@ -44,20 +47,34 @@ pip install -e ".[dev]"
 ### Create Your First Novel
 
 ```bash
-# Create a new novel project
-novel new my-story
-
-# Navigate to the project
-cd ~/novels/my-story
+# Create a new novel project (gets unique UUID automatically)
+novel new my-story --dir work/novels
+# → Creates: work/novels/my-story_a1b2c3d4/
 
 # Generate your first scene
+cd work/novels/my-story_a1b2c3d4
 novel tick
+
+# Or generate from anywhere
+novel tick --project work/novels/my-story_a1b2c3d4
 
 # Check project status
 novel status
 
 # Generate multiple scenes with automatic checkpointing
 novel run --n 10 --checkpoint-interval 10
+
+# See recent projects (shows UUIDs)
+novel recent
+
+# Resume most recent project (no need to type full path!)
+novel resume
+
+# Resume specific project by UUID
+novel resume --uuid a1b2
+
+# Resume and run multiple ticks
+novel resume --n 5
 
 # List what was created
 novel list characters
@@ -105,6 +122,8 @@ StoryDaemon/
 │   │   ├── scene_committer.py  # Scene persistence
 │   │   └── prompts.py          # LLM prompt templates
 │   ├── tools/           # LLM interface and tools
+│   │   ├── name_generator.py   # Syllable-based name generation
+│   │   └── ...
 │   ├── memory/          # Memory management
 │   │   ├── manager.py          # MemoryManager
 │   │   ├── entities.py         # Entity dataclasses
@@ -113,6 +132,7 @@ StoryDaemon/
 │   ├── cli/             # Command-line interface
 │   │   ├── main.py             # CLI entry point
 │   │   ├── project.py          # Project management
+│   │   ├── recent_projects.py  # Recent projects tracker
 │   │   └── commands/           # Phase 6 commands
 │   │       ├── status.py       # Status command
 │   │       ├── list.py         # List commands
@@ -121,19 +141,28 @@ StoryDaemon/
 │   │       ├── compile.py      # Manuscript compilation
 │   │       └── checkpoint.py   # Checkpoint management
 │   ├── configs/         # Configuration
+│   ├── data/            # Static data files
+│   │   └── names/       # Name generation syllables and titles
 │   └── utils/           # Utilities
+├── work/                # Development working directory (gitignored)
+│   ├── recent_projects.json  # Recent projects tracker
+│   ├── novels/          # Test novels with UUID suffixes
+│   │   └── my-story_a1b2c3d4/
+│   │       ├── memory/      # Entity storage
+│   │       ├── scenes/      # Generated scene markdown files
+│   │       ├── plans/       # Plan JSON files
+│   │       ├── checkpoints/ # Project snapshots
+│   │       └── errors/      # Error logs
+│   ├── experiments/     # Quick experiments
+│   └── scratch/         # Temporary files
 ├── tests/               # Test suite
-├── docs/                # Documentation
-│   ├── spec.md         # Technical specification
-│   ├── plan.md         # Implementation plan
-│   └── phase*_*.md     # Phase-specific documentation
-└── ~/novels/            # Generated novels (separate)
-    └── my-story/
-        ├── memory/      # Entity storage
-        ├── scenes/      # Generated scene markdown files
-        ├── plans/       # Plan JSON files
-        ├── checkpoints/ # Project snapshots
-        └── errors/      # Error logs
+└── docs/                # Documentation
+    ├── spec.md         # Technical specification
+    ├── plan.md         # Implementation plan
+    ├── name_generator_implementation_plan.md  # Name generator design
+    ├── project_safety_improvements.md         # UUID and title improvements
+    ├── resume_workflow.md                     # Resume command workflow
+    └── phase*_*.md     # Phase-specific documentation
 ```
 
 ## CLI Commands
@@ -141,8 +170,9 @@ StoryDaemon/
 ### Core Generation Commands
 
 ```bash
-# Create new novel project
+# Create new novel project (automatically gets UUID suffix)
 novel new <name> [--dir <path>]
+# Example: novel new my-story → creates my-story_a1b2c3d4/
 
 # Generate one scene
 novel tick [--project <path>]
@@ -152,6 +182,20 @@ novel run --n <count> [--checkpoint-interval 10] [--project <path>]
 
 # Compile scene summaries
 novel summarize [--project <path>]
+```
+
+### Project Management Commands
+
+```bash
+# Show recently accessed projects with UUIDs
+novel recent [--limit 10]
+
+# Resume most recent project
+novel resume [--n 1]
+
+# Resume specific project by UUID (supports partial match)
+novel resume --uuid <uuid> [--n 1]
+# Example: novel resume --uuid a1b2
 ```
 
 ### Inspection & Management Commands (Phase 6)
@@ -285,8 +329,11 @@ pytest tests/unit/test_file_ops.py
 
 ## Documentation
 
+### Core Documentation
 - [Technical Specification](docs/spec.md) - Detailed system design
 - [Implementation Plan](docs/plan.md) - Phase-by-phase roadmap
+
+### Phase Documentation
 - [Phase 1 Guide](docs/phase1_implementation.md) - Core framework implementation
 - [Phase 2 Detailed Plan](docs/phase2_detailed.md) - Memory system design
 - [Phase 2 Completion](docs/phase2_completion.md) - Implementation summary
@@ -299,6 +346,11 @@ pytest tests/unit/test_file_ops.py
 - [Phase 6 Implementation Summary](docs/phase6_implementation_summary.md) - Implementation summary
 - [Phase 6 Quick Reference](docs/phase6_quick_reference.md) - Command reference guide
 - [Phase 6 Complete](docs/PHASE6_COMPLETE.md) - Completion summary
+
+### Feature Documentation
+- [Name Generator Implementation](docs/name_generator_implementation_plan.md) - Syllable-based name generation
+- [Project Safety Improvements](docs/project_safety_improvements.md) - UUID system and scene titles
+- [Resume Workflow](docs/resume_workflow.md) - Recent projects and resume commands
 - [Agent vs CLI Tools](docs/agent_vs_cli_tools.md) - Understanding tool layers
 
 ## Philosophy
