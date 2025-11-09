@@ -6,17 +6,25 @@ import os
 import uuid
 import yaml
 from datetime import datetime
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from ..utils.file_ops import write_json, write_file, read_json
 from ..configs.config import Config
 
+if TYPE_CHECKING:
+    from .foundation import StoryFoundation
 
-def create_novel_project(name: str, base_dir: Optional[str] = None) -> str:
+
+def create_novel_project(
+    name: str, 
+    base_dir: Optional[str] = None,
+    foundation: Optional["StoryFoundation"] = None
+) -> str:
     """Create a new novel project directory structure.
     
     Args:
         name: Name of the novel
         base_dir: Base directory (default: ~/novels from config)
+        foundation: Optional story foundation (genre, premise, etc.)
         
     Returns:
         Path to created project directory
@@ -61,6 +69,11 @@ def create_novel_project(name: str, base_dir: Optional[str] = None) -> str:
             'created_at': datetime.now().isoformat(),
             'last_updated': datetime.now().isoformat(),
         }
+        
+        # Add story foundation if provided
+        if foundation:
+            initial_state['story_foundation'] = foundation.to_dict()
+        
         write_json(os.path.join(project_dir, 'state.json'), initial_state)
         
         # Create initial config

@@ -9,6 +9,11 @@ from .project import (
     save_project_state,
     get_project_config
 )
+from .foundation import (
+    prompt_for_foundation,
+    load_foundation_from_file,
+    create_foundation_from_args
+)
 from ..tools.llm_interface import initialize_llm, send_prompt
 from ..tools.codex_interface import CodexInterface
 from ..tools.registry import ToolRegistry
@@ -42,20 +47,100 @@ def new(
         "--dir",
         "-d",
         help="Base directory for novel (default: ~/novels)"
+    ),
+    interactive: bool = typer.Option(
+        False,
+        "--interactive",
+        "-i",
+        help="Interactively prompt for story foundation"
+    ),
+    foundation_file: Optional[Path] = typer.Option(
+        None,
+        "--foundation",
+        "-f",
+        help="Load story foundation from YAML file"
+    ),
+    genre: Optional[str] = typer.Option(
+        None,
+        "--genre",
+        help="Story genre (e.g., fantasy, sci-fi, thriller)"
+    ),
+    premise: Optional[str] = typer.Option(
+        None,
+        "--premise",
+        help="Story premise (1-2 sentences)"
+    ),
+    protagonist: Optional[str] = typer.Option(
+        None,
+        "--protagonist",
+        help="Protagonist archetype (personality/role)"
+    ),
+    setting: Optional[str] = typer.Option(
+        None,
+        "--setting",
+        help="Story setting (time/place/world)"
+    ),
+    tone: Optional[str] = typer.Option(
+        None,
+        "--tone",
+        help="Story tone (mood/atmosphere)"
+    ),
+    themes: Optional[str] = typer.Option(
+        None,
+        "--themes",
+        help="Story themes (comma-separated)"
     )
 ):
-    """Create a new novel project.
+    """Create a new novel project with optional story foundation.
     
     Creates a complete project structure with memory directories,
-    configuration files, and initial state.
+    configuration files, and initial state. Optionally define the
+    story foundation (genre, premise, setting, etc.) at creation.
     
-    Example:
+    Examples:
+        # Basic project (no foundation)
         novel new my-story
-        novel new my-story --dir ~/Documents/novels
+        
+        # Interactive foundation setup
+        novel new my-story --interactive
+        
+        # Load foundation from file
+        novel new my-story --foundation foundation.yaml
+        
+        # Specify foundation via command-line
+        novel new my-story --genre "science fiction" --premise "..." --protagonist "..." --setting "..." --tone "..."
     """
     try:
-        project_dir = create_novel_project(name, dir)
+        # Determine foundation source
+        foundation = None
+        
+        if interactive:
+            # Interactive prompting
+            foundation = prompt_for_foundation()
+        elif foundation_file:
+            # Load from file
+            foundation = load_foundation_from_file(foundation_file)
+            typer.echo(f"✅ Loaded foundation from: {foundation_file}")
+        else:
+            # Try to create from command-line args
+            foundation = create_foundation_from_args(
+                genre=genre,
+                premise=premise,
+                protagonist=protagonist,
+                setting=setting,
+                tone=tone,
+                themes=themes
+            )
+        
+        # Create project with optional foundation
+        project_dir = create_novel_project(name, dir, foundation=foundation)
         typer.echo(f"✅ Created novel project: {project_dir}")
+        
+        if foundation:
+            typer.echo(f"\n📚 Story foundation set:")
+            typer.echo(f"   Genre: {foundation.genre}")
+            typer.echo(f"   Setting: {foundation.setting}")
+        
         typer.echo(f"\n📝 Next steps:")
         typer.echo(f"  cd {project_dir}")
         typer.echo(f"  novel tick")

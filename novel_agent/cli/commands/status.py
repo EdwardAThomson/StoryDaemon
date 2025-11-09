@@ -81,6 +81,7 @@ def get_status_info(project_dir: Path, state: dict) -> dict:
         'project_dir': str(project_dir),
         'current_tick': state.get('current_tick', 0),
         'active_character': state.get('active_character', 'None'),
+        'story_foundation': state.get('story_foundation'),
         'scenes_written': scene_count,
         'characters': char_count,
         'locations': loc_count,
@@ -109,6 +110,19 @@ def display_status(info: dict, use_color: bool = True):
     print(f"📍 {bold('Location:')} {info['project_dir']}")
     print(f"🎬 {bold('Current Tick:')} {info['current_tick']}")
     print(f"👤 {bold('Active POV:')} {info['active_character']}")
+    
+    # Display story foundation if present
+    foundation = info.get('story_foundation')
+    if foundation:
+        print()
+        print(f"📚 {bold('Story Foundation:')}")
+        print(f"   Genre: {foundation.get('genre', 'N/A')}")
+        print(f"   Setting: {foundation.get('setting', 'N/A')}")
+        print(f"   Tone: {foundation.get('tone', 'N/A')}")
+        if foundation.get('themes'):
+            print(f"   Themes: {', '.join(foundation['themes'])}")
+    
+    print()
     print(f"📝 {bold('Scenes Written:')} {info['scenes_written']}")
     print(f"👥 {bold('Characters:')} {info['characters']}")
     print(f"🗺️  {bold('Locations:')} {info['locations']}")
