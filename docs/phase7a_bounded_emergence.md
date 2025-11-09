@@ -114,6 +114,7 @@ themes:
   - isolation
   - first contact
   - trust vs. paranoia
+primary_goal: Decode the alien signal without alerting Earth authorities  # Optional
 ```
 
 **Command-line mode:**
@@ -139,7 +140,8 @@ novel new my-story \
     "protagonist_archetype": "Curious, isolated technical expert with trust issues",
     "setting": "Near-future Mars colony, 2087",
     "tone": "Contemplative, mysterious, with mounting tension",
-    "themes": ["isolation", "first contact", "trust vs. paranoia"]
+    "themes": ["isolation", "first contact", "trust vs. paranoia"],
+    "primary_goal": "Decode the alien signal without alerting Earth authorities"
   },
   
   "current_tick": 0,
@@ -189,13 +191,19 @@ class OpenLoop:
 ```json
 {
   "story_goals": {
-    "primary": null,  // Emerges after ~10-15 scenes
+    "primary": {
+      "description": "Decode the alien signal without alerting Earth authorities",
+      "source": "user_specified",  // or "auto_promoted"
+      "promoted_at_tick": 0
+    },
     "secondary": [],
     "promotion_candidates": [],
-    "promotion_tick": null
+    "promotion_tick": 0
   }
 }
 ```
+
+**Note:** If `primary_goal` is specified in foundation, it's set immediately with `source: "user_specified"`. Otherwise, it auto-promotes during ticks 10-15 if conditions are met (protagonist exists, related loops with 5+ mentions).
 
 #### Auto-Promotion Logic
 

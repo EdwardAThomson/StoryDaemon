@@ -618,6 +618,47 @@ def inspect(
 
 
 @app.command()
+def goals(
+    project: Optional[str] = typer.Option(
+        None,
+        "--project",
+        "-p",
+        help="Path to novel project"
+    ),
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help="Output as JSON"
+    )
+):
+    """Show goal hierarchy and protagonist goals.
+    
+    Displays the story goal, protagonist goals (immediate, arc, story),
+    and goal progress tracking.
+    
+    Example:
+        novel goals
+        novel goals --json
+    """
+    from .commands.goals import get_goals_info, display_goals, display_goals_json
+    
+    try:
+        project_dir = Path(find_project_dir(project))
+        state = load_project_state(project_dir)
+        
+        info = get_goals_info(project_dir, state)
+        
+        if json_output:
+            display_goals_json(info)
+        else:
+            display_goals(info)
+        
+    except ValueError as e:
+        typer.echo(f"❌ Error: {e}", err=True)
+        raise typer.Exit(1)
+
+
+@app.command()
 def compile(
     project: Optional[str] = typer.Option(
         None,

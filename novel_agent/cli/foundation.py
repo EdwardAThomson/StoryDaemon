@@ -16,7 +16,8 @@ class StoryFoundation:
         protagonist_archetype: str,
         setting: str,
         tone: str,
-        themes: Optional[List[str]] = None
+        themes: Optional[List[str]] = None,
+        primary_goal: Optional[str] = None
     ):
         self.genre = genre
         self.premise = premise
@@ -24,6 +25,7 @@ class StoryFoundation:
         self.setting = setting
         self.tone = tone
         self.themes = themes or []
+        self.primary_goal = primary_goal  # Optional user-specified story goal
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for state.json."""
@@ -33,7 +35,8 @@ class StoryFoundation:
             "protagonist_archetype": self.protagonist_archetype,
             "setting": self.setting,
             "tone": self.tone,
-            "themes": self.themes
+            "themes": self.themes,
+            "primary_goal": self.primary_goal
         }
     
     @classmethod
@@ -45,7 +48,8 @@ class StoryFoundation:
             protagonist_archetype=data["protagonist_archetype"],
             setting=data["setting"],
             tone=data["tone"],
-            themes=data.get("themes", [])
+            themes=data.get("themes", []),
+            primary_goal=data.get("primary_goal")
         )
 
 
@@ -96,6 +100,15 @@ def prompt_for_foundation() -> StoryFoundation:
     
     themes = [t.strip() for t in themes_input.split(",") if t.strip()] if themes_input else []
     
+    # Primary goal (optional)
+    primary_goal = typer.prompt(
+        "Primary story goal (optional, will auto-emerge if not specified)",
+        default="",
+        type=str
+    ).strip()
+    
+    primary_goal = primary_goal if primary_goal else None
+    
     # Confirmation
     typer.echo("\n" + "━" * 60)
     typer.echo("📋 Foundation Summary:")
@@ -106,6 +119,8 @@ def prompt_for_foundation() -> StoryFoundation:
     typer.echo(f"  Tone: {tone}")
     if themes:
         typer.echo(f"  Themes: {', '.join(themes)}")
+    if primary_goal:
+        typer.echo(f"  Primary Goal: {primary_goal}")
     typer.echo("━" * 60)
     
     confirm = typer.confirm("\nProceed with this foundation?", default=True)
@@ -119,7 +134,8 @@ def prompt_for_foundation() -> StoryFoundation:
         protagonist_archetype=protagonist_archetype,
         setting=setting,
         tone=tone,
-        themes=themes
+        themes=themes,
+        primary_goal=primary_goal
     )
 
 
@@ -159,13 +175,17 @@ def load_foundation_from_file(file_path: Path) -> StoryFoundation:
     elif not isinstance(themes, list):
         themes = []
     
+    # Get primary goal if present
+    primary_goal = data.get("primary_goal")
+    
     return StoryFoundation(
         genre=data["genre"],
         premise=data["premise"],
         protagonist_archetype=data["protagonist_archetype"],
         setting=data["setting"],
         tone=data["tone"],
-        themes=themes
+        themes=themes,
+        primary_goal=primary_goal
     )
 
 

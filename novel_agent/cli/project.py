@@ -74,6 +74,23 @@ def create_novel_project(
         if foundation:
             initial_state['story_foundation'] = foundation.to_dict()
         
+        # Add story goals structure (Phase 7A.2)
+        primary_goal = None
+        if foundation and foundation.primary_goal:
+            # User specified a primary goal in foundation
+            primary_goal = {
+                'description': foundation.primary_goal,
+                'source': 'user_specified',
+                'promoted_at_tick': 0
+            }
+        
+        initial_state['story_goals'] = {
+            'primary': primary_goal,  # User-specified or auto-promotes during ticks 10-15
+            'secondary': [],
+            'promotion_candidates': [],
+            'promotion_tick': 0 if primary_goal else None
+        }
+        
         write_json(os.path.join(project_dir, 'state.json'), initial_state)
         
         # Create initial config

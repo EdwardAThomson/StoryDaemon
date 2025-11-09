@@ -177,6 +177,16 @@ class Character:
     history: List[HistoryEntry] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
     
+    # NEW: Goal hierarchy (Phase 7A.2)
+    immediate_goals: List[str] = field(default_factory=list)  # "Fix the antenna"
+    arc_goal: Optional[str] = None  # "Overcome isolation and trust others"
+    story_goal: Optional[str] = None  # "Make contact with alien intelligence"
+    
+    # NEW: Goal tracking
+    goal_progress: Dict[str, float] = field(default_factory=dict)  # goal -> progress (0.0-1.0)
+    goals_completed: List[str] = field(default_factory=list)
+    goals_abandoned: List[str] = field(default_factory=list)
+    
     def __post_init__(self):
         """Set timestamps if not provided."""
         if not self.created_at:
@@ -331,6 +341,11 @@ class OpenLoop:
     notes: str = ""
     resolved_in_scene: Optional[str] = None
     resolution_summary: Optional[str] = None
+    
+    # NEW: Tracking fields (Phase 7A.2)
+    scenes_mentioned: int = 0  # How many scenes has this appeared in?
+    last_mentioned_tick: Optional[int] = None
+    is_story_goal: bool = False  # Promoted to main story goal?
     
     def __post_init__(self):
         """Set timestamp if not provided."""

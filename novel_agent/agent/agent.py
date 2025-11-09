@@ -209,11 +209,15 @@ class StoryAgent:
                 print("   11. Syncing vector database...")
                 self._reindex_updated_entities(facts)
             
-            # Step 12: Update state
+            # Step 12: Check for goal promotion (Phase 7A.2)
+            print("   12. Checking goal promotion...")
+            promotion_result = self._check_goal_promotion(tick)
+            
+            # Step 13: Update state
             self.state["current_tick"] += 1
             self._save_state()
             
-            return {
+            result = {
                 "success": True,
                 "tick": tick,
                 "plan_file": str(plan_file),
@@ -224,6 +228,11 @@ class StoryAgent:
                 "eval_warnings": eval_result.get("warnings", []),
                 "entities_updated": update_stats
             }
+            
+            if promotion_result:
+                result["goal_promoted"] = promotion_result
+            
+            return result
         
         except RuntimeError as e:
             # Tool execution error - save error details
@@ -619,3 +628,88 @@ class StoryAgent:
                     
         except Exception as e:
             logger.error(f"Error re-indexing entities: {e}")
+    
+    def _check_goal_promotion(self, tick: int) -> dict:
+        """Check if a story goal should be auto-promoted (Phase 7A.2).
+        
+        After 10-15 scenes, promote the most active protagonist-related loop
+        to become the primary story goal. Skips if user specified a goal.
+        
+        Args:
+            tick: Current tick number
+            
+        Returns:
+            Dictionary with promotion info if promotion occurred, None otherwise
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        # Only check during the promotion window
+        if tick < 10 or tick > 15:
+            return None
+        
+        # Check if already promoted or user-specified
+        story_goals = self.state.get('story_goals', {})
+        primary = story_goals.get('primary')
+        if primary:
+            # Don't auto-promote if user specified a goal or already promoted
+            if primary.get('source') == 'user_specified':
+                logger.debug("Primary goal was user-specified, skipping auto-promotion")
+            return None
+        
+        # Get protagonist ID
+        protagonist_id = self.state.get('active_character')
+        if not protagonist_id:
+            logger.debug("No protagonist set, skipping goal promotion")
+            return None
+        
+        # Get all open loops
+        open_loops = self.memory.get_open_loops()
+        if not open_loops:
+            logger.debug("No open loops, skipping goal promotion")
+            return None
+        
+        # Find protagonist-related loops
+        protagonist_loops = [
+            loop for loop in open_loops
+            if protagonist_id in loop.related_characters
+        ]
+        
+        if not protagonist_loops:
+            logger.debug("No protagonist-related loops, skipping goal promotion")
+            return None
+        
+        # Find most mentioned loop (must have been mentioned at least 5 times)
+        top_loop = max(
+            protagonist_loops,
+            key=lambda l: l.scenes_mentioned,
+            default=None
+        )
+        
+        if not top_loop or top_loop.scenes_mentioned < 5:
+            logger.debug(f"Top loop only mentioned {top_loop.scenes_mentioned if top_loop else 0} times, need 5+")
+            return None
+        
+        # Promote to story goal!
+        top_loop.is_story_goal = True
+        self.memory.save_open_loop(top_loop)
+        
+        # Update state
+        story_goals['primary'] = {
+            'loop_id': top_loop.id,
+            'description': top_loop.description,
+            'source': 'auto_promoted',
+            'promoted_at_tick': tick
+        }
+        story_goals['promotion_tick'] = tick
+        self.state['story_goals'] = story_goals
+        
+        logger.info(f"🎯 Story Goal Emerged: {top_loop.description}")
+        print(f"\n🎯 Story Goal Emerged: {top_loop.description}\n")
+        
+        return {
+            'loop_id': top_loop.id,
+            'description': top_loop.description,
+            'tick': tick,
+            'mentions': top_loop.scenes_mentioned
+        }
