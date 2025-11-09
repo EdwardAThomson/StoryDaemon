@@ -10,9 +10,11 @@ StoryDaemon is a Python-based system that generates long-form fiction through an
 - 📖 **Deep POV Writing** - Strict point-of-view discipline for immersive narrative
 - 🧠 **Evolving Memory** - Characters, locations, and story elements dynamically update
 - 🎯 **Emergent Structure** - No pre-outlining; story develops organically
+- 📚 **Story Foundation** - Optional genre, premise, setting, tone to guide emergence
+- 🎯 **Goal Hierarchy** - Protagonist goals emerge naturally or can be user-specified
 - 💰 **Zero Additional Cost** - Uses Codex CLI for GPT-5 access (included in subscription)
 - 🔧 **Tool-Based System** - Extensible tool registry for character generation, memory search, etc.
-- 🔍 **Rich Inspection Tools** - Status, list, inspect commands for full project visibility
+- 🔍 **Rich Inspection Tools** - Status, list, inspect, goals commands for full project visibility
 - 💾 **Automatic Checkpointing** - Snapshot and restore project state at any point
 - 📝 **Manuscript Compilation** - Export to Markdown or HTML with scene filtering
 - 🎲 **Unique Name Generation** - Syllable-based name generator with 4M+ combinations
@@ -51,6 +53,20 @@ pip install -e ".[dev]"
 novel new my-story --dir work/novels
 # → Creates: work/novels/my-story_a1b2c3d4/
 
+# Create with story foundation (interactive mode)
+novel new my-story --interactive
+
+# Or from a YAML file
+novel new my-story --foundation foundation.yaml
+
+# Or via command-line arguments
+novel new my-story \
+  --genre "science fiction" \
+  --premise "A lone engineer discovers an alien signal" \
+  --protagonist "Curious, isolated technical expert" \
+  --setting "Near-future Mars colony" \
+  --tone "Contemplative, mysterious"
+
 # Generate your first scene
 cd work/novels/my-story_a1b2c3d4
 novel tick
@@ -58,8 +74,11 @@ novel tick
 # Or generate from anywhere
 novel tick --project work/novels/my-story_a1b2c3d4
 
-# Check project status
+# Check project status (includes story foundation)
 novel status
+
+# View goal hierarchy
+novel goals
 
 # Generate multiple scenes with automatic checkpointing
 novel run --n 10 --checkpoint-interval 10
@@ -102,10 +121,12 @@ StoryDaemon uses a **story tick loop** where each tick produces one scene passag
 
 Each novel maintains its own working directory with:
 
+- **Story Foundation** - Optional immutable constraints (genre, premise, protagonist, setting, tone, themes, primary goal)
 - **Characters** - Dynamic character data with goals, relationships, emotional state
 - **Locations** - Evolving location descriptions with sensory details
 - **Scenes** - Scene metadata and summaries
-- **Open Loops** - Unresolved narrative threads
+- **Open Loops** - Unresolved narrative threads with mention tracking
+- **Goal Hierarchy** - Protagonist immediate/arc/story goals with progress tracking
 - **Vector Index** - Semantic search for context retrieval
 
 ## Project Structure
@@ -132,9 +153,11 @@ StoryDaemon/
 │   ├── cli/             # Command-line interface
 │   │   ├── main.py             # CLI entry point
 │   │   ├── project.py          # Project management
+│   │   ├── foundation.py       # Story foundation setup
 │   │   ├── recent_projects.py  # Recent projects tracker
-│   │   └── commands/           # Phase 6 commands
+│   │   └── commands/           # CLI commands
 │   │       ├── status.py       # Status command
+│   │       ├── goals.py        # Goals command
 │   │       ├── list.py         # List commands
 │   │       ├── inspect.py      # Inspect command
 │   │       ├── plan.py         # Plan preview
@@ -174,6 +197,11 @@ StoryDaemon/
 novel new <name> [--dir <path>]
 # Example: novel new my-story → creates my-story_a1b2c3d4/
 
+# Create with story foundation
+novel new <name> --interactive                    # Interactive prompts
+novel new <name> --foundation <yaml_file>         # From YAML file
+novel new <name> --genre <genre> --premise <text> # Command-line args
+
 # Generate one scene
 novel tick [--project <path>]
 
@@ -198,11 +226,14 @@ novel resume --uuid <uuid> [--n 1]
 # Example: novel resume --uuid a1b2
 ```
 
-### Inspection & Management Commands (Phase 6)
+### Inspection & Management Commands
 
 ```bash
-# Show project overview
+# Show project overview (includes story foundation)
 novel status [--json] [--project <path>]
+
+# Show goal hierarchy and protagonist goals
+novel goals [--json] [--project <path>]
 
 # List entities
 novel list characters [-v] [--json] [--project <path>]
@@ -312,7 +343,23 @@ Project-specific configuration in `<project>/config.yaml`.
 - [x] JSON output support for all commands
 - [x] 10 tests passing
 
-**Phase 7:** See [docs/plan.md](docs/plan.md) for future enhancements.
+**Phase 7A: Bounded Emergence Framework** 🚧 In Progress
+- [x] **7A.1: Story Foundation** - Optional immutable constraints (genre, premise, protagonist, setting, tone, themes, primary goal)
+  - [x] Interactive/file/CLI input modes
+  - [x] Foundation display in `novel status`
+  - [x] Tests for foundation functionality
+- [x] **7A.2: Goal Hierarchy** - Protagonist goals and auto-promotion
+  - [x] Character goal fields (immediate, arc, story goals)
+  - [x] OpenLoop tracking fields (scenes_mentioned, is_story_goal)
+  - [x] Auto-promotion logic (ticks 10-15, 5+ mentions)
+  - [x] User-specified primary goal support
+  - [x] `novel goals` command to view hierarchy
+  - [x] Tests for goal promotion logic
+- [ ] **7A.3: Tension Tracking** - Scene-level tension scoring
+- [ ] **7A.4: Lore Consistency** - World rules and constraint checking
+- [ ] **7A.5: Multi-Stage Prompts** - Foundation/goals in planning context
+
+**Phase 7B+:** See [docs/phase7a_bounded_emergence.md](docs/phase7a_bounded_emergence.md) for full roadmap.
 
 ## Testing
 
@@ -348,6 +395,7 @@ pytest tests/unit/test_file_ops.py
 - [Phase 6 Complete](docs/PHASE6_COMPLETE.md) - Completion summary
 
 ### Feature Documentation
+- [Phase 7A: Bounded Emergence Framework](docs/phase7a_bounded_emergence.md) - Story foundation and goal hierarchy
 - [Name Generator Implementation](docs/name_generator_implementation_plan.md) - Syllable-based name generation
 - [Project Safety Improvements](docs/project_safety_improvements.md) - UUID system and scene titles
 - [Resume Workflow](docs/resume_workflow.md) - Recent projects and resume commands
