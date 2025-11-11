@@ -19,6 +19,9 @@ Your task is to analyze the current story state and create a plan for the next s
 ### Open Story Loops
 {open_loops_list}
 
+### Tension Pattern
+{tension_history}
+
 ### Active Character Details
 {active_character_details}
 

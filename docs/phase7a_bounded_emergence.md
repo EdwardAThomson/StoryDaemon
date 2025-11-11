@@ -228,42 +228,97 @@ def check_goal_promotion(self, tick: int):
 
 ---
 
-### Tier 3: Tension Tracking (Continuous) - AUTOMATIC
+### Phase 7A.3: Tension Tracking - ✅ IMPLEMENTED
 
-Simple pacing metrics to prevent narrative flatness.
+Scene-level tension scoring to maintain narrative momentum and pacing awareness.
 
-#### Story Dynamics in State
+#### Scene Tension Fields
 
-```json
-{
-  "story_dynamics": {
-    "tension_level": 3,  // 1-10 scale
-    "stakes": "personal",  // personal → community → world
-    "pacing": "steady",  // slow, steady, accelerating, climactic
-    "scenes_since_major_event": 0,
-    "major_events": [],
-    "tension_history": [3, 3, 4, 5, 7, 6, 5]
-  }
-}
-```
-
-#### Auto-Update After Each Scene
+Each scene now tracks tension automatically:
 
 ```python
-def update_after_scene(self, scene_summary: str):
-    """Update dynamics based on scene content."""
-    # Analyze for tension keywords
-    tension_change = analyze_tension(scene_summary)
-    
-    # Update tension level (1-10)
-    dynamics['tension_level'] = clamp(old_tension + tension_change, 1, 10)
-    
-    # Detect major events (tension spike of 3+)
-    if tension_change >= 3:
-        record_major_event()
-    
-    # Update pacing based on tension trend
-    dynamics['pacing'] = calculate_pacing(tension_history)
+@dataclass
+class Scene:
+    # ... existing fields ...
+    tension_level: Optional[int] = None  # 0-10 scale
+    tension_category: Optional[str] = None  # calm, rising, high, climactic
+```
+
+#### Tension Categories
+
+- **calm** (0-3): Low-stakes, peaceful, reflective scenes
+- **rising** (4-6): Building conflict, questions, uncertainty
+- **high** (7-8): Active conflict, danger, revelations
+- **climactic** (9-10): Peak moments, critical decisions, major events
+
+#### TensionEvaluator
+
+Analyzes scene prose using multiple factors:
+
+```python
+# Keyword analysis (40% weight)
+- High tension: danger, threat, attack, panic, blood, death
+- Medium tension: conflict, worry, suspicious, reveal, shock
+- Low tension: calm, peace, safe, gentle, comfort
+
+# Sentence structure (20% weight)
+- Short sentences = higher tension
+- Long, flowing sentences = lower tension
+
+# Emotional intensity (30% weight)
+- Exclamations, questions, dashes
+- Action verbs: gasped, lunged, fled, screamed
+
+# Open loops (10% weight)
+- Creating loops = raising tension
+- Resolving loops = lowering tension
+```
+
+#### Configuration
+
+Tension tracking can be toggled:
+
+```yaml
+# config.yaml
+generation:
+  enable_tension_tracking: true  # Set to false to disable
+```
+
+#### Context Integration
+
+Recent tension pattern appears in planner context:
+
+```
+### Tension Pattern
+Recent tension: [3, 5, 7, 6, 4] (calm → rising → high → rising → rising)
+```
+
+This helps the planner make informed pacing decisions without rigid enforcement.
+
+#### CLI Visualization
+
+**`novel status`** shows tension history:
+
+```
+⚡ Tension Pattern:
+   Tick   1:  3/10 [██████░░░░░░░░░░░░░░] (calm)
+   Tick   2:  5/10 [██████████░░░░░░░░░░] (rising)
+   Tick   3:  7/10 [██████████████░░░░░░] (high)
+   Tick   4:  6/10 [████████████░░░░░░░░] (rising)
+   Tick   5:  4/10 [████████░░░░░░░░░░░░] (rising)
+   Progression: calm → rising → high → rising → rising
+```
+
+**`novel list scenes`** includes tension levels:
+
+```
+📝 Scenes (5 total)
+
+  file          word_count  pov_character  tension_level
+  ------------  ----------  -------------  -----------------
+  scene_001.md  2,431       CHAR_001       3/10 (calm)
+  scene_002.md  2,789       CHAR_001       5/10 (rising)
+  scene_003.md  3,102       CHAR_001       7/10 (high)
 ```
 
 ---

@@ -79,6 +79,9 @@ class ContextBuilder:
         # Get open loops
         context["open_loops_list"] = self._format_open_loops()
         
+        # Get tension history (Phase 7A.3)
+        context["tension_history"] = self._get_tension_history()
+        
         # Get available tools description
         context["available_tools_description"] = self.tools.get_tools_description()
         
@@ -222,3 +225,38 @@ class ContextBuilder:
             )
         
         return "\n".join(rel_lines)
+    
+    def _get_tension_history(self) -> str:
+        """Get recent tension history for context (Phase 7A.3).
+        
+        Returns:
+            Formatted tension history string
+        """
+        if not self.config.get('generation.enable_tension_tracking', True):
+            return ""
+        
+        # Get recent scene IDs
+        scene_ids = self.memory.list_scenes()
+        if not scene_ids:
+            return ""
+        
+        # Get last 5 scene IDs
+        recent_ids = scene_ids[-5:]
+        
+        # Load scenes and filter for tension data
+        tension_scenes = []
+        for scene_id in recent_ids:
+            scene = self.memory.load_scene(scene_id)
+            if scene and hasattr(scene, 'tension_level') and scene.tension_level is not None:
+                tension_scenes.append(scene)
+        
+        if not tension_scenes:
+            return ""
+        
+        # Format tension progression
+        levels = [str(s.tension_level) for s in tension_scenes]
+        categories = [s.tension_category for s in tension_scenes]
+        
+        progression = ' → '.join(categories)
+        
+        return f"Recent tension: [{', '.join(levels)}] ({progression})"

@@ -17,6 +17,7 @@ from .evaluator import SceneEvaluator
 from .scene_committer import SceneCommitter
 from .fact_extractor import FactExtractor
 from .entity_updater import EntityUpdater
+from .tension_evaluator import TensionEvaluator
 from ..tools.registry import ToolRegistry
 from ..memory.manager import MemoryManager
 from ..memory.vector_store import VectorStore
@@ -91,6 +92,9 @@ class StoryAgent:
         # Phase 5 components
         self.fact_extractor = FactExtractor(llm_interface, self.memory, config)
         self.entity_updater = EntityUpdater(self.memory, config)
+        
+        # Phase 7A.3 components
+        self.tension_evaluator = TensionEvaluator(config)
         
         # Load state
         self.state = self._load_state()
@@ -188,9 +192,25 @@ class StoryAgent:
             if not eval_result["passed"]:
                 raise ValueError(f"Scene evaluation failed: {eval_result['issues']}")
             
+            # Step 7.5: Evaluate tension (Phase 7A.3)
+            print("   7.5. Evaluating tension...")
+            tension_result = self.tension_evaluator.evaluate_tension(
+                scene_data["text"],
+                writer_context
+            )
+            
             # Step 8: Commit scene (Phase 4)
             print("   8. Committing scene...")
             scene_id = self.committer.commit_scene(scene_data, tick, plan)
+            
+            # Step 8.5: Update scene with tension data (Phase 7A.3)
+            if tension_result.get('enabled'):
+                scene = self.memory.load_scene(scene_id)
+                if scene:
+                    scene.tension_level = tension_result['tension_level']
+                    scene.tension_category = tension_result['tension_category']
+                    self.memory.save_scene(scene)
+                    print(f"        Tension: {tension_result['tension_level']}/10 ({tension_result['tension_category']})")
             
             # Step 9: Extract facts (Phase 5)
             print("   9. Extracting facts...")
@@ -231,6 +251,12 @@ class StoryAgent:
             
             if promotion_result:
                 result["goal_promoted"] = promotion_result
+            
+            if tension_result.get('enabled'):
+                result["tension"] = {
+                    "level": tension_result['tension_level'],
+                    "category": tension_result['tension_category']
+                }
             
             return result
         

@@ -155,6 +155,8 @@ def list_scenes(project_dir: Path, verbose: bool = False) -> List[Dict[str, Any]
             'number': scene_num,
             'word_count': word_count,
             'pov_character': metadata.get('pov_character', 'Unknown'),
+            'tension_level': metadata.get('tension_level'),
+            'tension_category': metadata.get('tension_category'),
         }
         
         if verbose:
@@ -281,7 +283,11 @@ def display_scenes(scenes: List[Dict[str, Any]], verbose: bool = False):
     
     if verbose:
         for scene in scenes:
-            print(f"  {scene['file']}  ({scene['word_count']:,} words)")
+            tension_str = ""
+            if scene.get('tension_level') is not None:
+                tension_str = f" | Tension: {scene['tension_level']}/10 ({scene.get('tension_category', 'unknown')})"
+            
+            print(f"  {scene['file']}  ({scene['word_count']:,} words{tension_str})")
             print(f"      POV: {scene['pov_character']}")
             if scene.get('location'):
                 print(f"      Location: {scene['location']}")
@@ -289,8 +295,26 @@ def display_scenes(scenes: List[Dict[str, Any]], verbose: bool = False):
                 print(f"      Summary: {scene['summary'][:80]}...")
             print()
     else:
-        headers = ['file', 'word_count', 'pov_character']
-        display_table(scenes, headers)
+        # Add tension column if any scenes have tension data
+        has_tension = any(s.get('tension_level') is not None for s in scenes)
+        if has_tension:
+            headers = ['file', 'word_count', 'pov_character', 'tension_level']
+            
+            # Format tension level with category
+            def format_row(item, headers, col_widths):
+                parts = []
+                for h in headers:
+                    if h == 'tension_level' and item.get('tension_level') is not None:
+                        value = f"{item['tension_level']}/10 ({item.get('tension_category', 'N/A')})"
+                    else:
+                        value = str(item.get(h, ''))
+                    parts.append(value.ljust(col_widths[h]))
+                return "  ".join(parts)
+            
+            display_table(scenes, headers, format_func=format_row)
+        else:
+            headers = ['file', 'word_count', 'pov_character']
+            display_table(scenes, headers)
     
     print()
 

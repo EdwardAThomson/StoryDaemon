@@ -61,10 +61,11 @@ def get_status_info(project_dir: Path, state: dict) -> dict:
             loops = data.get('loops', [])
             loop_count = len([l for l in loops if l.get('status') == 'open'])
     
-    # Get last scene info
+    # Get last scene info and tension history
     last_scene_file = None
     last_scene_words = 0
     last_scene_time = None
+    tension_history = []
     
     if scene_count > 0:
         # Find highest numbered scene
@@ -75,6 +76,23 @@ def get_status_info(project_dir: Path, state: dict) -> dict:
             last_scene_time = datetime.fromtimestamp(
                 scene_files[-1].stat().st_mtime
             ).strftime('%Y-%m-%d %H:%M:%S')
+        
+        # Get tension history from scene metadata (Phase 7A.3)
+        from ...memory.manager import MemoryManager
+        memory = MemoryManager(project_dir)
+        all_scenes = memory.list_scenes()
+        
+        # Get last 10 scenes with tension data
+        recent_scenes = all_scenes[-10:] if len(all_scenes) > 10 else all_scenes
+        tension_history = [
+            {
+                'tick': s.tick,
+                'level': s.tension_level,
+                'category': s.tension_category
+            }
+            for s in recent_scenes
+            if hasattr(s, 'tension_level') and s.tension_level is not None
+        ]
     
     return {
         'novel_name': state.get('novel_name', 'Unknown'),
@@ -89,6 +107,7 @@ def get_status_info(project_dir: Path, state: dict) -> dict:
         'last_scene_file': last_scene_file,
         'last_scene_words': last_scene_words,
         'last_scene_time': last_scene_time,
+        'tension_history': tension_history,
         'created_at': format_timestamp(state.get('created_at', 'Unknown')),
         'last_updated': format_timestamp(state.get('last_updated', 'Unknown'))
     }
@@ -132,6 +151,36 @@ def display_status(info: dict, use_color: bool = True):
         print()
         print(f"{bold('Last Scene:')} {info['last_scene_file']} ({info['last_scene_words']:,} words)")
         print(f"{bold('Last Updated:')} {info['last_scene_time']}")
+    
+    # Display tension history (Phase 7A.3)
+    tension_history = info.get('tension_history', [])
+    if tension_history:
+        print()
+        print(f"⚡ {bold('Tension Pattern:')}")
+        
+        # Create a simple sparkline-style visualization
+        levels = [t['level'] for t in tension_history]
+        categories = [t['category'] for t in tension_history]
+        
+        # Visual bar chart
+        max_width = 20
+        bars = []
+        for level in levels:
+            bar_width = int((level / 10) * max_width)
+            bar = '█' * bar_width + '░' * (max_width - bar_width)
+            bars.append(f"{level:2d}/10 [{bar}]")
+        
+        # Show last 5 scenes
+        display_count = min(5, len(bars))
+        for i in range(-display_count, 0):
+            tick = tension_history[i]['tick']
+            category = tension_history[i]['category']
+            print(f"   Tick {tick:3d}: {bars[i]} ({category})")
+        
+        # Show progression
+        if len(categories) >= 2:
+            progression = ' → '.join(categories[-5:])
+            print(f"   Progression: {progression}")
     
     print(f"\n{bold('Created:')} {info['created_at']}")
     print()

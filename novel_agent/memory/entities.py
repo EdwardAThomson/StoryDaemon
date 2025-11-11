@@ -310,6 +310,10 @@ class Scene:
     open_loops_resolved: List[str] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
     
+    # NEW: Tension tracking (Phase 7A.3)
+    tension_level: Optional[int] = None  # 0-10 scale
+    tension_category: Optional[str] = None  # calm, rising, high, climactic
+    
     def __post_init__(self):
         """Set timestamp if not provided."""
         if not self.created_at:

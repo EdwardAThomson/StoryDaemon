@@ -12,6 +12,7 @@ StoryDaemon is a Python-based system that generates long-form fiction through an
 - 🎯 **Emergent Structure** - No pre-outlining; story develops organically
 - 📚 **Story Foundation** - Optional genre, premise, setting, tone to guide emergence
 - 🎯 **Goal Hierarchy** - Protagonist goals emerge naturally or can be user-specified
+- ⚡ **Tension Tracking** - Automatic scene tension scoring (0-10) for pacing awareness
 - 💰 **Zero Additional Cost** - Uses Codex CLI for GPT-5 access (included in subscription)
 - 🔧 **Tool-Based System** - Extensible tool registry for character generation, memory search, etc.
 - 🔍 **Rich Inspection Tools** - Status, list, inspect, goals commands for full project visibility
@@ -355,7 +356,12 @@ Project-specific configuration in `<project>/config.yaml`.
   - [x] User-specified primary goal support
   - [x] `novel goals` command to view hierarchy
   - [x] Tests for goal promotion logic
-- [ ] **7A.3: Tension Tracking** - Scene-level tension scoring
+- [x] **7A.3: Tension Tracking** - Scene-level tension scoring (0-10 scale)
+  - [x] TensionEvaluator with keyword/structure/emotion analysis
+  - [x] Configurable on/off via `enable_tension_tracking`
+  - [x] Tension history in planner context
+  - [x] Visualization in `novel status` and `novel list scenes`
+  - [x] Tests for tension evaluation
 - [ ] **7A.4: Lore Consistency** - World rules and constraint checking
 - [ ] **7A.5: Multi-Stage Prompts** - Foundation/goals in planning context
 

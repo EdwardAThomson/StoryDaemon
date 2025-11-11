@@ -25,6 +25,7 @@ DEFAULT_CONFIG = {
         'include_overall_summary': True,
         'enable_fact_extraction': True,
         'enable_entity_updates': True,
+        'enable_tension_tracking': True,  # Phase 7A.3: Track scene tension levels
     }
 }
 
