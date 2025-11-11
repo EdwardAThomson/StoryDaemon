@@ -230,9 +230,15 @@ class ContextBuilder:
         """Get recent tension history for context (Phase 7A.3).
         
         Returns:
-            Formatted tension history string
+            Formatted tension history string with pacing suggestions
         """
-        if not self.config.get('generation.enable_tension_tracking', True):
+        # Handle both Config object and plain dict
+        if isinstance(self.config, dict) and 'generation' in self.config:
+            enabled = self.config.get('generation', {}).get('enable_tension_tracking', True)
+        else:
+            enabled = self.config.get('generation.enable_tension_tracking', True)
+        
+        if not enabled:
             return ""
         
         # Get recent scene IDs
@@ -254,9 +260,41 @@ class ContextBuilder:
             return ""
         
         # Format tension progression
-        levels = [str(s.tension_level) for s in tension_scenes]
+        levels = [s.tension_level for s in tension_scenes]
         categories = [s.tension_category for s in tension_scenes]
         
         progression = ' → '.join(categories)
+        levels_str = ', '.join(str(l) for l in levels)
         
-        return f"Recent tension: [{', '.join(levels)}] ({progression})"
+        # Analyze pattern for gentle guidance
+        result = f"Recent tension: [{levels_str}] ({progression})\n"
+        
+        # Add contextual pacing notes (informational, not prescriptive)
+        if len(levels) >= 3:
+            avg_tension = sum(levels) / len(levels)
+            variance = max(levels) - min(levels)
+            
+            # Check for sustained high tension (priority check)
+            if avg_tension >= 7 and all(l >= 6 for l in levels[-3:]):
+                result += "\nNote: Tension has been high. Consider whether a brief respite would:\n"
+                result += "  - Allow character reflection and emotional processing\n"
+                result += "  - Build anticipation for the next major event\n"
+                result += "  - Provide contrast to make future tension more impactful\n"
+            
+            # Check for sustained low tension (priority check)
+            elif avg_tension <= 3 and all(l <= 4 for l in levels[-3:]):
+                result += "\nNote: Tension has been low. Consider whether the story needs:\n"
+                result += "  - Rising stakes or complications\n"
+                result += "  - Introduction of conflict or obstacles\n"
+                result += "  - Continued calm (if building toward something)\n"
+            
+            # Check for flatness (low variance) - only if not already caught above
+            elif variance <= 1 and len(levels) >= 4:
+                result += "\nNote: Tension has been steady. Consider whether the story would benefit from:\n"
+                result += "  - A calm moment (reflection, planning, character interaction)\n"
+                result += "  - A tension spike (revelation, confrontation, danger)\n"
+                result += "  - Continued current pacing (if appropriate for the narrative)\n"
+        
+        result += "\nThis is informational only - follow the natural story flow."
+        
+        return result

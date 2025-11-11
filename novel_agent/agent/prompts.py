@@ -19,7 +19,7 @@ Your task is to analyze the current story state and create a plan for the next s
 ### Open Story Loops
 {open_loops_list}
 
-### Tension Pattern
+### Tension Pattern (Pacing Awareness)
 {tension_history}
 
 ### Active Character Details
@@ -41,6 +41,7 @@ Create a plan for the next scene. Consider:
 2. What information do you need to write this scene effectively?
 3. Should new characters or locations be introduced?
 4. How should relationships evolve?
+5. What pacing would serve the story best? (Review tension pattern above for context)
 
 ## Output Format
 

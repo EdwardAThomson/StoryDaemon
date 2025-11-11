@@ -388,8 +388,36 @@ All Phase 7A.1-7A.3 features working seamlessly in production:
 - ✅ Story Foundation provides guidance without restriction
 - ✅ Goal Hierarchy ready for emergence (tick 10-15)
 - ✅ Tension Tracking accurately reflects narrative pacing
+- ✅ **Enhanced:** Tension guidance system provides gentle pacing suggestions
 
 **Status: PRODUCTION READY** 🎉
+
+### Tension Guidance Enhancement
+
+After initial testing revealed tension could plateau (e.g., oscillating 5-6 indefinitely), we added **gentle pacing awareness** to the planner context:
+
+**Triggers:**
+- **Steady tension** (variance ≤ 1 over 4+ scenes): Suggests calm moment, tension spike, or continued pacing
+- **Sustained high** (avg ≥ 7, all recent ≥ 6): Suggests respite for reflection and anticipation
+- **Sustained low** (avg ≤ 3, all recent ≤ 4): Suggests rising stakes or conflict introduction
+
+**Example Output:**
+```
+Recent tension: [6, 5, 6, 5] (rising → rising → rising → rising)
+
+Note: Tension has been steady. Consider whether the story would benefit from:
+  - A calm moment (reflection, planning, character interaction)
+  - A tension spike (revelation, confrontation, danger)
+  - Continued current pacing (if appropriate for the narrative)
+
+This is informational only - follow the natural story flow.
+```
+
+**Key Design Principles:**
+- ✅ Informational, not prescriptive
+- ✅ Offers options, doesn't mandate
+- ✅ Maintains emergent philosophy
+- ✅ Prevents prolonged monotony while allowing intentional steadiness
 
 ---
 

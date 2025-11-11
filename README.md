@@ -388,9 +388,10 @@ Project-specific configuration in `<project>/config.yaml`.
 - [x] **7A.3: Tension Tracking** - Scene-level tension scoring (0-10 scale) ✅ **TESTED IN PRODUCTION**
   - [x] TensionEvaluator with keyword/structure/emotion analysis
   - [x] Configurable on/off via `enable_tension_tracking`
-  - [x] Tension history in planner context
+  - [x] Tension history in planner context with gentle pacing guidance
+  - [x] Adaptive suggestions (steady/high/low tension patterns)
   - [x] Visualization in `novel status` and `novel list scenes`
-  - [x] Tests for tension evaluation
+  - [x] Tests for tension evaluation and guidance
   - [x] Real-world story generation test (5 scenes, accurate scoring)
 - [ ] **7A.4: Lore Consistency** - World rules and constraint checking
 - [ ] **7A.5: Multi-Stage Prompts** - Foundation/goals in planning context
@@ -421,7 +422,9 @@ python tests/manual_tension_test.py
 
 ### Test Coverage
 
-- **Unit Tests:** 15 tests for tension evaluation (keyword analysis, structure, emotion, config)
+- **Unit Tests:** 22 tests for tension evaluation and guidance
+  - 15 tests for tension evaluation (keyword analysis, structure, emotion, config)
+  - 7 tests for tension guidance (steady/high/low patterns, config handling)
 - **Integration Tests:** 10 tests for end-to-end tension tracking in story generation
 - **Manual Tests:** 4 comprehensive test suites with real scene generation
 - **Production Test:** Successfully generated 5-scene story with accurate tension scoring
