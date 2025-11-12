@@ -190,6 +190,7 @@ StoryDaemon/
 │   │   └── commands/           # CLI commands
 │   │       ├── status.py       # Status command
 │   │       ├── goals.py        # Goals command
+│   │       ├── lore.py         # Lore command
 │   │       ├── list.py         # List commands
 │   │       ├── inspect.py      # Inspect command
 │   │       ├── plan.py         # Plan preview

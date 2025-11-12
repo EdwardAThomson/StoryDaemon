@@ -487,19 +487,19 @@ Create a plan for the next scene that:
 
 ## Implementation Phases
 
-### Phase 7A.1: Story Foundation (Week 1)
+### Phase 7A.1: Story Foundation (Week 1) ✅ COMPLETE
 
 **Goal:** Add foundational constraints at project creation
 
 **Tasks:**
-- [ ] Create `novel_agent/cli/foundation.py` with prompting and file loading functions
-- [ ] Enhance `novel new` command with `--interactive` flag
-- [ ] Add `--foundation <file>` flag to load from YAML file
-- [ ] Add command-line flags for genre, premise, protagonist, setting, tone
-- [ ] Update `create_novel_project()` to accept and store foundation
-- [ ] Add `story_foundation` section to `state.json`
-- [ ] Add foundation display to `novel status` command
-- [ ] Write tests for foundation prompting, file loading, and validation
+- [x] Create `novel_agent/cli/foundation.py` with prompting and file loading functions
+- [x] Enhance `novel new` command with `--interactive` flag
+- [x] Add `--foundation <file>` flag to load from YAML file
+- [x] Add command-line flags for genre, premise, protagonist, setting, tone
+- [x] Update `create_novel_project()` to accept and store foundation
+- [x] Add `story_foundation` section to `state.json`
+- [x] Add foundation display to `novel status` command
+- [x] Write tests for foundation prompting, file loading, and validation
 
 **Deliverables:**
 - ✅ `novel new --interactive` prompts for story foundation
@@ -511,18 +511,18 @@ Create a plan for the next scene that:
 
 ---
 
-### Phase 7A.2: Goal Hierarchy (Week 2)
+### Phase 7A.2: Goal Hierarchy (Week 2) ✅ COMPLETE
 
 **Goal:** Track protagonist goals and auto-promote story goal
 
 **Tasks:**
-- [ ] Enhance `Character` dataclass with goal fields (`immediate_goals`, `arc_goal`)
-- [ ] Enhance `OpenLoop` dataclass with tracking fields (`mentions_count`, `last_mentioned_tick`)
-- [ ] Add `story_goals` section to `state.json`
-- [ ] Implement `check_goal_promotion()` in `StoryAgent`
-- [ ] Add goal tracking to fact extractor
-- [ ] Create `novel goals` command to view hierarchy
-- [ ] Write tests for goal promotion logic
+- [x] Enhance `Character` dataclass with goal fields (`immediate_goals`, `arc_goal`)
+- [x] Enhance `OpenLoop` dataclass with tracking fields (`scenes_mentioned`, `last_mentioned_tick`)
+- [x] Add `story_goals` section to `state.json`
+- [x] Implement `check_goal_promotion()` in `StoryAgent`
+- [x] Add goal tracking to fact extractor
+- [x] Create `novel goals` command to view hierarchy
+- [x] Write tests for goal promotion logic
 
 **Deliverables:**
 - ✅ Characters track immediate, arc, and story goals
@@ -533,18 +533,18 @@ Create a plan for the next scene that:
 
 ---
 
-### Phase 7A.3: Tension Tracking (Week 3)
+### Phase 7A.3: Tension Tracking (Week 3) ✅ COMPLETE
 
 **Goal:** Track and guide story pacing automatically
 
 **Tasks:**
-- [ ] Create `novel_agent/agent/dynamics_tracker.py`
-- [ ] Add `story_dynamics` to `state.json`
-- [ ] Implement tension analysis from scene summaries (keyword-based)
-- [ ] Implement pacing calculation from tension history
-- [ ] Create `novel dynamics` command
-- [ ] Add tension visualization to `novel status`
-- [ ] Write tests for dynamics tracking
+- [x] Create `novel_agent/agent/dynamics_tracker.py`
+- [x] Add `story_dynamics` to `state.json`
+- [x] Implement tension analysis from scene summaries (keyword-based)
+- [x] Implement pacing calculation from tension history
+- [x] Create `novel dynamics` command
+- [x] Add tension visualization to `novel status`
+- [x] Write tests for dynamics tracking
 
 **Deliverables:**
 - ✅ System tracks tension level (1-10)
@@ -1103,27 +1103,27 @@ Once the basic multi-stage system is working:
 
 Phase 7A is complete when all sub-phases are done:
 
-**Phase 7A.1: Story Foundation**
-- [ ] `novel new --interactive` prompts for and stores story foundation
-- [ ] `novel new --foundation file.yaml` loads foundation from YAML file
-- [ ] Foundation visible in `novel status`
+**Phase 7A.1: Story Foundation** ✅ COMPLETE
+- [x] `novel new --interactive` prompts for and stores story foundation
+- [x] `novel new --foundation file.yaml` loads foundation from YAML file
+- [x] Foundation visible in `novel status`
 
-**Phase 7A.2: Goal Hierarchy**
-- [ ] Characters track immediate, arc, and story goals
-- [ ] Story goal emerges automatically after 10-15 scenes
-- [ ] `novel goals` shows goal hierarchy and progress
+**Phase 7A.2: Goal Hierarchy** ✅ COMPLETE
+- [x] Characters track immediate, arc, and story goals
+- [x] Story goal emerges automatically after 10-15 scenes
+- [x] `novel goals` shows goal hierarchy and progress
 
-**Phase 7A.3: Tension Tracking**
-- [ ] System tracks tension level (1-10) after each scene
-- [ ] `novel dynamics` shows tension graph
-- [ ] Pacing detection working (slow/steady/accelerating/climactic)
+**Phase 7A.3: Tension Tracking** ✅ COMPLETE
+- [x] System tracks tension level (1-10) after each scene
+- [x] `novel dynamics` shows tension graph
+- [x] Pacing detection working (slow/steady/accelerating/climactic)
 
-**Phase 7A.4: Lore Consistency**
-- [ ] World rules tracked and indexed in vector store
-- [ ] `novel lore` lists established world rules
-- [ ] Basic contradiction detection working
+**Phase 7A.4: Lore Consistency** ✅ COMPLETE
+- [x] World rules tracked and indexed in vector store
+- [x] `novel lore` lists established world rules
+- [x] Basic contradiction detection working
 
-**Phase 7A.5: Multi-Stage Prompts**
+**Phase 7A.5: Multi-Stage Prompts** 🚧 NEXT
 - [ ] Multi-stage planner replaces single-stage planner
 - [ ] Stage 1: Strategic planning (foundation + state → intention)
 - [ ] Stage 2: Semantic context selection (vector search)
@@ -1133,10 +1133,10 @@ Phase 7A is complete when all sub-phases are done:
 - [ ] Semantic filtering for scenes, loops, and lore
 
 **Overall:**
-- [ ] All features have unit tests
-- [ ] Integration tests pass
-- [ ] Documentation is complete
-- [ ] Performance acceptable (< 5s per tick)
+- [x] All features have unit tests (Phases 7A.1-7A.4)
+- [x] Integration tests pass (Phases 7A.1-7A.4)
+- [x] Documentation is complete (Phases 7A.1-7A.4)
+- [x] Performance acceptable (< 5s per tick)
 
 ---
 
@@ -1159,9 +1159,41 @@ Phase 7A is complete when all sub-phases are done:
 
 ---
 
+## Recent Improvements (November 2025)
+
+### Character Name Structure Enhancement
+
+**Date:** November 12, 2025
+
+Split character names into separate fields for more natural prose:
+
+**Changes:**
+- `Character.name` → `first_name`, `family_name`, `title`
+- `Character.aliases` → `nicknames`
+- Added properties: `full_name`, `display_name`, `name` (backward compatible)
+- Migration support in `from_dict()` for old format
+- Updated character generation tool to use split fields
+- Updated vector store indexing for better search
+
+**Benefits:**
+- More natural prose (use first names in scenes)
+- Better character indexing/search
+- Support for titles (Dr., Captain, Lord, etc.)
+- Separate nicknames field
+- Backward compatibility maintained
+
+**Files Modified:**
+- `novel_agent/memory/entities.py` - Character dataclass
+- `novel_agent/tools/memory_tools.py` - Character generation
+- `novel_agent/memory/vector_store.py` - Indexing
+- All character-related tests updated
+
+---
+
 ## Related Documentation
 
 - [Implementation Plan](plan.md) - Overall project roadmap
 - [Phase 6 Complete](PHASE6_COMPLETE.md) - CLI enhancements
 - [Project Safety](project_safety_improvements.md) - UUID system
 - [Technical Specification](spec.md) - System architecture
+- [Phase 7A.4 Lore Tracking](../PHASE_7A4_LORE_TRACKING.md) - Lore consistency implementation
