@@ -20,6 +20,7 @@ from .entity_updater import EntityUpdater
 from .tension_evaluator import TensionEvaluator
 from .lore_extractor import LoreExtractor
 from .lore_contradiction_detector import LoreContradictionDetector
+from .multi_stage_planner import MultiStagePlanner
 from ..tools.registry import ToolRegistry
 from ..memory.manager import MemoryManager
 from ..memory.vector_store import VectorStore
@@ -48,7 +49,8 @@ class StoryAgent:
         project_path: Path,
         llm_interface,
         tool_registry: ToolRegistry,
-        config: dict
+        config: dict,
+        save_prompts: bool = False
     ):
         """Initialize story agent.
         
@@ -57,6 +59,7 @@ class StoryAgent:
             llm_interface: LLM interface (CodexInterface or similar)
             tool_registry: Registry of available tools
             config: Project configuration
+            save_prompts: Whether to save prompts to files (Phase 7A.5)
         """
         self.project_path = Path(project_path)
         self.llm = llm_interface
@@ -101,6 +104,20 @@ class StoryAgent:
         # Phase 7A.4 components
         self.lore_extractor = LoreExtractor(llm_interface, self.memory, config)
         self.lore_detector = LoreContradictionDetector(self.memory, self.vector, config)
+        
+        # Phase 7A.5 components (optional)
+        self.use_multi_stage = config.get('generation.use_multi_stage_planner', True)
+        if self.use_multi_stage:
+            prompts_dir = self.project_path / "prompts" if save_prompts else None
+            self.multi_stage_planner = MultiStagePlanner(
+                llm_interface,
+                self.memory,
+                self.vector,
+                self.tools,
+                config,
+                save_prompts=save_prompts,
+                prompts_dir=prompts_dir
+            )
         
         # Load state
         self.state = self._load_state()
@@ -229,7 +246,7 @@ class StoryAgent:
             print("   10. Updating entities...")
             update_stats = {}
             if facts:  # Only update if extraction succeeded
-                update_stats = self.entity_updater.apply_updates(facts, tick, scene_id)
+                update_stats = self.entity_updater.apply_updates(facts, tick, scene_id, writer_context)
                 
                 # Step 11: Re-index updated entities (Phase 5)
                 print("   11. Syncing vector database...")
@@ -274,6 +291,10 @@ class StoryAgent:
                     "level": tension_result['tension_level'],
                     "category": tension_result['tension_category']
                 }
+            
+            # Include multi-stage planner stats if available (Phase 7A.5)
+            if self.use_multi_stage and hasattr(self.multi_stage_planner, 'stage_stats'):
+                result["stage_stats"] = self.multi_stage_planner.stage_stats
             
             return result
         
@@ -397,7 +418,7 @@ class StoryAgent:
             print("   12. Updating entities...")
             update_stats = {}
             if facts:
-                update_stats = self.entity_updater.apply_updates(facts, tick, scene_id)
+                update_stats = self.entity_updater.apply_updates(facts, tick, scene_id, writer_context)
             
             # Step 14: Extract lore (Phase 7A.4)
             print("   13. Extracting lore...")
@@ -554,6 +575,11 @@ class StoryAgent:
         Raises:
             ValueError: If LLM response cannot be parsed
         """
+        # Use multi-stage planner if enabled (Phase 7A.5)
+        if self.use_multi_stage:
+            return self.multi_stage_planner.plan(self.state)
+        
+        # Otherwise use legacy single-stage planning
         # Format prompt
         prompt = format_planner_prompt(context)
         

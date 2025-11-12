@@ -32,6 +32,52 @@ from ..agent.agent import StoryAgent
 from .recent_projects import RecentProjects
 
 
+def _show_stage_stats(stats: dict):
+    """Display multi-stage planner statistics."""
+    typer.echo(f"\n📊 Multi-Stage Planning Stats:")
+    typer.echo(f"   Stage 1 (Strategic): {stats.get('stage1_tokens', 0)} tokens, {stats.get('stage1_time', 0):.2f}s")
+    typer.echo(f"   Stage 2 (Semantic): {stats.get('stage2_items', 0)} items, {stats.get('stage2_time', 0):.2f}s")
+    typer.echo(f"   Stage 3 (Tactical): {stats.get('stage3_tokens', 0)} tokens, {stats.get('stage3_time', 0):.2f}s")
+    total_time = stats.get('stage1_time', 0) + stats.get('stage2_time', 0) + stats.get('stage3_time', 0)
+    total_tokens = stats.get('stage1_tokens', 0) + stats.get('stage3_tokens', 0)
+    typer.echo(f"   Total: {total_tokens} tokens, {total_time:.2f}s")
+
+
+def _show_story_stats(project_dir: Path, state: dict):
+    """Display story statistics summary."""
+    from ..memory.manager import MemoryManager
+    
+    memory = MemoryManager(project_dir)
+    
+    # Count entities
+    scene_ids = memory.list_scenes()
+    all_chars = memory.list_characters()
+    all_locs = memory.list_locations()
+    all_loops = memory.load_open_loops()
+    all_lore = memory.load_all_lore()
+    
+    # Calculate total word count and tension from scene files
+    total_words = 0
+    tensions = []
+    for scene_id in scene_ids:
+        scene = memory.load_scene(scene_id)
+        if scene and scene.word_count:
+            total_words += scene.word_count
+        if scene and scene.tension_level is not None:
+            tensions.append(scene.tension_level)
+    
+    avg_tension = sum(tensions) / len(tensions) if tensions else 0
+    
+    typer.echo(f"\n📖 Story Stats:")
+    typer.echo(f"   Scenes: {len(scene_ids)} ({total_words:,} words)")
+    typer.echo(f"   Characters: {len(all_chars)}")
+    typer.echo(f"   Locations: {len(all_locs)}")
+    typer.echo(f"   Open Loops: {len(all_loops)}")
+    typer.echo(f"   Lore Items: {len(all_lore)}")
+    if tensions:
+        typer.echo(f"   Avg Tension: {avg_tension:.1f}/10")
+
+
 app = typer.Typer(
     name="novel",
     help="StoryDaemon - Agentic novel generation system",
@@ -159,6 +205,11 @@ def tick(
         "--project",
         "-p",
         help="Path to novel project (default: current directory)"
+    ),
+    save_prompts: bool = typer.Option(
+        False,
+        "--save-prompts",
+        help="Save prompts to prompts/ directory for inspection"
     )
 ):
     """Run one story generation tick.
@@ -186,6 +237,10 @@ def tick(
         
         # Load config
         config = get_project_config(project_dir)
+        
+        # Show prompt saving status
+        if save_prompts:
+            typer.echo(f"   💾 Saving prompts to: {project_dir}/prompts/")
         
         current_tick = state['current_tick']
         typer.echo(f"   Current tick: {current_tick}")
@@ -225,7 +280,7 @@ def tick(
         
         # Create agent
         typer.echo(f"🤖 Initializing story agent...")
-        agent = StoryAgent(project_dir, llm, tool_registry, config)
+        agent = StoryAgent(project_dir, llm, tool_registry, config, save_prompts=save_prompts)
         
         # Execute tick
         typer.echo(f"\n⚙️  Executing tick {current_tick}...")
@@ -260,6 +315,13 @@ def tick(
                 typer.echo(f"      - {warning}")
         
         typer.echo(f"\n   ⏭️  Next tick: {current_tick + 1}")
+        
+        # Show multi-stage planner stats if available (Phase 7A.5)
+        if result.get('stage_stats'):
+            _show_stage_stats(result['stage_stats'])
+        
+        # Show story stats summary
+        _show_story_stats(project_dir, state)
         
     except RuntimeError as e:
         # Tool execution error - details saved to /errors/
