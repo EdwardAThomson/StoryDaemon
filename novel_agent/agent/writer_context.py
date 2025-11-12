@@ -94,7 +94,7 @@ class WriterContextBuilder:
             return character_id, f"Character {character_id} not found."
         
         # Format character details
-        details = f"**Name:** {character.name}\n"
+        details = f"**Name:** {character.display_name} (full name: {character.full_name})\n"
         details += f"**ID:** {character.id}\n\n"
         
         if character.description:
@@ -109,7 +109,7 @@ class WriterContextBuilder:
         if character.current_state.goals:
             details += f"**Goals:** {', '.join(character.current_state.goals)}\n\n"
         
-        return character.name, details.strip()
+        return character.display_name, details.strip()
     
     def _get_location_details(self, location_id: Optional[str]) -> tuple[str, str]:
         """Get location name and formatted details.

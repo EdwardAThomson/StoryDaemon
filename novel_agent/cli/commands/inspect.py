@@ -65,7 +65,20 @@ def display_character(data: Dict[str, Any], filepath: Path, history_limit: int =
     """
     print(f"\n🔍 Inspecting Character: {data.get('id', 'Unknown')}\n")
     
-    print(f"Name: {data.get('name', 'Unknown')}")
+    # Build full name from components (backward compatible)
+    if 'first_name' in data or 'family_name' in data:
+        name_parts = []
+        if data.get('title'):
+            name_parts.append(data['title'])
+        if data.get('first_name'):
+            name_parts.append(data['first_name'])
+        if data.get('family_name'):
+            name_parts.append(data['family_name'])
+        name = ' '.join(name_parts) if name_parts else 'Unknown'
+    else:
+        name = data.get('name', 'Unknown')
+    
+    print(f"Name: {name}")
     print(f"Type: {data.get('type', 'Unknown')}")
     print(f"Role: {data.get('role', 'Unknown')}")
     

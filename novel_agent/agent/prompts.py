@@ -119,9 +119,11 @@ Write a scene passage from {pov_character_name}'s deep POV.{scene_length_guidanc
 
 **CRITICAL RULES:**
 
-1. **Use exact character name** - The POV character is named "{pov_character_name}" - use this exact name, do not invent nicknames or alternate names
+1. **Use character name naturally** - The POV character is "{pov_character_name}" - use this name in prose
    - NEVER use placeholder formats like "char_name" or "character_name"
-   - ALWAYS use the actual name: "{pov_character_name}"
+   - Use "{pov_character_name}" when introducing the character or for clarity
+   - After introduction, you can vary between the name and pronouns naturally
+   - NEVER invent nicknames or alternate names not provided
 2. **Third-person POV** - Write in third person using "{pov_character_name}" or pronouns (he/she)
    - NEVER use first person ("I", "my", "me") unless in dialogue
    - Example: "{pov_character_name} pressed a palm against..." NOT "I pressed my palm against..."

@@ -452,7 +452,9 @@ class MemoryManager:
         Returns:
             New lore ID (e.g., "L001")
         """
-        self.counters["lore"] += 1
+        # Handle missing lore counter (backward compatibility)
+        current = self.counters.get("lore", 0)
+        self.counters["lore"] = current + 1
         self._save_counters()
         return f"L{self.counters['lore']:03d}"
     

@@ -157,7 +157,8 @@ class LoreExtractor:
         pov_char = self.memory.load_character(pov_char_id) if pov_char_id else None
         location = self.memory.load_location(location_id) if location_id else None
         
-        pov_char_name = pov_char.name if pov_char else "Unknown"
+        # Use display name for natural reference in lore extraction
+        pov_char_name = pov_char.display_name if pov_char else "Unknown"
         location_name = location.name if location else "Unknown"
         
         return LORE_EXTRACTION_PROMPT.format(
