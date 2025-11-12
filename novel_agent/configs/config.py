@@ -26,6 +26,10 @@ DEFAULT_CONFIG = {
         'enable_fact_extraction': True,
         'enable_entity_updates': True,
         'enable_tension_tracking': True,  # Phase 7A.3: Track scene tension levels
+        'enable_lore_tracking': True,  # Phase 7A.4: Track world rules and lore
+    },
+    'lore': {
+        'contradiction_threshold': 0.5,  # Similarity threshold for flagging contradictions (0.0-2.0)
     }
 }
 

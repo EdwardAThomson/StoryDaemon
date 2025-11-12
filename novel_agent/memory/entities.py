@@ -425,3 +425,38 @@ class RelationshipGraph:
         elif character_id == self.character_b:
             return self.perspective_b
         return None
+
+
+@dataclass
+class Lore:
+    """World rule or lore fact (Phase 7A.4).
+    
+    Tracks established world rules, constraints, and facts to maintain
+    internal consistency across the emergent narrative.
+    """
+    id: str
+    type: str = "lore"
+    lore_type: str = ""  # "rule", "fact", "constraint", "capability", "limitation"
+    content: str = ""  # The actual lore statement
+    category: str = ""  # "magic", "technology", "society", "physics", "biology", etc.
+    source_scene_id: str = ""  # Scene where this was established
+    tick: int = 0
+    importance: str = "normal"  # "critical", "important", "normal", "minor"
+    tags: List[str] = field(default_factory=list)  # For categorization
+    related_lore: List[str] = field(default_factory=list)  # IDs of related lore
+    potential_contradictions: List[str] = field(default_factory=list)  # IDs of potentially conflicting lore
+    created_at: str = ""
+    
+    def __post_init__(self):
+        """Set created_at if not provided."""
+        if not self.created_at:
+            self.created_at = datetime.utcnow().isoformat() + "Z"
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        return asdict(self)
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "Lore":
+        """Create from dictionary."""
+        return cls(**data)

@@ -6,7 +6,7 @@ from typing import List, Dict, Any, Optional, Union
 from datetime import datetime
 
 from .entities import (
-    Character, Location, Scene, OpenLoop, RelationshipGraph,
+    Character, Location, Scene, OpenLoop, RelationshipGraph, Lore,
     HistoryEntry, RelationshipHistoryEntry
 )
 
@@ -27,6 +27,7 @@ class MemoryManager:
         self.scenes_path = self.memory_path / "scenes"
         self.open_loops_file = self.memory_path / "open_loops.json"
         self.relationships_file = self.memory_path / "relationships.json"
+        self.lore_file = self.memory_path / "lore.json"
         self.counters_file = self.memory_path / "counters.json"
         
         self._ensure_directories()
@@ -46,13 +47,17 @@ class MemoryManager:
         if not self.relationships_file.exists():
             self._write_json(self.relationships_file, {"relationships": []})
         
+        if not self.lore_file.exists():
+            self._write_json(self.lore_file, {"lore": []})
+        
         if not self.counters_file.exists():
             self._write_json(self.counters_file, {
                 "character": 0,
                 "location": 0,
                 "scene": 0,
                 "open_loop": 0,
-                "relationship": 0
+                "relationship": 0,
+                "lore": 0
             })
     
     def _load_counters(self):
@@ -436,3 +441,99 @@ class MemoryManager:
             state = json.load(f)
         
         return state.get("active_character")
+    
+    # ========================================================================
+    # Lore Management (Phase 7A.4)
+    # ========================================================================
+    
+    def generate_lore_id(self) -> str:
+        """Generate a new lore ID.
+        
+        Returns:
+            New lore ID (e.g., "L001")
+        """
+        self.counters["lore"] += 1
+        self._save_counters()
+        return f"L{self.counters['lore']:03d}"
+    
+    def save_lore(self, lore: Lore):
+        """Save a lore entry.
+        
+        Args:
+            lore: Lore object to save
+        """
+        lore_list = self.load_all_lore()
+        
+        # Update existing or append new
+        found = False
+        for i, existing in enumerate(lore_list):
+            if existing.id == lore.id:
+                lore_list[i] = lore
+                found = True
+                break
+        
+        if not found:
+            lore_list.append(lore)
+        
+        # Save to file
+        data = {"lore": [l.to_dict() for l in lore_list]}
+        self._write_json(self.lore_file, data)
+    
+    def load_lore(self, lore_id: str) -> Optional[Lore]:
+        """Load a specific lore entry.
+        
+        Args:
+            lore_id: Lore ID to load
+            
+        Returns:
+            Lore object or None if not found
+        """
+        lore_list = self.load_all_lore()
+        for lore in lore_list:
+            if lore.id == lore_id:
+                return lore
+        return None
+    
+    def load_all_lore(self) -> List[Lore]:
+        """Load all lore entries.
+        
+        Returns:
+            List of Lore objects
+        """
+        data = self._read_json(self.lore_file)
+        return [Lore.from_dict(l) for l in data.get("lore", [])]
+    
+    def list_lore_by_category(self, category: str) -> List[Lore]:
+        """List lore entries by category.
+        
+        Args:
+            category: Category to filter by
+            
+        Returns:
+            List of Lore objects in that category
+        """
+        all_lore = self.load_all_lore()
+        return [l for l in all_lore if l.category.lower() == category.lower()]
+    
+    def list_lore_by_type(self, lore_type: str) -> List[Lore]:
+        """List lore entries by type.
+        
+        Args:
+            lore_type: Type to filter by (rule, fact, constraint, etc.)
+            
+        Returns:
+            List of Lore objects of that type
+        """
+        all_lore = self.load_all_lore()
+        return [l for l in all_lore if l.lore_type.lower() == lore_type.lower()]
+    
+    def delete_lore(self, lore_id: str):
+        """Delete a lore entry.
+        
+        Args:
+            lore_id: Lore ID to delete
+        """
+        lore_list = self.load_all_lore()
+        lore_list = [l for l in lore_list if l.id != lore_id]
+        data = {"lore": [l.to_dict() for l in lore_list]}
+        self._write_json(self.lore_file, data)

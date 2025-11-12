@@ -659,6 +659,90 @@ def goals(
 
 
 @app.command()
+def lore(
+    project: Optional[str] = typer.Option(
+        None,
+        "--project",
+        "-p",
+        help="Path to novel project"
+    ),
+    group_by: str = typer.Option(
+        "category",
+        "--group-by",
+        "-g",
+        help="Group by: category, type, or none"
+    ),
+    category: Optional[str] = typer.Option(
+        None,
+        "--category",
+        "-c",
+        help="Filter by category"
+    ),
+    lore_type: Optional[str] = typer.Option(
+        None,
+        "--type",
+        "-t",
+        help="Filter by type (rule, fact, constraint, capability, limitation)"
+    ),
+    importance: Optional[str] = typer.Option(
+        None,
+        "--importance",
+        "-i",
+        help="Filter by importance (critical, important, normal, minor)"
+    ),
+    stats: bool = typer.Option(
+        False,
+        "--stats",
+        "-s",
+        help="Show statistics only"
+    ),
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help="Output as JSON"
+    )
+):
+    """Show world lore and rules (Phase 7A.4).
+    
+    Displays established world rules, constraints, and facts extracted
+    from scenes. Helps maintain consistency and track world-building.
+    
+    Examples:
+        novel lore                           # Show all lore grouped by category
+        novel lore --group-by type           # Group by type instead
+        novel lore --category magic          # Show only magic lore
+        novel lore --importance critical     # Show only critical lore
+        novel lore --stats                   # Show statistics
+        novel lore --json                    # JSON output
+    """
+    from .commands.lore import (
+        get_lore_info, display_lore, display_lore_json, display_lore_stats
+    )
+    
+    try:
+        project_dir = Path(find_project_dir(project))
+        
+        info = get_lore_info(project_dir)
+        
+        if json_output:
+            display_lore_json(info)
+        elif stats:
+            display_lore_stats(info)
+        else:
+            display_lore(
+                info,
+                group_by=group_by,
+                filter_category=category,
+                filter_type=lore_type,
+                filter_importance=importance
+            )
+        
+    except ValueError as e:
+        typer.echo(f"❌ Error: {e}", err=True)
+        raise typer.Exit(1)
+
+
+@app.command()
 def compile(
     project: Optional[str] = typer.Option(
         None,

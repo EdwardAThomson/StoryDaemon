@@ -5,7 +5,7 @@ from typing import List, Dict, Any, Optional
 import chromadb
 from chromadb.config import Settings
 
-from .entities import Character, Location, Scene
+from .entities import Character, Location, Scene, Lore
 
 
 class VectorStore:
@@ -39,6 +39,10 @@ class VectorStore:
         self.scenes_collection = self.client.get_or_create_collection(
             name="scenes",
             metadata={"description": "Scene summaries"}
+        )
+        self.lore_collection = self.client.get_or_create_collection(
+            name="lore",
+            metadata={"description": "World rules and lore (Phase 7A.4)"}
         )
     
     # ========================================================================
@@ -297,5 +301,110 @@ class VectorStore:
         return {
             "characters": self.characters_collection.count(),
             "locations": self.locations_collection.count(),
-            "scenes": self.scenes_collection.count()
+            "scenes": self.scenes_collection.count(),
+            "lore": self.lore_collection.count()
         }
+    
+    # ========================================================================
+    # Lore Methods (Phase 7A.4)
+    # ========================================================================
+    
+    def index_lore(self, lore: Lore):
+        """Add or update lore in vector index (Phase 7A.4).
+        
+        Args:
+            lore: Lore entity to index
+        """
+        # Build searchable text from lore attributes
+        text_parts = [
+            f"Type: {lore.lore_type}",
+            f"Category: {lore.category}",
+            f"Content: {lore.content}",
+            f"Tags: {', '.join(lore.tags)}" if lore.tags else "",
+            f"Importance: {lore.importance}"
+        ]
+        
+        searchable_text = "\n".join([p for p in text_parts if p])
+        
+        # Prepare metadata
+        metadata = {
+            "type": "lore",
+            "lore_type": lore.lore_type,
+            "category": lore.category,
+            "importance": lore.importance,
+            "source_scene": lore.source_scene_id,
+            "tick": lore.tick
+        }
+        
+        # Upsert to collection
+        self.lore_collection.upsert(
+            ids=[lore.id],
+            documents=[searchable_text],
+            metadatas=[metadata]
+        )
+    
+    def search_lore(
+        self,
+        query: str,
+        n_results: int = 5,
+        category: Optional[str] = None,
+        lore_type: Optional[str] = None,
+        importance: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Search for relevant lore (Phase 7A.4).
+        
+        Args:
+            query: Search query
+            n_results: Number of results to return
+            category: Optional category filter
+            lore_type: Optional type filter
+            importance: Optional importance filter
+        
+        Returns:
+            List of lore search results with metadata
+        """
+        # Build where filter
+        where = {}
+        if category:
+            where["category"] = category
+        if lore_type:
+            where["lore_type"] = lore_type
+        if importance:
+            where["importance"] = importance
+        
+        # Search
+        results = self.lore_collection.query(
+            query_texts=[query],
+            n_results=n_results,
+            where=where if where else None
+        )
+        
+        # Format results
+        formatted_results = []
+        if results and results['ids'] and results['ids'][0]:
+            for i, lore_id in enumerate(results['ids'][0]):
+                formatted_results.append({
+                    "id": lore_id,
+                    "distance": results['distances'][0][i] if 'distances' in results else None,
+                    "metadata": results['metadatas'][0][i] if 'metadatas' in results else {},
+                    "document": results['documents'][0][i] if 'documents' in results else ""
+                })
+        
+        return formatted_results
+    
+    def find_similar_lore(self, lore: Lore, n_results: int = 5) -> List[Dict[str, Any]]:
+        """Find lore similar to the given lore (for contradiction detection).
+        
+        Args:
+            lore: Lore entity to find similar items for
+            n_results: Number of results to return
+        
+        Returns:
+            List of similar lore items
+        """
+        # Use the lore content as query
+        return self.search_lore(
+            query=lore.content,
+            n_results=n_results + 1,  # +1 because it might return itself
+            category=lore.category  # Search within same category
+        )

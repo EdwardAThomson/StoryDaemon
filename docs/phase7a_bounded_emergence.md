@@ -555,23 +555,31 @@ Create a plan for the next scene that:
 
 ---
 
-### Phase 7A.4: Lore Consistency (Week 4)
+### Phase 7A.4: Lore Consistency (Week 4) ✅ COMPLETE
 
 **Goal:** Track and enforce world rules
 
 **Tasks:**
-- [ ] Create `Lore` dataclass in `entities.py`
-- [ ] Add lore collection to `VectorStore`
-- [ ] Extract lore facts during scene commit (LLM-based)
-- [ ] Index lore in vector store for semantic search
-- [ ] Create `novel lore` command to list world rules
-- [ ] Add lore contradiction detection (basic)
-- [ ] Write tests for lore tracking
+- [x] Create `Lore` dataclass in `entities.py`
+- [x] Add lore collection to `VectorStore`
+- [x] Extract lore facts during scene commit (LLM-based)
+- [x] Index lore in vector store for semantic search
+- [x] Create `novel lore` command to list world rules
+- [x] Add lore contradiction detection (basic)
+- [x] Write tests for lore tracking
 
 **Deliverables:**
 - ✅ World rules tracked and indexed in vector store
-- ✅ `novel lore` lists established world rules
-- ✅ Basic contradiction detection
+- ✅ `novel lore` lists established world rules with filtering
+- ✅ Basic contradiction detection using semantic similarity
+- ✅ 12 unit tests covering all lore operations
+
+**Implementation Details:**
+- **Lore Extraction:** LLM-based extraction identifies rules, constraints, facts, capabilities, and limitations
+- **Categories:** magic, technology, society, geography, biology, physics, other
+- **Importance Levels:** critical, important, normal, minor
+- **Contradiction Detection:** Semantic similarity threshold (default 0.5) flags potential conflicts
+- **CLI Features:** Group by category/type, filter by category/type/importance, statistics view, JSON output
 
 **Note:** Semantic lore retrieval happens in Phase 7A.5 (Multi-Stage Prompts)
 

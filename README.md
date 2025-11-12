@@ -120,7 +120,8 @@ StoryDaemon uses a **story tick loop** where each tick produces one scene passag
 6. **Evaluate Tension** - Analyze scene tension (0-10 scale) for pacing awareness
 7. **Commit** - Save scene and update memory
 8. **Extract Facts** - Update character/location state from scene content
-9. **Check Goals** - Promote story goals when conditions are met
+9. **Extract Lore** - Identify world rules, constraints, and capabilities
+10. **Check Goals** - Promote story goals when conditions are met
 
 ### Real-World Example
 
@@ -157,6 +158,7 @@ Each novel maintains its own working directory with:
 - **Scenes** - Scene metadata and summaries
 - **Open Loops** - Unresolved narrative threads with mention tracking
 - **Goal Hierarchy** - Protagonist immediate/arc/story goals with progress tracking
+- **Lore** - World rules, constraints, and capabilities with contradiction detection
 - **Vector Index** - Semantic search for context retrieval
 
 ## Project Structure
@@ -264,6 +266,9 @@ novel status [--json] [--project <path>]
 
 # Show goal hierarchy and protagonist goals
 novel goals [--json] [--project <path>]
+
+# Show world lore and rules
+novel lore [--group-by category|type|none] [--category <cat>] [--type <type>] [--importance <level>] [--stats] [--json] [--project <path>]
 
 # List entities
 novel list characters [-v] [--json] [--project <path>]
@@ -393,10 +398,17 @@ Project-specific configuration in `<project>/config.yaml`.
   - [x] Visualization in `novel status` and `novel list scenes`
   - [x] Tests for tension evaluation and guidance
   - [x] Real-world story generation test (5 scenes, accurate scoring)
-- [ ] **7A.4: Lore Consistency** - World rules and constraint checking
+- [x] **7A.4: Lore Consistency** - World rules and constraint checking ✅ **COMPLETE**
+  - [x] Lore dataclass with comprehensive fields
+  - [x] LLM-based extraction (rules, constraints, facts, capabilities, limitations)
+  - [x] VectorStore integration for semantic search
+  - [x] Contradiction detection using similarity threshold
+  - [x] `novel lore` command with filtering and grouping
+  - [x] 12 unit tests covering all operations
+  - [x] Configurable via `enable_lore_tracking`
 - [ ] **7A.5: Multi-Stage Prompts** - Foundation/goals in planning context
 
-**Phase 7A.1-7A.3 Status:** ✅ Production ready and tested with real story generation
+**Phase 7A.1-7A.4 Status:** ✅ Production ready with comprehensive test coverage
 
 **Phase 7B+:** See [docs/phase7a_bounded_emergence.md](docs/phase7a_bounded_emergence.md) for full roadmap.
 
@@ -416,20 +428,23 @@ pytest tests/unit/test_file_ops.py
 pytest tests/unit/test_tension_evaluator.py -v
 pytest tests/integration/test_tension_integration.py -v
 
+# Run lore tracking tests
+pytest tests/unit/test_lore_tracking.py -v
+
 # Run manual test suite (comprehensive verification)
 python tests/manual_tension_test.py
 ```
 
 ### Test Coverage
 
-- **Unit Tests:** 22 tests for tension evaluation and guidance
-  - 15 tests for tension evaluation (keyword analysis, structure, emotion, config)
-  - 7 tests for tension guidance (steady/high/low patterns, config handling)
+- **Unit Tests:** 34 total tests
+  - 22 tests for tension evaluation and guidance
+  - 12 tests for lore tracking (dataclass, persistence, vector search, contradictions)
 - **Integration Tests:** 10 tests for end-to-end tension tracking in story generation
 - **Manual Tests:** 4 comprehensive test suites with real scene generation
 - **Production Test:** Successfully generated 5-scene story with accurate tension scoring
 
-All Phase 7A.1-7A.3 features have been tested in real story generation and are production-ready.
+All Phase 7A.1-7A.4 features have comprehensive test coverage and are production-ready.
 
 ## Documentation
 

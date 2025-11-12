@@ -18,6 +18,8 @@ from .scene_committer import SceneCommitter
 from .fact_extractor import FactExtractor
 from .entity_updater import EntityUpdater
 from .tension_evaluator import TensionEvaluator
+from .lore_extractor import LoreExtractor
+from .lore_contradiction_detector import LoreContradictionDetector
 from ..tools.registry import ToolRegistry
 from ..memory.manager import MemoryManager
 from ..memory.vector_store import VectorStore
@@ -95,6 +97,10 @@ class StoryAgent:
         
         # Phase 7A.3 components
         self.tension_evaluator = TensionEvaluator(config)
+        
+        # Phase 7A.4 components
+        self.lore_extractor = LoreExtractor(llm_interface, self.memory, config)
+        self.lore_detector = LoreContradictionDetector(self.memory, self.vector, config)
         
         # Load state
         self.state = self._load_state()
@@ -229,11 +235,22 @@ class StoryAgent:
                 print("   11. Syncing vector database...")
                 self._reindex_updated_entities(facts)
             
-            # Step 12: Check for goal promotion (Phase 7A.2)
-            print("   12. Checking goal promotion...")
+            # Step 12: Extract lore (Phase 7A.4)
+            print("   12. Extracting lore...")
+            lore_items = self._extract_lore_with_retry(
+                scene_data["text"],
+                writer_context,
+                tick
+            )
+            if lore_items:
+                print(f"        Found {len(lore_items)} lore items")
+                self._save_lore_items(lore_items, scene_id, tick)
+            
+            # Step 13: Check for goal promotion (Phase 7A.2)
+            print("   13. Checking goal promotion...")
             promotion_result = self._check_goal_promotion(tick)
             
-            # Step 13: Update state
+            # Step 14: Update state
             self.state["current_tick"] += 1
             self._save_state()
             
@@ -382,8 +399,19 @@ class StoryAgent:
             if facts:
                 update_stats = self.entity_updater.apply_updates(facts, tick, scene_id)
             
-            # Step 14: Sync vector database
-            print("   13. Syncing vector database...")
+            # Step 14: Extract lore (Phase 7A.4)
+            print("   13. Extracting lore...")
+            lore_items = self._extract_lore_with_retry(
+                scene_data["text"],
+                writer_context,
+                tick
+            )
+            if lore_items:
+                print(f"        Found {len(lore_items)} lore items")
+                self._save_lore_items(lore_items, scene_id, tick)
+            
+            # Step 15: Sync vector database
+            print("   14. Syncing vector database...")
             self.vector.index_scene(self.memory.load_scene(scene_id))
             
             # Increment tick
@@ -739,3 +767,80 @@ class StoryAgent:
             'tick': tick,
             'mentions': top_loop.scenes_mentioned
         }
+    
+    def _extract_lore_with_retry(self, scene_text: str, scene_context: dict, tick: int) -> list:
+        """Extract lore with retry logic for graceful degradation (Phase 7A.4).
+        
+        Args:
+            scene_text: Scene prose text
+            scene_context: Scene context dictionary
+            tick: Current tick number
+        
+        Returns:
+            List of lore items or empty list on failure
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        try:
+            # First attempt
+            lore_items = self.lore_extractor.extract_lore(scene_text, scene_context, tick)
+            return lore_items
+            
+        except Exception as e:
+            logger.warning(f"Lore extraction failed: {e}")
+            
+            try:
+                # Retry once
+                logger.info("Retrying lore extraction...")
+                lore_items = self.lore_extractor.extract_lore(scene_text, scene_context, tick)
+                return lore_items
+                
+            except Exception as e2:
+                logger.error(f"Lore extraction failed after retry: {e2}")
+                # Return empty list on failure (graceful degradation)
+                return []
+    
+    def _save_lore_items(self, lore_items: list, scene_id: str, tick: int):
+        """Save extracted lore items to memory (Phase 7A.4).
+        
+        Args:
+            lore_items: List of lore item dictionaries
+            scene_id: Scene ID where lore was established
+            tick: Current tick number
+        """
+        from ..memory.entities import Lore
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        for item in lore_items:
+            try:
+                # Generate lore ID
+                lore_id = self.memory.generate_lore_id()
+                
+                # Create Lore object
+                lore = Lore(
+                    id=lore_id,
+                    lore_type=item.get('type', 'fact'),
+                    content=item.get('content', ''),
+                    category=item.get('category', 'other'),
+                    source_scene_id=scene_id,
+                    tick=tick,
+                    importance=item.get('importance', 'normal'),
+                    tags=item.get('tags', [])
+                )
+                
+                # Save to memory
+                self.memory.save_lore(lore)
+                
+                # Index in vector store for semantic search
+                self.vector.index_lore(lore)
+                
+                # Check for contradictions
+                self.lore_detector.update_contradictions(lore_id)
+                
+                logger.info(f"Saved lore {lore_id}: {lore.content[:50]}...")
+                
+            except Exception as e:
+                logger.error(f"Failed to save lore item: {e}")
+                continue
