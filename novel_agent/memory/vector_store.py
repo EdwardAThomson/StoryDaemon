@@ -57,8 +57,11 @@ class VectorStore:
         """
         # Build searchable text from character attributes
         text_parts = [
-            f"Name: {character.name}",
-            f"Aliases: {', '.join(character.aliases)}" if character.aliases else "",
+            f"Name: {character.full_name}",
+            f"First name: {character.first_name}",
+            f"Family name: {character.family_name}" if character.family_name else "",
+            f"Title: {character.title}" if character.title else "",
+            f"Nicknames: {', '.join(character.nicknames)}" if character.nicknames else "",
             f"Role: {character.role}",
             f"Description: {character.description}",
             f"Traits: {', '.join(character.personality.core_traits)}" if character.personality.core_traits else "",
@@ -73,7 +76,8 @@ class VectorStore:
         # Metadata for filtering
         metadata = {
             "entity_type": "character",
-            "name": character.name,
+            "name": character.full_name,
+            "first_name": character.first_name,
             "role": character.role,
             "updated_at": character.updated_at
         }

@@ -7,7 +7,8 @@ def test_character_goal_fields():
     """Test that Character has new goal fields."""
     char = Character(
         id="C0",
-        name="Test Character",
+        first_name="Test",
+        family_name="Character",
         immediate_goals=["Fix antenna", "Avoid detection"],
         arc_goal="Learn to trust others",
         story_goal="Make contact with aliens"
@@ -25,7 +26,8 @@ def test_character_goal_tracking():
     """Test character goal tracking fields."""
     char = Character(
         id="C0",
-        name="Test Character",
+        first_name="Test",
+        family_name="Character",
         goal_progress={"Fix antenna": 0.75, "Learn to trust": 0.3},
         goals_completed=["Repair suit", "Find shelter"],
         goals_abandoned=["Return to Earth"]
@@ -41,7 +43,7 @@ def test_character_to_dict_with_goals():
     """Test Character serialization with goals."""
     char = Character(
         id="C0",
-        name="Sarah",
+        first_name="Sarah",
         immediate_goals=["Goal 1", "Goal 2"],
         arc_goal="Arc goal",
         goal_progress={"Goal 1": 0.5}

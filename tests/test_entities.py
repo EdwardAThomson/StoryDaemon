@@ -11,13 +11,17 @@ def test_character_creation():
     """Test creating a character entity."""
     char = Character(
         id="C0",
-        name="Elena Thorne",
+        first_name="Elena",
+        family_name="Thorne",
         role="protagonist",
         description="A skilled mapmaker"
     )
     
     assert char.id == "C0"
-    assert char.name == "Elena Thorne"
+    assert char.first_name == "Elena"
+    assert char.family_name == "Thorne"
+    assert char.full_name == "Elena Thorne"
+    assert char.display_name == "Elena"
     assert char.role == "protagonist"
     assert char.type == "character"
     assert char.created_at != ""
@@ -28,7 +32,8 @@ def test_character_serialization():
     """Test character to_dict and from_dict."""
     char = Character(
         id="C0",
-        name="Elena Thorne",
+        first_name="Elena",
+        family_name="Thorne",
         role="protagonist",
         description="A skilled mapmaker",
         personality=Personality(
@@ -41,7 +46,8 @@ def test_character_serialization():
     # Serialize
     data = char.to_dict()
     assert data["id"] == "C0"
-    assert data["name"] == "Elena Thorne"
+    assert data["first_name"] == "Elena"
+    assert data["family_name"] == "Thorne"
     assert "personality" in data
     assert data["personality"]["core_traits"] == ["meticulous", "curious"]
     

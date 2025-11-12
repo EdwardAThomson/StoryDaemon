@@ -74,7 +74,8 @@ def test_save_and_load_character(memory_manager):
     """Test saving and loading a character."""
     char = Character(
         id="C0",
-        name="Elena Thorne",
+        first_name="Elena",
+        family_name="Thorne",
         role="protagonist",
         description="A skilled mapmaker"
     )
@@ -92,7 +93,8 @@ def test_update_character(memory_manager):
     """Test updating character fields."""
     char = Character(
         id="C0",
-        name="Elena Thorne",
+        first_name="Elena",
+        family_name="Thorne",
         role="protagonist"
     )
     
@@ -106,8 +108,8 @@ def test_update_character(memory_manager):
 
 def test_list_characters(memory_manager):
     """Test listing all characters."""
-    char1 = Character(id="C0", name="Elena")
-    char2 = Character(id="C1", name="Marcus")
+    char1 = Character(id="C0", first_name="Elena")
+    char2 = Character(id="C1", first_name="Marcus")
     
     memory_manager.save_character(char1)
     memory_manager.save_character(char2)

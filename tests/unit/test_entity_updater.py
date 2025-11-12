@@ -29,15 +29,18 @@ def test_update_character_emotional_state(entity_updater, mock_memory):
     """Test updating character emotional state."""
     # Create test character
     character = Character(
-        id="C0",
-        name="Sarah",
+        id="C001",
+        first_name="Bob",
+        family_name="Smith",
+        role="protagonist",
+        description="A clever thief",
         current_state=CurrentState(emotional_state="calm")
     )
     mock_memory.load_character.return_value = character
     
     # Update
     update = {
-        "id": "C0",
+        "id": "C001",
         "changes": {
             "emotional_state": "anxious"
         }
@@ -57,15 +60,18 @@ def test_update_character_inventory(entity_updater, mock_memory):
     """Test updating character inventory (list field)."""
     # Create test character
     character = Character(
-        id="C0",
-        name="Sarah",
+        id="C001",
+        first_name="Alice",
+        family_name="Johnson",
+        role="protagonist",
+        description="A brave adventurer",
         current_state=CurrentState(inventory=["sword"])
     )
     mock_memory.load_character.return_value = character
     
     # Update - add new items
     update = {
-        "id": "C0",
+        "id": "C001",
         "changes": {
             "inventory": ["key", "map"]
         }
@@ -167,7 +173,7 @@ def test_resolve_open_loop(entity_updater, mock_memory):
 def test_apply_updates_all_types(entity_updater, mock_memory):
     """Test applying all types of updates."""
     # Setup mocks
-    character = Character(id="C0", name="Sarah", current_state=CurrentState())
+    character = Character(id="C0", first_name="Sarah", current_state=CurrentState())
     mock_memory.load_character.return_value = character
     mock_memory.generate_id.return_value = "OL1"
     

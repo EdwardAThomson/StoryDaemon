@@ -165,8 +165,13 @@ class Character:
     type: str = "character"
     created_at: str = ""
     updated_at: str = ""
-    name: str = ""
-    aliases: List[str] = field(default_factory=list)
+    
+    # Name fields
+    first_name: str = ""
+    family_name: str = ""
+    title: str = ""  # Dr., Captain, Lord, etc.
+    nicknames: List[str] = field(default_factory=list)  # Informal names
+    
     role: str = ""  # protagonist, antagonist, supporting, minor
     description: str = ""
     physical_traits: PhysicalTraits = field(default_factory=PhysicalTraits)
@@ -187,8 +192,30 @@ class Character:
     goals_completed: List[str] = field(default_factory=list)
     goals_abandoned: List[str] = field(default_factory=list)
     
+    @property
+    def full_name(self) -> str:
+        """Get full name with title if present."""
+        parts = []
+        if self.title:
+            parts.append(self.title)
+        if self.first_name:
+            parts.append(self.first_name)
+        if self.family_name:
+            parts.append(self.family_name)
+        return " ".join(parts) if parts else "Unnamed"
+    
+    @property
+    def display_name(self) -> str:
+        """Get name for prose (first name, or full name if no first name)."""
+        return self.first_name if self.first_name else self.full_name
+    
+    @property
+    def name(self) -> str:
+        """Backward compatibility property."""
+        return self.full_name
+    
     def __post_init__(self):
-        """Set timestamps if not provided."""
+        """Set timestamps and handle migration."""
         if not self.created_at:
             self.created_at = datetime.utcnow().isoformat() + "Z"
         if not self.updated_at:
@@ -210,7 +237,22 @@ class Character:
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Character":
-        """Create from dictionary."""
+        """Create from dictionary with migration support."""
+        # Migrate old 'name' field to first_name/family_name
+        if 'name' in data and not data.get('first_name'):
+            old_name = data.pop('name')
+            # Try to split intelligently
+            parts = old_name.strip().split()
+            if len(parts) >= 2:
+                data['first_name'] = parts[0]
+                data['family_name'] = ' '.join(parts[1:])
+            elif len(parts) == 1:
+                data['first_name'] = parts[0]
+        
+        # Migrate old 'aliases' to 'nicknames'
+        if 'aliases' in data and not data.get('nicknames'):
+            data['nicknames'] = data.pop('aliases')
+        
         # Convert nested objects
         if 'physical_traits' in data and isinstance(data['physical_traits'], dict):
             data['physical_traits'] = PhysicalTraits.from_dict(data['physical_traits'])

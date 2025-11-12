@@ -139,14 +139,28 @@ class CharacterGenerateTool(Tool):
             Success status and character ID
         """
         # Auto-generate name if not provided
+        first_name = ""
+        family_name = ""
+        title = ""
+        
         if not name and self.name_generator:
             # Random 50/50 if gender not specified (to avoid LLM bias)
             char_gender = gender or random.choice(["male", "female"])
             name_result = self.name_generator.generate_name(gender=char_gender, genre="scifi")
-            name = name_result["full_name"]
-        elif not name:
+            first_name = name_result["first_name"]
+            family_name = name_result["last_name"]
+            title = name_result.get("title", "")
+        elif name:
+            # Split provided name
+            parts = name.strip().split()
+            if len(parts) >= 2:
+                first_name = parts[0]
+                family_name = ' '.join(parts[1:])
+            elif len(parts) == 1:
+                first_name = parts[0]
+        else:
             # Fallback if no generator available
-            name = f"Character_{self.memory_manager.generate_id('character')}"
+            first_name = f"Character_{self.memory_manager.generate_id('character')}"
         
         # Generate ID
         character_id = self.memory_manager.generate_id("character")
@@ -154,7 +168,9 @@ class CharacterGenerateTool(Tool):
         # Create character entity
         character = Character(
             id=character_id,
-            name=name,
+            first_name=first_name,
+            family_name=family_name,
+            title=title,
             role=role,
             description=description,
             personality=Personality(core_traits=traits or []),
@@ -174,7 +190,7 @@ class CharacterGenerateTool(Tool):
         return {
             "success": True,
             "character_id": character_id,
-            "name": name
+            "name": character.full_name
         }
 
 
