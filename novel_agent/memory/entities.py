@@ -24,6 +24,52 @@ class PhysicalTraits:
         return cls(**data)
 
 
+# ============================================================================
+# Faction Entity (Organizations/Groups)
+# ============================================================================
+
+@dataclass
+class Faction:
+    """Organizational entity to ground groups (corporate, guild, agency, etc.)."""
+    id: str
+    type: str = "faction"
+    created_at: str = ""
+    updated_at: str = ""
+
+    # Core identity
+    name: str = ""
+    org_type: str = "other"  # corporate | government | guild | criminal | cult | ai_collective | syndicate | consortium | other
+    summary: str = ""
+
+    # Capabilities and position
+    mandate_objectives: List[str] = field(default_factory=list)
+    influence_domains: List[str] = field(default_factory=list)
+    assets_resources: List[str] = field(default_factory=list)
+    methods_tactics: List[str] = field(default_factory=list)
+
+    # Relations
+    stance_by_character: Dict[str, str] = field(default_factory=dict)  # char_id -> friendly|neutral|hostile|exploitative|unknown
+    relationships: Dict[str, str] = field(default_factory=dict)  # faction_id -> ally|rival|parent|subsidiary|unknown
+
+    # Meta
+    importance: str = "medium"  # low|medium|high|critical
+    tags: List[str] = field(default_factory=list)
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self):
+        if not self.created_at:
+            self.created_at = datetime.utcnow().isoformat() + "Z"
+        if not self.updated_at:
+            self.updated_at = self.created_at
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "Faction":
+        return cls(**data)
+
+
 @dataclass
 class Personality:
     """Personality traits and motivations."""

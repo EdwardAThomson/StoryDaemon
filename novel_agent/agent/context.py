@@ -82,6 +82,9 @@ class ContextBuilder:
         # Get tension history (Phase 7A.3)
         context["tension_history"] = self._get_tension_history()
         
+        # Get factions summary (organizations relevant to the story)
+        context["factions_summary"] = self._format_factions()
+        
         # Get available tools description
         context["available_tools_description"] = self.tools.get_tools_description()
         
@@ -298,3 +301,33 @@ class ContextBuilder:
         result += "\nThis is informational only - follow the natural story flow."
         
         return result
+
+    def _format_factions(self) -> str:
+        """Format factions (organizations) for prompt context.
+        
+        Returns:
+            Formatted list of factions by importance
+        """
+        # Access MemoryManager directly
+        try:
+            faction_ids = self.memory.list_factions()
+        except Exception:
+            return "No factions."
+        if not faction_ids:
+            return "No factions."
+        factions = []
+        for fid in faction_ids:
+            fac = self.memory.load_faction(fid)
+            if fac:
+                factions.append(fac)
+        # Sort by importance
+        importance_order = {"critical": 3, "high": 2, "medium": 1, "low": 0}
+        factions.sort(key=lambda f: importance_order.get(getattr(f, 'importance', 'medium'), 1), reverse=True)
+        lines = []
+        for f in factions[:8]:
+            imp = getattr(f, 'importance', 'medium')
+            org_type = getattr(f, 'org_type', 'other')
+            name = getattr(f, 'name', f.id)
+            summary = getattr(f, 'summary', '')
+            lines.append(f"- {name} ({f.id}) — type: {org_type}, importance: {imp}. {summary}")
+        return "\n".join(lines)

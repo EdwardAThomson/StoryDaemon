@@ -2,7 +2,7 @@
 
 PLANNER_PROMPT_TEMPLATE = """You are a creative story planner for an emergent narrative system.
 
-Your task is to analyze the current story state and create a plan for the next scene.
+Your task is to analyze the current story state and create a plan for the next scene that ADVANCES THE PLOT.
 
 ## Current Story State
 
@@ -16,7 +16,7 @@ Your task is to analyze the current story state and create a plan for the next s
 ### Recent Scenes (Detailed)
 {recent_scenes_summary}
 
-### Open Story Loops
+### Open Story Loops (PRIORITIZED BY IMPORTANCE)
 {open_loops_list}
 
 ### Tension Pattern (Pacing Awareness)
@@ -28,48 +28,82 @@ Your task is to analyze the current story state and create a plan for the next s
 ### Available Relationships
 {character_relationships}
 
+### Factions (Organizations)
+{factions_summary}
+
 ## Available Tools
 
 You can use the following tools to gather information or create entities:
 
 {available_tools_description}
 
-## Your Task
+## Your Task: ADVANCE THE STORY
 
-Create a plan for the next scene. Consider:
-1. Which open loops should be addressed or developed?
-2. What information do you need to write this scene effectively?
-3. Should new characters or locations be introduced?
-4. How should relationships evolve?
-5. What pacing would serve the story best? (Review tension pattern above for context)
+Create a plan for the next scene that makes CONCRETE PROGRESS on the plot.
+
+**CRITICAL REQUIREMENTS:**
+
+1. **CHANGE THE SITUATION** - The scene must alter the story state in a meaningful way
+   - NOT: "Character continues doing X"
+   - YES: "Character succeeds/fails at X, leading to Y"
+   - NOT: "Character struggles with problem"
+   - YES: "Character discovers new information that changes their approach"
+
+2. **ADVANCE OR ESCALATE** - Select at least ONE high-priority open loop and:
+   - Make measurable progress toward resolution (milestones over multiple scenes are OK)
+   - OR introduce a meaningful complication/escalation that moves it forward
+   - If full resolution is premature, specify a 'progress_milestone' for this scene
+
+3. **FORWARD MOMENTUM** - The scene must move the story toward:
+   - Resolution of a conflict
+   - Discovery of crucial information
+   - A character making a significant choice
+   - A situation reaching a turning point
+   - Introduction of a new complication (if current ones are stale)
+
+4. **AVOID REPETITION** - Review recent scenes. Do NOT repeat:
+   - Similar situations (e.g., "character negotiates again")
+   - Similar actions (e.g., "character struggles with same problem")
+   - Similar emotional beats (e.g., "character feels desperate again")
+
+**PLANNING QUESTIONS:**
+
+1. What will CHANGE by the end of this scene?
+2. Which high-priority open loop will you advance?
+3. How will this scene be DIFFERENT from recent scenes?
+4. What is the TURNING POINT or KEY EVENT?
 
 ## Output Format
 
 Respond with a JSON object following this structure:
 
 ```json
-{{
-  "rationale": "Brief explanation of your planning decisions",
-  "scene_intention": "What should happen in this scene (1-2 sentences)",
+{
+  "rationale": "Brief explanation focusing on HOW this scene advances the plot and WHAT changes",
+  "scene_intention": "What CHANGES in this scene - be specific about the outcome/turning point",
+  "key_change": "One sentence: What is fundamentally different after this scene?",
+  "progress_milestone": "Specific milestone achieved toward resolving a loop (optional)",
+  "progress_step": "setup|complication|reversal|revelation|decision|resolution (optional)",
+  "loops_addressed": ["OL4", "OL5"],
   "pov_character": "Character ID for POV (use {active_character_id} or specify another)",
   "target_location": "Location ID where scene takes place (or null for new location)",
   "actions": [
-    {{
+    {
       "tool": "tool.name",
-      "args": {{
+      "args": {
         "arg1": "value1"
-      }},
+      },
       "reason": "Why this tool is needed"
-    }}
+    }
   ],
   "expected_outcomes": [
-    "Outcome 1",
-    "Outcome 2"
+    "Concrete outcome 1 (something that CHANGES)",
+    "Concrete outcome 2 (something that CHANGES)"
   ],
-  "metadata": {{
+  "metadata": {
     "scene_length": "brief|short|long|extended (optional - only if you want to guide scene length)"
-  }}
-}}
+  }
+}
 ```
 
 ## Guidelines
@@ -77,11 +111,17 @@ Respond with a JSON object following this structure:
 - Keep actions focused (2-4 tools maximum per plan)
 - Use memory.search to recall relevant context
 - Use character.generate to create characters - names will be auto-generated uniquely
+- Use location.generate to create locations as needed
 - Use relationship.create when characters first interact significantly
 - Use relationship.update to track relationship changes
-- Scene intention should be specific and actionable
-- Expected outcomes should be concrete story developments
-- Scene length is optional: use "brief" for quick transitions, "short" for focused moments, "long" for developed scenes, "extended" for major events. Omit if the scene should be whatever length it needs.
+- Use faction.generate/update/query to ground organizations when referenced (avoid generic “corporate”)
+- Scene intention must describe a CHANGE, not a continuation
+- Expected outcomes must be CONCRETE changes to story state (or a clear progress milestone)
+- Every scene should contain a turning point or a clear setup beat that commits to future change
+- Avoid repeating recent scene patterns
+- Scene length is optional: use "brief" for quick transitions, "short" for focused moments, "long" for developed scenes, "extended" for major events
+
+**REMEMBER: Your job is to ADVANCE the story, not just continue it. Make something CHANGE.**
 
 Generate your plan now:"""
 
@@ -103,6 +143,9 @@ The following context includes FULL TEXT from the most recent scenes to help you
 
 **Intention:** {scene_intention}
 
+**KEY CHANGE THIS SCENE MUST ACCOMPLISH:** {key_change}
+**PROGRESS MILESTONE (if not resolving):** {progress_milestone}
+
 **Tool Results:** {tool_results_summary}
 
 ## POV Character
@@ -115,9 +158,27 @@ The following context includes FULL TEXT from the most recent scenes to help you
 
 ## Your Task
 
-Write a scene passage from {pov_character_name}'s deep POV.{scene_length_guidance}
+Write a scene passage from {pov_character_name}'s deep POV that ACCOMPLISHES THE KEY CHANGE or CLEARLY ACHIEVES THE PROGRESS MILESTONE described above.{scene_length_guidance}
 
-**CRITICAL RULES:**
+**CRITICAL REQUIREMENTS:**
+
+1. **EXECUTE THE CHANGE OR ACHIEVE THE MILESTONE** - This scene must accomplish the key change or clearly achieve the specified progress milestone
+   - The situation at the END must be meaningfully different from the BEGINNING
+   - Something must be resolved, discovered, decided, escalated, or firmly set up
+   - DO NOT end with the same status quo as the start
+
+2. **BUILD TO A TURNING POINT** - Structure the scene with:
+   - Opening: Establish current situation
+   - Rising action: Build tension/conflict
+   - Turning point: The moment something CHANGES
+   - Resolution: Show the new situation
+
+3. **AVOID REPETITION** - Review the recent context above
+   - Do NOT repeat similar actions from recent scenes
+   - Do NOT repeat similar emotional beats
+   - Find fresh ways to show character state and conflict
+
+**WRITING RULES:**
 
 1. **Use character name naturally** - The POV character is "{pov_character_name}" - use this name in prose
    - NEVER use placeholder formats like "char_name" or "character_name"
@@ -133,21 +194,22 @@ Write a scene passage from {pov_character_name}'s deep POV.{scene_length_guidanc
 6. **Sensory details** - Engage sight, sound, smell, touch, taste
 7. **Internal thoughts and reactions** - Show character's mental state
 8. **Length:** Write as much as the scene needs - no arbitrary limits
+9. **Ground factions** - When an organization appears for the first time, include a brief identity line (who they are) or use a generated faction representative in dialogue
 
 **AVOID:**
-- First-person POV ("I", "my", "me") except in dialogue
-- Placeholder formats like "char_elliot" or "character_name" - use the real name!
-- Phrases like "unknown to them", "little did they know", "meanwhile"
-- Head-hopping to other characters' thoughts
-- Future foreshadowing the POV character couldn't know
-- Telling emotions instead of showing them
+- Ending with the same situation as the start
+- Repeating actions/beats from recent scenes
+- First-person POV except in dialogue
+- Placeholder names
+- Head-hopping
+- Telling emotions instead of showing
 
 **FOCUS ON:**
+- Accomplishing the key change
+- The turning point moment
 - What {pov_character_name} sees, hears, feels, thinks
-- Immediate sensory experience
-- Character voice and personality
 - Concrete actions and dialogue
-- Subtext and implication
+- Fresh approaches (not repetitive)
 
 Generate the scene now:"""
 

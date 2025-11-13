@@ -169,6 +169,58 @@ def list_scenes(project_dir: Path, verbose: bool = False) -> List[Dict[str, Any]
     return scenes
 
 
+def list_factions(project_dir: Path, verbose: bool = False) -> List[Dict[str, Any]]:
+    """List all factions in the project.
+    
+    Args:
+        project_dir: Path to project directory
+        verbose: Include detailed information
+        
+    Returns:
+        List of faction info dictionaries
+    """
+    fac_dir = project_dir / "memory" / "factions"
+    if not fac_dir.exists():
+        return []
+    factions = []
+    for fac_file in sorted(fac_dir.glob("*.json")):
+        data = load_entity_file(fac_file)
+        if data:
+            fac_info = {
+                'id': data.get('id', fac_file.stem),
+                'name': data.get('name', 'Unknown'),
+                'org_type': data.get('org_type', ''),
+                'importance': data.get('importance', 'medium'),
+            }
+            if verbose:
+                fac_info['summary'] = data.get('summary', '')
+                fac_info['tags'] = data.get('tags', [])
+            factions.append(fac_info)
+    return factions
+
+
+def display_factions(factions: List[Dict[str, Any]], verbose: bool = False):
+    """Display factions in formatted output."""
+    print(f"\n🏛️  Factions ({len(factions)} total)\n")
+    if not factions:
+        print("  (none)")
+        return
+    if verbose:
+        for f in factions:
+            print(f"  {f['id']}  {f['name']}")
+            print(f"      Type: {f.get('org_type','')}")
+            print(f"      Importance: {f.get('importance','')}")
+            if f.get('summary'):
+                print(f"      Summary: {f['summary'][:80]}...")
+            if f.get('tags'):
+                print(f"      Tags: {', '.join(f['tags'])}")
+            print()
+    else:
+        headers = ['id', 'name', 'org_type', 'importance']
+        display_table(factions, headers)
+    print()
+
+
 def display_table(items: List[Dict[str, Any]], headers: List[str], format_func=None):
     """Display items in a simple table format.
     

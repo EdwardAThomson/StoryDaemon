@@ -39,6 +39,9 @@ class WriterContextBuilder:
         novel_name = project_state.get("novel_name", "Untitled Novel")
         current_tick = project_state.get("current_tick", 0)
         scene_intention = plan.get("scene_intention", "Continue the story")
+        key_change = plan.get("key_change", "Advance the plot")
+        progress_milestone = plan.get("progress_milestone", "")
+        progress_step = plan.get("progress_step", "")
         pov_character_id = plan.get("pov_character", "")
         location_id = plan.get("target_location")
         
@@ -68,6 +71,9 @@ class WriterContextBuilder:
             "novel_name": novel_name,
             "current_tick": current_tick,
             "scene_intention": scene_intention,
+            "key_change": key_change,
+            "progress_milestone": progress_milestone,
+            "progress_step": progress_step,
             "pov_character_id": pov_character_id,
             "pov_character_name": pov_character_name,
             "pov_character_details": pov_character_details,

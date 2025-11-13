@@ -6,7 +6,7 @@ from typing import List, Dict, Any, Optional, Union
 from datetime import datetime
 
 from .entities import (
-    Character, Location, Scene, OpenLoop, RelationshipGraph, Lore,
+    Character, Location, Scene, OpenLoop, RelationshipGraph, Lore, Faction,
     HistoryEntry, RelationshipHistoryEntry
 )
 
@@ -25,6 +25,7 @@ class MemoryManager:
         self.characters_path = self.memory_path / "characters"
         self.locations_path = self.memory_path / "locations"
         self.scenes_path = self.memory_path / "scenes"
+        self.factions_path = self.memory_path / "factions"
         self.open_loops_file = self.memory_path / "open_loops.json"
         self.relationships_file = self.memory_path / "relationships.json"
         self.lore_file = self.memory_path / "lore.json"
@@ -39,6 +40,7 @@ class MemoryManager:
         self.characters_path.mkdir(exist_ok=True)
         self.locations_path.mkdir(exist_ok=True)
         self.scenes_path.mkdir(exist_ok=True)
+        self.factions_path.mkdir(exist_ok=True)
         
         # Initialize empty files if they don't exist
         if not self.open_loops_file.exists():
@@ -57,7 +59,8 @@ class MemoryManager:
                 "scene": 0,
                 "open_loop": 0,
                 "relationship": 0,
-                "lore": 0
+                "lore": 0,
+                "faction": 0
             })
     
     def _load_counters(self):
@@ -106,6 +109,8 @@ class MemoryManager:
             return f"OL{current}"
         elif entity_type == "relationship":
             return f"R{current}"
+        elif entity_type == "faction":
+            return f"F{current}"
         else:
             raise ValueError(f"Unknown entity type: {entity_type}")
     
@@ -208,7 +213,7 @@ class MemoryManager:
     # Generic Entity Operations
     # ========================================================================
     
-    def load_entity(self, entity_id: str) -> Optional[Union[Character, Location, Scene]]:
+    def load_entity(self, entity_id: str) -> Optional[Union[Character, Location, Scene, Faction]]:
         """Load an entity by ID (auto-detects type from prefix).
         
         Args:
@@ -223,10 +228,12 @@ class MemoryManager:
             return self.load_location(entity_id)
         elif entity_id.startswith("S"):
             return self.load_scene(entity_id)
+        elif entity_id.startswith("F"):
+            return self.load_faction(entity_id)
         else:
             raise ValueError(f"Unknown entity ID format: {entity_id}")
     
-    def save_entity(self, entity: Union[Character, Location, Scene]):
+    def save_entity(self, entity: Union[Character, Location, Scene, Faction]):
         """Save an entity to disk (auto-detects type)."""
         if isinstance(entity, Character):
             self.save_character(entity)
@@ -234,6 +241,8 @@ class MemoryManager:
             self.save_location(entity)
         elif isinstance(entity, Scene):
             self.save_scene(entity)
+        elif isinstance(entity, Faction):
+            self.save_faction(entity)
         else:
             raise ValueError(f"Unknown entity type: {type(entity)}")
     
@@ -261,8 +270,42 @@ class MemoryManager:
             return self.list_locations()
         elif entity_type == "scene":
             return self.list_scenes()
+        elif entity_type == "faction":
+            return self.list_factions()
         else:
             raise ValueError(f"Unknown entity type: {entity_type}")
+
+    # ========================================================================
+    # CRUD Operations - Factions
+    # ========================================================================
+
+    def load_faction(self, faction_id: str) -> Optional[Faction]:
+        """Load a faction by ID."""
+        path = self.factions_path / f"{faction_id}.json"
+        if not path.exists():
+            return None
+        data = self._read_json(path)
+        return Faction.from_dict(data)
+
+    def save_faction(self, faction: Faction):
+        """Save a faction to disk."""
+        faction.updated_at = datetime.utcnow().isoformat() + "Z"
+        path = self.factions_path / f"{faction.id}.json"
+        self._write_json(path, faction.to_dict())
+
+    def update_faction(self, faction_id: str, changes: Dict[str, Any]):
+        """Update specific fields of a faction."""
+        faction = self.load_faction(faction_id)
+        if not faction:
+            raise ValueError(f"Faction {faction_id} not found")
+        for key, value in changes.items():
+            if hasattr(faction, key):
+                setattr(faction, key, value)
+        self.save_faction(faction)
+
+    def list_factions(self) -> List[str]:
+        """List all faction IDs."""
+        return [f.stem for f in self.factions_path.glob("*.json")]
     
     # ========================================================================
     # Open Loops Management

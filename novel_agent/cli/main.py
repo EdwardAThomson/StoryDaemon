@@ -23,7 +23,10 @@ from ..tools.memory_tools import (
     LocationGenerateTool,
     RelationshipCreateTool,
     RelationshipUpdateTool,
-    RelationshipQueryTool
+    RelationshipQueryTool,
+    FactionGenerateTool,
+    FactionUpdateTool,
+    FactionQueryTool
 )
 from ..tools.name_generator import NameGeneratorTool
 from ..memory.manager import MemoryManager
@@ -275,6 +278,10 @@ def tick(
         tool_registry.register(RelationshipCreateTool(memory_manager))
         tool_registry.register(RelationshipUpdateTool(memory_manager))
         tool_registry.register(RelationshipQueryTool(memory_manager))
+        # Faction tools
+        tool_registry.register(FactionGenerateTool(memory_manager, vector_store))
+        tool_registry.register(FactionUpdateTool(memory_manager, vector_store))
+        tool_registry.register(FactionQueryTool(memory_manager, vector_store))
         
         typer.echo(f"   Registered {len(tool_registry)} tools")
         
@@ -552,7 +559,7 @@ def status(
 def list_entities(
     entity_type: str = typer.Argument(
         ...,
-        help="Entity type to list: characters, locations, loops, scenes"
+        help="Entity type to list: characters, locations, loops, scenes, factions"
     ),
     project: Optional[str] = typer.Option(
         None,
@@ -581,8 +588,8 @@ def list_entities(
         novel list scenes
     """
     from .commands.list import (
-        list_characters, list_locations, list_open_loops, list_scenes,
-        display_characters, display_locations, display_loops, display_scenes,
+        list_characters, list_locations, list_open_loops, list_scenes, list_factions,
+        display_characters, display_locations, display_loops, display_scenes, display_factions,
         display_json
     )
     
@@ -616,10 +623,16 @@ def list_entities(
                 display_json(items)
             else:
                 display_scenes(items, verbose)
+        elif entity_type == "factions":
+            items = list_factions(project_dir, verbose)
+            if json_output:
+                display_json(items)
+            else:
+                display_factions(items, verbose)
         
         else:
             typer.echo(f"❌ Unknown entity type: {entity_type}", err=True)
-            typer.echo("Valid types: characters, locations, loops, scenes", err=True)
+            typer.echo("Valid types: characters, locations, loops, scenes, factions", err=True)
             raise typer.Exit(1)
         
     except ValueError as e:

@@ -5,7 +5,7 @@ from typing import List, Dict, Any, Optional
 import chromadb
 from chromadb.config import Settings
 
-from .entities import Character, Location, Scene, Lore
+from .entities import Character, Location, Scene, Lore, Faction
 
 
 class VectorStore:
@@ -43,6 +43,10 @@ class VectorStore:
         self.lore_collection = self.client.get_or_create_collection(
             name="lore",
             metadata={"description": "World rules and lore (Phase 7A.4)"}
+        )
+        self.factions_collection = self.client.get_or_create_collection(
+            name="factions",
+            metadata={"description": "Faction/organization entities"}
         )
     
     # ========================================================================
@@ -151,6 +155,37 @@ class VectorStore:
             documents=[text],
             metadatas=[metadata]
         )
+
+    def index_faction(self, faction: Faction):
+        """Add or update faction in vector index.
+        
+        Args:
+            faction: Faction entity to index
+        """
+        text_parts = [
+            f"Name: {faction.name}",
+            f"Type: {faction.org_type}",
+            f"Summary: {faction.summary}",
+            f"Mandate: {', '.join(faction.mandate_objectives)}" if faction.mandate_objectives else "",
+            f"Influence: {', '.join(faction.influence_domains)}" if faction.influence_domains else "",
+            f"Assets: {', '.join(faction.assets_resources)}" if faction.assets_resources else "",
+            f"Methods: {', '.join(faction.methods_tactics)}" if faction.methods_tactics else "",
+            f"Tags: {', '.join(faction.tags)}" if faction.tags else "",
+            f"Importance: {faction.importance}",
+        ]
+        text = " ".join([p for p in text_parts if p])
+        metadata = {
+            "entity_type": "faction",
+            "name": faction.name,
+            "org_type": faction.org_type,
+            "importance": faction.importance,
+            "updated_at": faction.updated_at,
+        }
+        self.factions_collection.upsert(
+            ids=[faction.id],
+            documents=[text],
+            metadatas=[metadata]
+        )
     
     # ========================================================================
     # Search Methods
@@ -221,7 +256,7 @@ class VectorStore:
             List of search results sorted by relevance
         """
         if entity_types is None:
-            entity_types = ["character", "location", "scene"]
+            entity_types = ["character", "location", "scene", "faction"]
         
         all_results = []
         
@@ -236,11 +271,30 @@ class VectorStore:
         if "scene" in entity_types:
             scene_results = self.search_scenes(query, limit)
             all_results.extend(scene_results)
+        if "faction" in entity_types:
+            fac_results = self.search_factions(query, limit)
+            all_results.extend(fac_results)
         
         # Sort by distance (lower is better)
         all_results.sort(key=lambda x: x["distance"])
         
         return all_results[:limit]
+
+    def search_factions(self, query: str, limit: int = 5) -> List[Dict[str, Any]]:
+        """Search for relevant factions.
+        
+        Args:
+            query: Natural language search query
+            limit: Maximum number of results
+        
+        Returns:
+            List of search results
+        """
+        results = self.factions_collection.query(
+            query_texts=[query],
+            n_results=limit
+        )
+        return self._format_results(results)
     
     def _format_results(self, results: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Format ChromaDB results into a consistent structure.
@@ -306,7 +360,8 @@ class VectorStore:
             "characters": self.characters_collection.count(),
             "locations": self.locations_collection.count(),
             "scenes": self.scenes_collection.count(),
-            "lore": self.lore_collection.count()
+            "lore": self.lore_collection.count(),
+            "factions": self.factions_collection.count(),
         }
     
     # ========================================================================

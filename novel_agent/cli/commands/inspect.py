@@ -31,6 +31,11 @@ def find_entity_file(project_dir: Path, entity_id: str) -> Optional[Path]:
         scene_file = memory_dir / "scenes" / f"{entity_id}.json"
         if scene_file.exists():
             return scene_file
+    elif entity_id.startswith("F"):
+        # Faction
+        fac_file = memory_dir / "factions" / f"{entity_id}.json"
+        if fac_file.exists():
+            return fac_file
     
     return None
 
@@ -293,6 +298,25 @@ def inspect_entity(project_dir: Path, entity_id: Optional[str] = None,
             display_location(data, filepath, history_limit)
         elif entity_type.startswith('S'):
             display_scene(data, filepath)
+        elif entity_type.startswith('F'):
+            print(f"\n🔍 Inspecting Faction: {data.get('id','Unknown')}\n")
+            print(f"Name: {data.get('name','Unknown')}")
+            print(f"Type: {data.get('org_type','Unknown')}")
+            print(f"Importance: {data.get('importance','medium')}")
+            if data.get('summary'):
+                print(f"\nSummary:\n  {data['summary']}")
+            if data.get('mandate_objectives'):
+                print(f"\nMandate/Objectives:\n  - " + "\n  - ".join(data['mandate_objectives']))
+            if data.get('influence_domains'):
+                print(f"\nInfluence Domains:\n  - " + "\n  - ".join(data['influence_domains']))
+            if data.get('assets_resources'):
+                print(f"\nAssets/Resources:\n  - " + "\n  - ".join(data['assets_resources']))
+            if data.get('methods_tactics'):
+                print(f"\nMethods/Tactics:\n  - " + "\n  - ".join(data['methods_tactics']))
+            if data.get('tags'):
+                print(f"\nTags: {', '.join(data['tags'])}")
+            print(f"\nFull JSON: {filepath}")
+            print()
         else:
             # Unknown type, show raw
             display_raw_json(data)
