@@ -596,23 +596,60 @@ class FactionQueryTool(Tool):
             description="Search for factions by natural language and optional filters",
             parameters={
                 "query": {"type": "string", "description": "Search query", "optional": True},
+                "org_type": {"type": "string", "description": "Filter by org type (corporate, government, etc.)", "optional": True},
+                "tags": {"type": "array", "items": {"type": "string"}, "description": "Require these tags (all must match)", "optional": True},
+                "importance": {"type": "string", "description": "Filter by importance (low|medium|high|critical)", "optional": True},
+                "name_contains": {"type": "string", "description": "Substring to match in name (case-insensitive)", "optional": True},
                 "limit": {"type": "integer", "description": "Max results (default: 5)", "optional": True}
             }
         )
         self.memory_manager = memory_manager
         self.vector_store = vector_store
     
-    def execute(self, query: Optional[str] = None, limit: int = 5) -> Dict[str, Any]:
+    def execute(
+        self,
+        query: Optional[str] = None,
+        org_type: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        importance: Optional[str] = None,
+        name_contains: Optional[str] = None,
+        limit: int = 5
+    ) -> Dict[str, Any]:
         q = query or "faction"
-        results = self.vector_store.search(q, entity_types=["faction"], limit=limit)
+        # Fetch a few more to allow filtering, then trim
+        raw_results = self.vector_store.search(q, entity_types=["faction"], limit=max(limit * 3, 10))
+        filtered = []
+        for r in raw_results:
+            meta = r.get("metadata", {})
+            # org_type filter
+            if org_type and meta.get("org_type") != org_type:
+                continue
+            # importance filter
+            if importance and meta.get("importance") != importance:
+                continue
+            # tags filter (all required tags must be present)
+            if tags:
+                entity_tags = set(meta.get("tags", []) or [])
+                if not set(tags).issubset(entity_tags):
+                    continue
+            # name_contains filter
+            if name_contains:
+                name_val = (meta.get("name") or "").lower()
+                if name_contains.lower() not in name_val:
+                    continue
+            filtered.append(r)
+        # Sort by relevance score desc (vector_store provides distance asc)
+        filtered.sort(key=lambda x: x.get("relevance_score", 0.0), reverse=True)
+        trimmed = filtered[:limit]
         formatted = []
-        for r in results:
+        for r in trimmed:
             meta = r.get("metadata", {})
             formatted.append({
                 "faction_id": r.get("entity_id"),
                 "name": meta.get("name", ""),
                 "org_type": meta.get("org_type", ""),
                 "importance": meta.get("importance", ""),
+                "tags": meta.get("tags", []),
                 "relevance_score": round(r.get("relevance_score", 0.0), 2)
             })
         return {"success": True, "results": formatted, "count": len(formatted)}
