@@ -629,7 +629,8 @@ class FactionQueryTool(Tool):
                 continue
             # tags filter (all required tags must be present)
             if tags:
-                entity_tags = set(meta.get("tags", []) or [])
+                raw = meta.get("tags") or ""
+                entity_tags = set([t for t in raw.split("|") if t])
                 if not set(tags).issubset(entity_tags):
                     continue
             # name_contains filter
@@ -644,12 +645,14 @@ class FactionQueryTool(Tool):
         formatted = []
         for r in trimmed:
             meta = r.get("metadata", {})
+            raw_tags = meta.get("tags") or ""
+            tag_list = [t for t in raw_tags.split("|") if t]
             formatted.append({
                 "faction_id": r.get("entity_id"),
                 "name": meta.get("name", ""),
                 "org_type": meta.get("org_type", ""),
                 "importance": meta.get("importance", ""),
-                "tags": meta.get("tags", []),
+                "tags": tag_list,
                 "relevance_score": round(r.get("relevance_score", 0.0), 2)
             })
         return {"success": True, "results": formatted, "count": len(formatted)}

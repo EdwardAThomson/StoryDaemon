@@ -179,7 +179,7 @@ class VectorStore:
             "name": faction.name,
             "org_type": faction.org_type,
             "importance": faction.importance,
-            "tags": faction.tags,
+            "tags": "|".join(faction.tags) if faction.tags else "",
             "updated_at": faction.updated_at,
         }
         self.factions_collection.upsert(
