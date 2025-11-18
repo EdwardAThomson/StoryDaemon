@@ -1,80 +1,117 @@
 """LLM interface for StoryDaemon.
 
-Provides a simple interface to GPT-5 via Codex CLI.
-Can be extended to support direct API calls if needed.
+Provides a backend-agnostic interface for LLM access.
+
+Backends:
+- "codex"  → Codex CLI (GPT-5 via codex exec)
+- "api"    → Multi-provider API backend (OpenAI, Gemini, Claude) using
+              an ai_helper-style model registry.
+
+The API backend uses model names (e.g. "gpt-5.1", "claude-4.5",
+"gemini-2.5-pro") to route to the correct provider.
 """
-from typing import Optional
+from typing import Optional, Union
+
 from .codex_interface import CodexInterface
+from .multi_provider_llm import MultiProviderInterface
 
 
-# Global Codex interface instance
-_codex_interface: Optional[CodexInterface] = None
+LLMClient = Union[CodexInterface, MultiProviderInterface]
 
 
-def initialize_llm(codex_bin: str = "codex"):
-    """Initialize the LLM interface.
-    
+# Global LLM client instance used by helper functions
+_llm_client: Optional[LLMClient] = None
+
+
+def initialize_llm(
+    backend: str = "codex",
+    codex_bin: str = "codex",
+    model: str = "gpt-5.1",
+) -> LLMClient:
+    """Initialize the LLM client for the given backend.
+
     Args:
-        codex_bin: Path to Codex CLI binary
-        
+        backend: LLM backend identifier ("codex" or "api").
+        codex_bin: Path to Codex CLI binary (for backend="codex").
+        model: Model identifier for the API backend (for backend="api").
+
+    Returns:
+        An initialized LLM client instance.
+
     Raises:
-        RuntimeError: If Codex CLI is not available
+        RuntimeError: If the requested backend cannot be initialized.
     """
-    global _codex_interface
-    _codex_interface = CodexInterface(codex_bin)
+    global _llm_client
+
+    backend_normalized = backend.lower().strip()
+
+    if backend_normalized == "codex":
+        _llm_client = CodexInterface(codex_bin)
+    elif backend_normalized in {"api", "openai"}:
+        # "openai" kept for backward compatibility; it now means
+        # "use the API backend" with the configured model.
+        _llm_client = MultiProviderInterface(model=model)
+    else:
+        raise RuntimeError(
+            f"Unsupported LLM backend: {backend}. Supported backends are: 'codex', 'api'."
+        )
+
+    return _llm_client
 
 
 def send_prompt(prompt: str, max_tokens: int = 2000) -> str:
-    """Send prompt to GPT-5 via Codex CLI.
-    
+    """Send a prompt using the initialized LLM client.
+
     Args:
-        prompt: The prompt to send
-        max_tokens: Maximum tokens to generate
-        
+        prompt: The prompt to send.
+        max_tokens: Maximum tokens to generate.
+
     Returns:
-        Generated text from GPT-5
-        
+        Generated text from the configured LLM backend.
+
     Raises:
-        RuntimeError: If LLM interface not initialized or generation fails
+        RuntimeError: If no backend is initialized or generation fails.
     """
-    if _codex_interface is None:
-        initialize_llm()
-    
-    return _codex_interface.generate(prompt, max_tokens=max_tokens)
+    if _llm_client is None:
+        # Default to Codex if nothing has been explicitly initialized
+        initialize_llm(backend="codex")
+
+    return _llm_client.generate(prompt, max_tokens=max_tokens)  # type: ignore[union-attr]
 
 
 def send_prompt_with_retry(
     prompt: str,
     max_tokens: int = 2000,
-    max_retries: int = 3
+    max_retries: int = 3,
 ) -> str:
     """Send prompt with automatic retry on failure.
-    
+
     Args:
-        prompt: The prompt to send
-        max_tokens: Maximum tokens to generate
-        max_retries: Maximum retry attempts
-        
+        prompt: The prompt to send.
+        max_tokens: Maximum tokens to generate.
+        max_retries: Maximum retry attempts.
+
     Returns:
-        Generated text from GPT-5
-        
+        Generated text from the configured LLM backend.
+
     Raises:
-        RuntimeError: If all retry attempts fail
+        RuntimeError: If all retry attempts fail or no backend is initialized.
     """
-    if _codex_interface is None:
-        initialize_llm()
-    
-    return _codex_interface.generate_with_retry(
+    if _llm_client is None:
+        # Default to Codex if nothing has been explicitly initialized
+        initialize_llm(backend="codex")
+
+    return _llm_client.generate_with_retry(  # type: ignore[union-attr]
         prompt,
         max_tokens=max_tokens,
-        max_retries=max_retries
+        max_retries=max_retries,
     )
 
 
 def is_initialized() -> bool:
-    """Check if LLM interface is initialized.
-    
+    """Check if an LLM backend has been initialized.
+
     Returns:
-        True if initialized, False otherwise
+        True if initialized, False otherwise.
     """
-    return _codex_interface is not None
+    return _llm_client is not None

@@ -16,7 +16,6 @@ def preview_plan(project_dir: Path, save: Optional[Path] = None, verbose: bool =
         True if successful, False otherwise
     """
     from ...cli.project import load_project_state, get_project_config
-    from ...tools.codex_interface import CodexInterface
     from ...tools.llm_interface import initialize_llm
     from ...tools.registry import ToolRegistry
     from ...tools.memory_tools import (
@@ -41,11 +40,19 @@ def preview_plan(project_dir: Path, save: Optional[Path] = None, verbose: bool =
         
         print(f"📋 Generating plan preview for tick {current_tick}...\n")
         
-        # Initialize LLM
+        # Initialize LLM backend
+        backend = config.get('llm.backend', 'codex')
         codex_bin = config.get('llm.codex_bin_path', 'codex')
+        model = (
+            config.get('llm.model')
+            or config.get('llm.openai_model', 'gpt-5.1')
+        )
         try:
-            initialize_llm(codex_bin)
-            llm = CodexInterface(codex_bin)
+            llm = initialize_llm(
+                backend=backend,
+                codex_bin=codex_bin,
+                model=model,
+            )
         except RuntimeError as e:
             print(f"❌ {e}")
             return False

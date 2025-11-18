@@ -13,7 +13,7 @@ StoryDaemon is a Python-based system that generates long-form fiction through an
 - 📚 **Story Foundation** - Optional genre, premise, setting, tone to guide emergence
 - 🎯 **Goal Hierarchy** - Protagonist goals emerge naturally or can be user-specified
 - ⚡ **Tension Tracking** - Automatic scene tension scoring (0-10) for pacing awareness
-- 💰 **Zero Additional Cost** - Uses Codex CLI for GPT-5 access (included in subscription)
+- 💰 **Flexible LLM Backends** - Codex CLI (zero additional cost) or API backends (GPT-5/5.1, Claude 4.5, Gemini 2.5 Pro)
 - 🔧 **Tool-Based System** - Extensible tool registry for character generation, memory search, etc.
 - 🔍 **Rich Inspection Tools** - Status, list, inspect, goals commands for full project visibility
 - 💾 **Automatic Checkpointing** - Snapshot and restore project state at any point
@@ -27,11 +27,15 @@ StoryDaemon is a Python-based system that generates long-form fiction through an
 ### Prerequisites
 
 - Python 3.11+
-- Codex CLI installed and authenticated
+- Codex CLI installed and authenticated (default backend)
   ```bash
   npm install -g @openai/codex-cli
   codex auth
   ```
+- (Optional) API access for OpenAI / Claude / Gemini backends
+  - OpenAI GPT-5/5.1 or newer
+  - Claude 4.5 (Anthropic)
+  - Gemini 2.5 Pro
 
 ### Installation
 
@@ -114,6 +118,11 @@ novel tick --save-prompts  # Saves to prompts/ directory
 novel lore list
 novel lore list --category world_rules
 novel lore list --importance high
+
+# Use API backend instead of Codex
+novel tick --llm-backend api --llm-model gpt-5.1      # OpenAI GPT-5.1
+novel tick --llm-backend api --llm-model claude-4.5   # Anthropic Claude 4.5
+novel tick --llm-backend api --llm-model gemini-2.5-pro  # Gemini 2.5 Pro
 ```
 
 ## How It Works
@@ -308,7 +317,10 @@ Global configuration in `~/.storydaemon/config.yaml`:
 
 ```yaml
 llm:
+  backend: codex              # "codex" (Codex CLI) or "api" (multi-provider API)
   codex_bin_path: codex
+  model: gpt-5.1              # Generic API model (gpt-5, gpt-5.1, claude-4.5, gemini-2.5-pro)
+  openai_model: gpt-5.1       # Legacy OpenAI-specific key (still honored)
   planner_max_tokens: 1000
   writer_max_tokens: 3000
 
@@ -323,6 +335,16 @@ generation:
 ```
 
 Project-specific configuration in `<project>/config.yaml`.
+
+### API Environment Variables
+
+For API backends, set these environment variables (e.g., in a `.env` file):
+
+```text
+OPENAI_API_KEY   # OpenAI GPT-5/5.1
+CLAUDE_API_KEY   # Claude 4.5 (Anthropic)
+GEMINI_API_KEY   # Gemini 2.5 Pro
+```
 
 ## Development Status
 
@@ -506,7 +528,7 @@ MIT License - See [LICENSE](LICENSE) file for details.
 ## Acknowledgments
 
 - Inspired by my own [NovelWriter](https://github.com/EdwardAThomson/NovelWriter)
-- Built with Codex CLI for GPT-5 access
+- Built with Codex CLI and multi-provider API backends (OpenAI, Claude, Gemini)
 - Uses Typer for CLI, Chroma for vector storage
 
 ---

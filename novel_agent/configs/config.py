@@ -7,12 +7,16 @@ from typing import Dict, Any, Optional
 # Default configuration
 DEFAULT_CONFIG = {
     'llm': {
+        'backend': 'codex',
         'codex_bin_path': 'codex',
         'default_max_tokens': 2000,
         'planner_max_tokens': 1000,
         'writer_max_tokens': 3000,
         'extractor_max_tokens': 2000,
         'timeout': 120,
+        'model': 'gpt-5.1',  # Generic model name for API backend (OpenAI/Gemini/Claude)
+        'openai_model': 'gpt-5.1',
+        'openai_api_key_env': 'OPENAI_API_KEY',
     },
     'paths': {
         'novels_dir': os.path.expanduser('~/novels'),

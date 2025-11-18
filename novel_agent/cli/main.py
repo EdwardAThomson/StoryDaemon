@@ -15,7 +15,6 @@ from .foundation import (
     create_foundation_from_args
 )
 from ..tools.llm_interface import initialize_llm, send_prompt
-from ..tools.codex_interface import CodexInterface
 from ..tools.registry import ToolRegistry
 from ..tools.memory_tools import (
     MemorySearchTool,
@@ -213,7 +212,22 @@ def tick(
         False,
         "--save-prompts",
         help="Save prompts to prompts/ directory for inspection"
-    )
+    ),
+    llm_backend: Optional[str] = typer.Option(
+        None,
+        "--llm-backend",
+        help="LLM backend: codex or api (multi-provider API)"
+    ),
+    llm_model: Optional[str] = typer.Option(
+        None,
+        "--llm-model",
+        help="Model name for API backend (e.g., gpt-5.1, gpt-5, gpt-5.1-mini, claude-4.5, gemini-2.5-pro)"
+    ),
+    codex_bin: Optional[str] = typer.Option(
+        None,
+        "--codex-bin",
+        help="Path to Codex CLI binary"
+    ),
 ):
     """Run one story generation tick.
     
@@ -241,6 +255,16 @@ def tick(
         # Load config
         config = get_project_config(project_dir)
         
+        # Determine LLM backend configuration
+        backend = llm_backend or config.get('llm.backend', 'codex')
+        codex_bin_effective = codex_bin or config.get('llm.codex_bin_path', 'codex')
+        # Prefer generic llm.model, fall back to legacy openai_model, then default
+        model = (
+            llm_model
+            or config.get('llm.model')
+            or config.get('llm.openai_model', 'gpt-5')
+        )
+        
         # Show prompt saving status
         if save_prompts:
             typer.echo(f"   💾 Saving prompts to: {project_dir}/prompts/")
@@ -248,12 +272,14 @@ def tick(
         current_tick = state['current_tick']
         typer.echo(f"   Current tick: {current_tick}")
         
-        # Initialize LLM
-        codex_bin = config.get('llm.codex_bin_path', 'codex')
+        # Initialize LLM backend
         try:
-            initialize_llm(codex_bin)
-            llm = CodexInterface(codex_bin)
-            typer.echo(f"✅ Codex CLI initialized")
+            llm = initialize_llm(
+                backend=backend,
+                codex_bin=codex_bin_effective,
+                model=model,
+            )
+            typer.echo(f"✅ LLM backend initialized: {backend}")
         except RuntimeError as e:
             typer.echo(f"❌ {e}", err=True)
             raise typer.Exit(1)
@@ -370,7 +396,22 @@ def run(
         10,
         "--checkpoint-interval",
         help="Create checkpoint every N ticks (0 to disable)"
-    )
+    ),
+    llm_backend: Optional[str] = typer.Option(
+        None,
+        "--llm-backend",
+        help="LLM backend: codex or api (multi-provider API)"
+    ),
+    llm_model: Optional[str] = typer.Option(
+        None,
+        "--llm-model",
+        help="Model name for API backend (e.g., gpt-5.1, gpt-5, gpt-5.1-mini, claude-4.5, gemini-2.5-pro)"
+    ),
+    codex_bin: Optional[str] = typer.Option(
+        None,
+        "--codex-bin",
+        help="Path to Codex CLI binary"
+    ),
 ):
     """Run multiple story generation ticks.
     
@@ -421,10 +462,19 @@ def run(
                 config = get_project_config(project_dir)
                 current_tick = state['current_tick']
                 
-                # Initialize LLM
-                codex_bin = config.get('llm.codex_bin_path', 'codex')
-                initialize_llm(codex_bin)
-                llm = CodexInterface(codex_bin)
+                # Initialize LLM backend
+                backend = llm_backend or config.get('llm.backend', 'codex')
+                codex_bin_effective = codex_bin or config.get('llm.codex_bin_path', 'codex')
+                model = (
+                    llm_model
+                    or config.get('llm.model')
+                    or config.get('llm.openai_model', 'gpt-5.1')
+                )
+                llm = initialize_llm(
+                    backend=backend,
+                    codex_bin=codex_bin_effective,
+                    model=model,
+                )
                 
                 # Initialize tool registry
                 tool_registry = ToolRegistry()

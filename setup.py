@@ -26,6 +26,7 @@ setup(
         "typer>=0.9.0",
         "pyyaml>=6.0.0",
         "jsonschema>=4.0.0",
+        "openai>=1.0.0",
     ],
     extras_require={
         "dev": [
