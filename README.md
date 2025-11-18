@@ -13,7 +13,7 @@ StoryDaemon is a Python-based system that generates long-form fiction through an
 - 📚 **Story Foundation** - Optional genre, premise, setting, tone to guide emergence
 - 🎯 **Goal Hierarchy** - Protagonist goals emerge naturally or can be user-specified
 - ⚡ **Tension Tracking** - Automatic scene tension scoring (0-10) for pacing awareness
-- 💰 **Flexible LLM Backends** - Codex CLI (zero additional cost) or API backends (GPT-5/5.1, Claude 4.5, Gemini 2.5 Pro)
+- 💰 **Flexible LLM Backends** - Codex CLI & Gemini CLI (zero additional cost), or API backends (GPT-5/5.1, Claude 4.5, Gemini 2.5 Pro)
 - 🔧 **Tool-Based System** - Extensible tool registry for character generation, memory search, etc.
 - 🔍 **Rich Inspection Tools** - Status, list, inspect, goals commands for full project visibility
 - 💾 **Automatic Checkpointing** - Snapshot and restore project state at any point
@@ -123,6 +123,9 @@ novel lore list --importance high
 novel tick --llm-backend api --llm-model gpt-5.1      # OpenAI GPT-5.1
 novel tick --llm-backend api --llm-model claude-4.5   # Anthropic Claude 4.5
 novel tick --llm-backend api --llm-model gemini-2.5-pro  # Gemini 2.5 Pro
+
+# Use Gemini CLI backend (local `gemini` binary)
+novel tick --llm-backend gemini-cli --llm-model gemini-2.5-pro
 ```
 
 ## How It Works
@@ -317,7 +320,7 @@ Global configuration in `~/.storydaemon/config.yaml`:
 
 ```yaml
 llm:
-  backend: codex              # "codex" (Codex CLI) or "api" (multi-provider API)
+  backend: codex              # "codex" (Codex CLI), "api" (multi-provider API), or "gemini-cli" (Gemini CLI)
   codex_bin_path: codex
   model: gpt-5.1              # Generic API model (gpt-5, gpt-5.1, claude-4.5, gemini-2.5-pro)
   openai_model: gpt-5.1       # Legacy OpenAI-specific key (still honored)

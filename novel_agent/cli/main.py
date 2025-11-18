@@ -216,7 +216,7 @@ def tick(
     llm_backend: Optional[str] = typer.Option(
         None,
         "--llm-backend",
-        help="LLM backend: codex or api (multi-provider API)"
+        help="LLM backend: codex, api (multi-provider API), or gemini-cli (Gemini CLI)"
     ),
     llm_model: Optional[str] = typer.Option(
         None,
@@ -242,6 +242,18 @@ def tick(
         novel tick
         novel tick --project ~/novels/my-story
     """
+    # When tick() is called programmatically (e.g., from resume()), Typer
+    # may pass OptionInfo objects instead of plain strings for llm_* args.
+    # Normalize these to None so our backend/model resolution logic behaves
+    # the same as when invoked from the CLI.
+    from typer.models import OptionInfo  # type: ignore
+    if isinstance(llm_backend, OptionInfo):
+        llm_backend = None
+    if isinstance(llm_model, OptionInfo):
+        llm_model = None
+    if isinstance(codex_bin, OptionInfo):
+        codex_bin = None
+
     try:
         # Find project directory
         project_dir = Path(find_project_dir(project))
@@ -400,7 +412,7 @@ def run(
     llm_backend: Optional[str] = typer.Option(
         None,
         "--llm-backend",
-        help="LLM backend: codex or api (multi-provider API)"
+        help="LLM backend: codex, api (multi-provider API), or gemini-cli (Gemini CLI)"
     ),
     llm_model: Optional[str] = typer.Option(
         None,
@@ -423,6 +435,13 @@ def run(
         novel run --n 5 --project ~/novels/my-story
         novel run --n 20 --checkpoint-interval 5
     """
+    if not isinstance(llm_backend, (str, type(None))):
+        llm_backend = None
+    if not isinstance(llm_model, (str, type(None))):
+        llm_model = None
+    if not isinstance(codex_bin, (str, type(None))):
+        codex_bin = None
+
     from ..memory.checkpoint import create_checkpoint, should_create_checkpoint
     
     try:

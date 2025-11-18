@@ -3,9 +3,10 @@
 Provides a backend-agnostic interface for LLM access.
 
 Backends:
-- "codex"  → Codex CLI (GPT-5 via codex exec)
-- "api"    → Multi-provider API backend (OpenAI, Gemini, Claude) using
-              an ai_helper-style model registry.
+- "codex"       → Codex CLI (GPT-5 via codex exec)
+- "api"         → Multi-provider API backend (OpenAI, Gemini, Claude) using
+                   an ai_helper-style model registry.
+- "gemini-cli"  → Gemini CLI backend using the local `gemini` binary.
 
 The API backend uses model names (e.g. "gpt-5.1", "claude-4.5",
 "gemini-2.5-pro") to route to the correct provider.
@@ -14,9 +15,10 @@ from typing import Optional, Union
 
 from .codex_interface import CodexInterface
 from .multi_provider_llm import MultiProviderInterface
+from .gemini_cli_interface import GeminiCliInterface
 
 
-LLMClient = Union[CodexInterface, MultiProviderInterface]
+LLMClient = Union[CodexInterface, MultiProviderInterface, GeminiCliInterface]
 
 
 # Global LLM client instance used by helper functions
@@ -31,9 +33,9 @@ def initialize_llm(
     """Initialize the LLM client for the given backend.
 
     Args:
-        backend: LLM backend identifier ("codex" or "api").
+        backend: LLM backend identifier ("codex", "api", or "gemini-cli").
         codex_bin: Path to Codex CLI binary (for backend="codex").
-        model: Model identifier for the API backend (for backend="api").
+        model: Model identifier for API-like backends (for backend="api" or "gemini-cli").
 
     Returns:
         An initialized LLM client instance.
@@ -51,9 +53,11 @@ def initialize_llm(
         # "openai" kept for backward compatibility; it now means
         # "use the API backend" with the configured model.
         _llm_client = MultiProviderInterface(model=model)
+    elif backend_normalized in {"gemini-cli", "gemini"}:
+        _llm_client = GeminiCliInterface(model=model)
     else:
         raise RuntimeError(
-            f"Unsupported LLM backend: {backend}. Supported backends are: 'codex', 'api'."
+            f"Unsupported LLM backend: {backend}. Supported backends are: 'codex', 'api', 'gemini-cli'."
         )
 
     return _llm_client
