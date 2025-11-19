@@ -216,7 +216,7 @@ def tick(
     llm_backend: Optional[str] = typer.Option(
         None,
         "--llm-backend",
-        help="LLM backend: codex, api (multi-provider API), or gemini-cli (Gemini CLI)"
+        help="LLM backend: codex, api (multi-provider API), gemini-cli (Gemini CLI), or claude-cli (Claude Code CLI)"
     ),
     llm_model: Optional[str] = typer.Option(
         None,
@@ -412,7 +412,7 @@ def run(
     llm_backend: Optional[str] = typer.Option(
         None,
         "--llm-backend",
-        help="LLM backend: codex, api (multi-provider API), or gemini-cli (Gemini CLI)"
+        help="LLM backend: codex, api (multi-provider API), gemini-cli (Gemini CLI), or claude-cli (Claude Code CLI)"
     ),
     llm_model: Optional[str] = typer.Option(
         None,

@@ -7,6 +7,7 @@ Backends:
 - "api"         → Multi-provider API backend (OpenAI, Gemini, Claude) using
                    an ai_helper-style model registry.
 - "gemini-cli"  → Gemini CLI backend using the local `gemini` binary.
+- "claude-cli"  → Claude Code CLI backend using the local `claude` binary.
 
 The API backend uses model names (e.g. "gpt-5.1", "claude-4.5",
 "gemini-2.5-pro") to route to the correct provider.
@@ -16,9 +17,10 @@ from typing import Optional, Union
 from .codex_interface import CodexInterface
 from .multi_provider_llm import MultiProviderInterface
 from .gemini_cli_interface import GeminiCliInterface
+from .claude_cli_interface import ClaudeCliInterface
 
 
-LLMClient = Union[CodexInterface, MultiProviderInterface, GeminiCliInterface]
+LLMClient = Union[CodexInterface, MultiProviderInterface, GeminiCliInterface, ClaudeCliInterface]
 
 
 # Global LLM client instance used by helper functions
@@ -33,7 +35,7 @@ def initialize_llm(
     """Initialize the LLM client for the given backend.
 
     Args:
-        backend: LLM backend identifier ("codex", "api", or "gemini-cli").
+        backend: LLM backend identifier ("codex", "api", "gemini-cli", or "claude-cli").
         codex_bin: Path to Codex CLI binary (for backend="codex").
         model: Model identifier for API-like backends (for backend="api" or "gemini-cli").
 
@@ -55,9 +57,11 @@ def initialize_llm(
         _llm_client = MultiProviderInterface(model=model)
     elif backend_normalized in {"gemini-cli", "gemini"}:
         _llm_client = GeminiCliInterface(model=model)
+    elif backend_normalized in {"claude-cli", "claude"}:
+        _llm_client = ClaudeCliInterface()
     else:
         raise RuntimeError(
-            f"Unsupported LLM backend: {backend}. Supported backends are: 'codex', 'api', 'gemini-cli'."
+            f"Unsupported LLM backend: {backend}. Supported backends are: 'codex', 'api', 'gemini-cli', 'claude-cli'."
         )
 
     return _llm_client

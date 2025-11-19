@@ -13,7 +13,7 @@ StoryDaemon is a Python-based system that generates long-form fiction through an
 - 📚 **Story Foundation** - Optional genre, premise, setting, tone to guide emergence
 - 🎯 **Goal Hierarchy** - Protagonist goals emerge naturally or can be user-specified
 - ⚡ **Tension Tracking** - Automatic scene tension scoring (0-10) for pacing awareness
-- 💰 **Flexible LLM Backends** - Codex CLI & Gemini CLI (zero additional cost), or API backends (GPT-5/5.1, Claude 4.5, Gemini 2.5 Pro)
+- 💰 **Flexible LLM Backends** - Codex CLI, Gemini CLI, Claude Code CLI (zero additional cost), or API backends (GPT-5/5.1, Claude 4.5, Gemini 2.5 Pro)
 - 🔧 **Tool-Based System** - Extensible tool registry for character generation, memory search, etc.
 - 🔍 **Rich Inspection Tools** - Status, list, inspect, goals commands for full project visibility
 - 💾 **Automatic Checkpointing** - Snapshot and restore project state at any point
@@ -36,6 +36,10 @@ StoryDaemon is a Python-based system that generates long-form fiction through an
   - OpenAI GPT-5/5.1 or newer
   - Claude 4.5 (Anthropic)
   - Gemini 2.5 Pro
+- (Optional) Gemini CLI installed (for `llm.backend = gemini-cli`)
+  - https://github.com/google-gemini/gemini-cli
+- (Optional) Claude Code CLI installed (for `llm.backend = claude-cli`)
+  - https://github.com/anthropics/claude-code
 
 ### Installation
 
@@ -126,6 +130,9 @@ novel tick --llm-backend api --llm-model gemini-2.5-pro  # Gemini 2.5 Pro
 
 # Use Gemini CLI backend (local `gemini` binary)
 novel tick --llm-backend gemini-cli --llm-model gemini-2.5-pro
+
+# Use Claude Code CLI backend (local `claude` binary, headless mode)
+novel tick --llm-backend claude-cli --llm-model claude-4.5
 ```
 
 ## How It Works
@@ -320,7 +327,7 @@ Global configuration in `~/.storydaemon/config.yaml`:
 
 ```yaml
 llm:
-  backend: codex              # "codex" (Codex CLI), "api" (multi-provider API), or "gemini-cli" (Gemini CLI)
+  backend: codex              # "codex" (Codex CLI), "api" (multi-provider API), "gemini-cli" (Gemini CLI), or "claude-cli" (Claude Code CLI)
   codex_bin_path: codex
   model: gpt-5.1              # Generic API model (gpt-5, gpt-5.1, claude-4.5, gemini-2.5-pro)
   openai_model: gpt-5.1       # Legacy OpenAI-specific key (still honored)
