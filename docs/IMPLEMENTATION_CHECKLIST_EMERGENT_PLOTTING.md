@@ -59,20 +59,20 @@ This checklist merges the plans from `ARCHITECTURE_PROPOSAL_EMERGENT_PLOTTING.md
 
 ## Phase 2 – Factions (World Grounding)
 
-- [ ] **Define Faction schema** in memory layer:
-  - [ ] Fields: `id`, `name`, `type`, `summary`, `mandate_objectives`, `influence_domains`,
+- [x] **Define Faction schema** in memory layer:
+  - [x] Fields: `id`, `name`, `type`, `summary`, `mandate_objectives`, `influence_domains`,
         `assets_resources`, `methods_tactics`, `stance_by_character`, `relationships`,
         `importance`, `tags`.
 
-- [ ] **Implement faction tools**
-  - [ ] `faction.generate` (creates new `F#`, initial fields).
-  - [ ] `faction.update` (partial updates, esp. stances, assets, relationships).
-  - [ ] `faction.query` (filters: type, tags, importance, name_contains).
+- [x] **Implement faction tools**
+  - [x] `faction.generate` (creates new `F#`, initial fields).
+  - [x] `faction.update` (partial updates, esp. stances, assets, relationships).
+  - [x] `faction.query` (filters: type, tags, importance, name_contains).
 
-- [ ] **Prompt integration**
-  - [ ] Planner: add a “Factions” context section summarizing relevant factions.
-  - [ ] Planner: allow/encourage plans that call `faction.generate/update/query`.
-  - [ ] Writer: first time a faction appears in a scene, include one-line identity grounding.
+- [x] **Prompt integration**
+  - [x] Planner: add a “Factions” context section summarizing relevant factions.
+  - [x] Planner: allow/encourage plans that call `faction.generate/update/query`.
+  - [x] Writer: first time a faction appears in a scene, include one-line identity grounding.
 
 - [ ] **QA integration**
   - [ ] QA flags ungrounded named groups and suggests creating a faction.

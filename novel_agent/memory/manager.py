@@ -68,6 +68,36 @@ class MemoryManager:
     def _load_counters(self):
         """Load ID counters from disk."""
         self.counters = self._read_json(self.counters_file)
+
+        # Backfill missing counters for backward compatibility
+        for key in [
+            "character",
+            "location",
+            "scene",
+            "open_loop",
+            "relationship",
+            "lore",
+            "faction",
+        ]:
+            if key not in self.counters:
+                self.counters[key] = 0
+
+        # Ensure the character counter is at least one past the highest
+        # character ID present on disk, so existing projects with stale
+        # counters.json do not reuse IDs.
+        max_existing = -1
+        for f in self.characters_path.glob("C*.json"):
+            stem = f.stem
+            try:
+                idx = int(stem[1:])
+            except (ValueError, IndexError):
+                continue
+            if idx > max_existing:
+                max_existing = idx
+
+        if max_existing >= 0 and self.counters.get("character", 0) <= max_existing:
+            self.counters["character"] = max_existing + 1
+            self._save_counters()
     
     def _save_counters(self):
         """Save ID counters to disk."""
@@ -97,6 +127,25 @@ class MemoryManager:
             New ID string (e.g., C0, L0, S001, OL0, R0)
         """
         current = self.counters.get(entity_type, 0)
+
+        # For characters, guard against stale or reset counters.json by
+        # looking at existing character files on disk and ensuring we
+        # never reuse an ID that already exists.
+        if entity_type == "character":
+            max_existing = -1
+            for f in self.characters_path.glob("C*.json"):
+                stem = f.stem
+                # Expect IDs like C0, C1, C2, ...
+                try:
+                    idx = int(stem[1:])
+                except (ValueError, IndexError):
+                    continue
+                if idx > max_existing:
+                    max_existing = idx
+
+            if max_existing >= 0 and current <= max_existing:
+                current = max_existing + 1
+
         self.counters[entity_type] = current + 1
         self._save_counters()
         

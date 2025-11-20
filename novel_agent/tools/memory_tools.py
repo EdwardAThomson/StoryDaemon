@@ -143,6 +143,9 @@ class CharacterGenerateTool(Tool):
         family_name = ""
         title = ""
         
+        # Generate ID up front so we can optionally use it in a fallback name
+        character_id = self.memory_manager.generate_id("character")
+
         if not name and self.name_generator:
             # Random 50/50 if gender not specified (to avoid LLM bias)
             char_gender = gender or random.choice(["male", "female"])
@@ -160,10 +163,7 @@ class CharacterGenerateTool(Tool):
                 first_name = parts[0]
         else:
             # Fallback if no generator available
-            first_name = f"Character_{self.memory_manager.generate_id('character')}"
-        
-        # Generate ID
-        character_id = self.memory_manager.generate_id("character")
+            first_name = f"Character_{character_id}"
         
         # Create character entity
         character = Character(
