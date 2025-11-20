@@ -44,6 +44,10 @@ class WriterContextBuilder:
         progress_step = plan.get("progress_step", "")
         pov_character_id = plan.get("pov_character", "")
         location_id = plan.get("target_location")
+        scene_mode = plan.get("scene_mode", "")
+        palette_shift = plan.get("palette_shift", "")
+        transition_path = plan.get("transition_path", "")
+        dialogue_targets = plan.get("dialogue_targets", "")
         
         # Get POV character details
         pov_character_name, pov_character_details = self._get_character_details(
@@ -74,6 +78,10 @@ class WriterContextBuilder:
             "key_change": key_change,
             "progress_milestone": progress_milestone,
             "progress_step": progress_step,
+            "scene_mode": scene_mode,
+            "palette_shift": palette_shift,
+            "transition_path": transition_path,
+            "dialogue_targets": dialogue_targets,
             "pov_character_id": pov_character_id,
             "pov_character_name": pov_character_name,
             "pov_character_details": pov_character_details,

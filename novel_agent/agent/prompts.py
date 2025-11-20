@@ -22,6 +22,9 @@ Your task is to analyze the current story state and create a plan for the next s
 ### Tension Pattern (Pacing Awareness)
 {tension_history}
 
+### Recent QA Feedback (Scene Quality & Momentum)
+{qa_feedback}
+
 ### Active Character Details
 {active_character_details}
 
@@ -84,6 +87,10 @@ Respond with a JSON object following this structure:
   "key_change": "One sentence: What is fundamentally different after this scene?",
   "progress_milestone": "Specific milestone achieved toward resolving a loop (optional)",
   "progress_step": "setup|complication|reversal|revelation|decision|resolution (optional)",
+  "scene_mode": "dialogue|political|action|technical|introspective (choose mode that differs from the previous scene when possible)",
+  "palette_shift": "Short description of the scene's sensory/emotional palette (e.g., 'heat, copper, crowd-noise')",
+  "transition_path": "1–3 sentence description of how we move from the previous scene/location to this one (optional if no transition is needed)",
+  "dialogue_targets": "Optional description of dialogue goals (e.g., 'at least 6 exchanges, conflict axis: leverage vs trust, participants: C0 and corp_proxy')",
   "loops_addressed": ["OL4", "OL5"],
   "pov_character": "Character ID for POV (use {active_character_id} or specify another)",
   "target_location": "Location ID where scene takes place (or null for new location)",
@@ -145,6 +152,11 @@ The following context includes FULL TEXT from the most recent scenes to help you
 
 **KEY CHANGE THIS SCENE MUST ACCOMPLISH:** {key_change}
 **PROGRESS MILESTONE (if not resolving):** {progress_milestone}
+
+**Scene Mode:** {scene_mode}
+**Palette Shift:** {palette_shift}
+**Transition Path (if provided):** {transition_path}
+**Dialogue Targets (if provided):** {dialogue_targets}
 
 **Tool Results:** {tool_results_summary}
 

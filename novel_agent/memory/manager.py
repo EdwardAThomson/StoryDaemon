@@ -26,6 +26,7 @@ class MemoryManager:
         self.locations_path = self.memory_path / "locations"
         self.scenes_path = self.memory_path / "scenes"
         self.factions_path = self.memory_path / "factions"
+        self.qa_path = self.memory_path / "qa"
         self.open_loops_file = self.memory_path / "open_loops.json"
         self.relationships_file = self.memory_path / "relationships.json"
         self.lore_file = self.memory_path / "lore.json"
@@ -41,6 +42,7 @@ class MemoryManager:
         self.locations_path.mkdir(exist_ok=True)
         self.scenes_path.mkdir(exist_ok=True)
         self.factions_path.mkdir(exist_ok=True)
+        self.qa_path.mkdir(exist_ok=True)
         
         # Initialize empty files if they don't exist
         if not self.open_loops_file.exists():
@@ -208,6 +210,40 @@ class MemoryManager:
     def list_scenes(self) -> List[str]:
         """List all scene IDs."""
         return sorted([f.stem for f in self.scenes_path.glob("*.json")])
+
+    def save_scene_qa(self, scene_id: str, tick: int, evaluation: Dict[str, Any]):
+        """Save QA evaluation data for a scene."""
+        data = {
+            "scene_id": scene_id,
+            "tick": tick,
+            "evaluation": evaluation,
+        }
+        path = self.qa_path / f"{scene_id}.json"
+        self._write_json(path, data)
+
+    def load_scene_qa(self, scene_id: str) -> Optional[Dict[str, Any]]:
+        """Load QA evaluation data for a scene."""
+        path = self.qa_path / f"{scene_id}.json"
+        if not path.exists():
+            return None
+        return self._read_json(path)
+
+    def get_recent_scene_qa(self, count: int = 3) -> List[Dict[str, Any]]:
+        """Get QA evaluations for the most recent scenes."""
+        scene_ids = self.list_scenes()
+        if not scene_ids:
+            return []
+        recent_ids = scene_ids[-count:]
+        results: List[Dict[str, Any]] = []
+        for scene_id in recent_ids:
+            qa = self.load_scene_qa(scene_id)
+            if qa:
+                if "tick" not in qa:
+                    scene = self.load_scene(scene_id)
+                    if scene:
+                        qa["tick"] = getattr(scene, "tick", None)
+                results.append(qa)
+        return results
     
     # ========================================================================
     # Generic Entity Operations

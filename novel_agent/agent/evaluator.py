@@ -33,26 +33,31 @@ class SceneEvaluator:
         issues = []
         warnings = []
         checks = {}
-        
-        # 1. POV check (heuristic)
+
         checks["pov"] = self._check_pov(scene_text, scene_context)
         if not checks["pov"]:
             warnings.append("Possible POV violations detected (omniscient narration)")
-        
-        # 3. Continuity check (basic)
+
         checks["continuity"] = self._check_continuity(scene_text, scene_context)
         if not checks["continuity"]:
             warnings.append("Possible continuity issues detected")
-        
-        # Scene passes if all checks pass and no critical issues
+
+        continuity_flags: List[str] = []
+        if not checks["continuity"]:
+            continuity_flags.append("possible_continuity_issue")
+
+        qa_metrics = self._compute_qa_metrics(scene_text, scene_context, continuity_flags)
+
         passed = all(checks.values()) and len(issues) == 0
-        
-        return {
+
+        result: Dict[str, Any] = {
             "passed": passed,
             "issues": issues,
             "warnings": warnings,
-            "checks": checks
+            "checks": checks,
         }
+        result.update(qa_metrics)
+        return result
     
     def _check_pov(self, text: str, context: Dict[str, Any]) -> bool:
         """Check for POV violations using heuristics.
@@ -138,3 +143,73 @@ class SceneEvaluator:
         except Exception as e:
             # If checking fails, don't fail the scene
             return True
+
+    def _compute_qa_metrics(self, text: str, context: Dict[str, Any], continuity_flags: List[str]) -> Dict[str, Any]:
+        key_change = context.get("key_change", "") or ""
+        progress_milestone = context.get("progress_milestone", "") or ""
+        scene_mode = context.get("scene_mode", "") or ""
+        dialogue_targets_raw = context.get("dialogue_targets", "") or ""
+
+        text_lower = text.lower()
+
+        def extract_keywords(value: str) -> List[str]:
+            words = [w.strip(".,!?;:\"'()").lower() for w in value.split()]
+            return [w for w in words if len(w) >= 4]
+
+        change_keywords = extract_keywords(key_change) or extract_keywords(progress_milestone)
+        achieved_change_value = False
+        if change_keywords:
+            achieved_change_value = any(w in text_lower for w in change_keywords)
+        else:
+            achieved_change_value = True
+
+        achieved_change = {
+            "value": achieved_change_value,
+            "explanation": "Heuristic match between key_change/progress_milestone and scene text."
+        }
+
+        quote_count = text.count("\"")
+        dialogue_count = max(0, quote_count // 2)
+
+        min_exchanges = None
+        met_dialogue_target = None
+        if isinstance(dialogue_targets_raw, dict):
+            min_exchanges = dialogue_targets_raw.get("min_exchanges")
+        elif isinstance(dialogue_targets_raw, str):
+            import re
+            match = re.search(r"min_exchanges\s*[:=]\s*(\d+)", dialogue_targets_raw)
+            if match:
+                try:
+                    min_exchanges = int(match.group(1))
+                except ValueError:
+                    min_exchanges = None
+        if isinstance(min_exchanges, int):
+            met_dialogue_target = dialogue_count >= min_exchanges
+
+        if context.get("transition_path"):
+            transition_clarity_score = 8
+            transition_notes = "Transition path provided in plan."
+        else:
+            transition_clarity_score = 5
+            transition_notes = "No explicit transition_path provided."
+
+        mode_used = scene_mode or "unknown"
+
+        novelty_score = 5.0
+
+        return {
+            "achieved_change": achieved_change,
+            "dialogue_count": dialogue_count,
+            "dialogue_target": {
+                "min_exchanges": min_exchanges,
+                "met": met_dialogue_target,
+            },
+            "transition_clarity": {
+                "score": transition_clarity_score,
+                "notes": transition_notes,
+            },
+            "mode_used": mode_used,
+            "mode_diversity_warning": False,
+            "novelty_score": novelty_score,
+            "continuity_flags": continuity_flags,
+        }

@@ -88,6 +88,8 @@ class ContextBuilder:
         # Get available tools description
         context["available_tools_description"] = self.tools.get_tools_description()
         
+        context["qa_feedback"] = self._get_qa_feedback()
+        
         return context
     
     def _format_character(self, character) -> str:
@@ -301,6 +303,38 @@ class ContextBuilder:
         result += "\nThis is informational only - follow the natural story flow."
         
         return result
+
+    def _get_qa_feedback(self) -> str:
+        try:
+            recent = self.memory.get_recent_scene_qa(count=3)
+        except Exception:
+            return ""
+        if not recent:
+            return ""
+        lines = []
+        for entry in recent:
+            scene_id = entry.get("scene_id", "?")
+            tick = entry.get("tick", None)
+            evaluation = entry.get("evaluation", {})
+            achieved = evaluation.get("achieved_change", {})
+            achieved_val = achieved.get("value")
+            achieved_label = "yes" if achieved_val else "no" if achieved_val is not None else "unknown"
+            mode_used = evaluation.get("mode_used", "unknown")
+            dialogue_count = evaluation.get("dialogue_count", None)
+            novelty = evaluation.get("novelty_score", None)
+            warnings = evaluation.get("warnings", [])
+            prefix = f"Tick {tick} ({scene_id})" if tick is not None else f"Scene {scene_id}"
+            summary_parts = [f"change={achieved_label}", f"mode={mode_used}"]
+            if dialogue_count is not None:
+                summary_parts.append(f"dialogue={dialogue_count}")
+            if novelty is not None:
+                summary_parts.append(f"novelty={novelty}")
+            line = f"- {prefix}: " + ", ".join(summary_parts)
+            if warnings:
+                joined = "; ".join(warnings[:3])
+                line += f"\n  Warnings: {joined}"
+            lines.append(line)
+        return "\n".join(lines)
 
     def _format_factions(self) -> str:
         """Format factions (organizations) for prompt context.

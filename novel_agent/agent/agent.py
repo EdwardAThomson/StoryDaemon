@@ -199,7 +199,6 @@ class StoryAgent:
             )
             scene_data = self.writer.write_scene(writer_context)
             
-            # Step 7: Evaluate scene (Phase 4)
             print("   7. Evaluating scene...")
             eval_result = self.evaluator.evaluate_scene(
                 scene_data["text"],
@@ -222,9 +221,14 @@ class StoryAgent:
                 writer_context
             )
             
-            # Step 8: Commit scene (Phase 4)
             print("   8. Committing scene...")
             scene_id = self.committer.commit_scene(scene_data, tick, plan)
+
+            if eval_result:
+                try:
+                    self.memory.save_scene_qa(scene_id, tick, eval_result)
+                except Exception:
+                    pass
             
             # Step 8.5: Update scene with tension data (Phase 7A.3)
             if tension_result.get('enabled'):
@@ -388,7 +392,6 @@ class StoryAgent:
             )
             scene_data = self.writer.write_scene(writer_context)
             
-            # Step 10: Evaluate scene
             print("   9. Evaluating scene...")
             eval_result = self.evaluator.evaluate_scene(
                 scene_data["text"],
@@ -403,9 +406,14 @@ class StoryAgent:
             if not eval_result["passed"]:
                 raise ValueError(f"Scene evaluation failed: {eval_result['issues']}")
             
-            # Step 11: Commit scene
             print("   10. Committing scene...")
             scene_id = self.committer.commit_scene(scene_data, tick, plan)
+
+            if eval_result:
+                try:
+                    self.memory.save_scene_qa(scene_id, tick, eval_result)
+                except Exception:
+                    pass
             
             # Step 12: Extract facts
             print("   11. Extracting facts...")

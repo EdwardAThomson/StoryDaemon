@@ -1,0 +1,178 @@
+# Implementation Checklist: Emergent Plot-First Architecture
+
+This checklist merges the plans from `ARCHITECTURE_PROPOSAL_EMERGENT_PLOTTING.md` and `PROPOSED_CHANGES_FORWARD_MOMENTUM.md` into a single ordered sequence of work.
+
+---
+
+## Phase 0 – Align with Reality (Current State)
+
+- [ ] **Confirm current planner/writer prompts**
+  - [ ] Verify planner is already producing `key_change` or `progress_milestone` / `progress_step`.
+  - [ ] Verify writer prompt explicitly requires accomplishing `key_change` or the milestone.
+  - [ ] Confirm tool guidance (memory.search, character/location/relationship tools) is present.
+
+- [ ] **Update docs if needed**
+  - [ ] Make sure the “current architecture” description acknowledges existing forward-momentum constraints (so it’s not purely reactive anymore).
+
+---
+
+## Phase 1 – Prompt-Only Additions + QA Loop (Near-Term)
+
+### 1. Planner fields and heuristics
+
+- [ ] **Extend planner output schema** to include:
+  - [ ] `scene_mode`: `"dialogue" | "political" | "action" | "technical" | "introspective"`.
+  - [ ] `palette_shift`: short bullet list of sensory/emotional palette elements.
+  - [ ] `transition_path`: 1–3 sentence outline of how we move from previous location/time.
+  - [ ] `dialogue_targets`: e.g. `{ min_exchanges, conflict_axis, participants }`.
+
+- [ ] **Prompt changes**
+  - [ ] Update planner prompt to explain each field and show examples.
+  - [ ] Add heuristics:
+    - [ ] Prefer a different `scene_mode` than the previous scene.
+    - [ ] If last scene was technical, bias to dialogue/political for next.
+
+### 2. Writer enforcement
+
+- [ ] **Update writer prompt** to enforce new fields:
+  - [ ] If `transition_path` exists, include a brief bridge paragraph (anchor-from → traversal → anchor-to).
+  - [ ] If `dialogue_targets.min_exchanges` exists, ensure at least that many exchanges and a visible power shift or decision in dialogue.
+  - [ ] Use `palette_shift` elements in description (without overdoing it).
+
+### 3. QA step + planner feedback
+
+- [ ] **Implement QA module** that runs after each scene:
+  - [ ] `achieved_change`: boolean + explanation (did `key_change`/milestone land?).
+  - [ ] `dialogue_count` and `met_target` vs `dialogue_targets`.
+  - [ ] `transition_clarity`: 0–10 + `notes`.
+  - [ ] `mode_used` and `mode_diversity_warning` if repeating modes.
+  - [ ] `novelty_score`: 0–10 against last N scenes.
+  - [ ] `continuity_flags`: list of potential issues.
+
+- [ ] **Persist QA results** (e.g., JSON per scene).
+
+- [ ] **Feed QA into planner**
+  - [ ] Surface key QA warnings in planner context (e.g., “last scene repeated tech mode; prefer dialogue/political”).
+  - [ ] Update planner prompt to reference `qa_feedback` and self-correct.
+
+---
+
+## Phase 2 – Factions (World Grounding)
+
+- [ ] **Define Faction schema** in memory layer:
+  - [ ] Fields: `id`, `name`, `type`, `summary`, `mandate_objectives`, `influence_domains`,
+        `assets_resources`, `methods_tactics`, `stance_by_character`, `relationships`,
+        `importance`, `tags`.
+
+- [ ] **Implement faction tools**
+  - [ ] `faction.generate` (creates new `F#`, initial fields).
+  - [ ] `faction.update` (partial updates, esp. stances, assets, relationships).
+  - [ ] `faction.query` (filters: type, tags, importance, name_contains).
+
+- [ ] **Prompt integration**
+  - [ ] Planner: add a “Factions” context section summarizing relevant factions.
+  - [ ] Planner: allow/encourage plans that call `faction.generate/update/query`.
+  - [ ] Writer: first time a faction appears in a scene, include one-line identity grounding.
+
+- [ ] **QA integration**
+  - [ ] QA flags ungrounded named groups and suggests creating a faction.
+
+---
+
+## Phase 3 – PlotBeat Phase 1 (CLI-Only, Non-Invasive)
+
+- [ ] **Implement PlotBeat / PlotOutline entities** (data layer)
+  - [ ] `PlotBeat` struct/class with fields from both docs:
+    - [ ] `id`, `description`, `characters_involved`, `location`, `plot_threads`,
+          `tension_target?`, `prerequisites`, `status`, `created_at`,
+          `executed_in_scene?`, plus metadata like `advances_character_arcs`,
+          `resolves_loops`, `creates_loops`.
+  - [ ] `PlotOutline` struct/class with:
+    - [ ] `beats`, `created_at`, `last_updated`, `current_arc`, `arc_progress`,
+          `to_json` / `from_json` (backed by `plot_outline.json` at project root).
+
+- [ ] **Implement PlotOutlineManager (non-agent)**
+  - [ ] `load_outline` / `save_outline`.
+  - [ ] `generate_next_beats(count)` using LLM + plot-generation prompt.
+  - [ ] `add_beats` (append validated beats).
+  - [ ] `get_next_beat` (next pending).
+  - [ ] Basic validation (duplicates, feasibility, prerequisites).
+
+- [ ] **CLI commands**
+  - [ ] `novel plot generate --count N` → generate & append beats to outline.
+  - [ ] `novel plot status` → show pending/completed beats + arc progress.
+  - [ ] `novel plot next` → preview the next pending beat.
+
+- [ ] **Plot generation prompt**
+  - [ ] Implement the factual, non-prose beat prompt (open loops, arcs, recent scenes, tension history in → JSON beats out).
+
+- [ ] **Manual evaluation loop**
+  - [ ] Run beats for the current story, review directionality & coherence manually.
+  - [ ] Tweak prompt/validation based on observed beat quality.
+
+---
+
+## Phase 4 – Soft Integration into the Agent Loop
+
+- [ ] **Expose beats softly to planner**
+  - [ ] Pass `next_beat.description` (and maybe characters/location) into planner context as a hint, not a hard constraint.
+  - [ ] Observe whether planner naturally moves in that direction.
+
+- [ ] **Add `plan_for_beat` path**
+  - [ ] Implement `planner.plan_for_beat(beat, context=story_state())`.
+  - [ ] Ensure resulting plan still includes:
+    - [ ] `key_change` / `progress_milestone`.
+    - [ ] `scene_mode`, `palette_shift`, `transition_path`, `dialogue_targets`.
+  - [ ] Use this path under a feature flag/config (e.g. `use_plot_first_soft`).
+
+- [ ] **Integrate with QA**
+  - [ ] Add QA field `beat_hint_alignment` (did the scene generally follow the suggested beat?).
+
+---
+
+## Phase 5 – Full Emergent Plot-First Tick
+
+- [ ] **Integrate PlotOutlineManager into `StoryAgent`**
+  - [ ] Add `self.plot_manager` initialization.
+  - [ ] In `tick`:
+    - [ ] Call `needs_regeneration()` and `generate_next_beats()` when pending beats < threshold.
+    - [ ] Fallback to reactive tick if no beats and generation fails (per config).
+
+- [ ] **Beat-constrained planning**
+  - [ ] Implement `_generate_plan_for_beat(beat)` or equivalent:
+    - [ ] Build planner context + beat info (description, characters, location).
+    - [ ] Call `planner.plan_for_beat`.
+  - [ ] Ensure this path is controlled by config (e.g. `use_plot_first: true`).
+
+- [ ] **Beat-constrained writer context**
+  - [ ] Inject into writer context:
+    - [ ] `plot_beat` description.
+    - [ ] `plot_beat_requirements` (characters, location, tension target, etc.).
+  - [ ] Update writer prompt to treat the beat as a hard goal.
+
+- [ ] **Verification + status updates**
+  - [ ] Move beat-execution verification into QA (or `_verify_beat_execution` wrapper that uses QA).
+  - [ ] On verified completion:
+    - [ ] `plot.mark_beat_complete(beat.id, scene_id)`.
+
+- [ ] **Configuration & defaults**
+  - [ ] `use_plot_first`, `plot_beats_ahead`, `plot_regeneration_threshold`,
+        `verify_beat_execution`, `allow_beat_skip`, `fallback_to_reactive`.
+  - [ ] Initially disabled / opt-in; later, make plot-first the default for new projects.
+  - [ ] Add migration note/tool for existing projects.
+
+---
+
+## Phase 6 – Advanced / Optimization
+
+- [ ] **Multi-arc management**
+  - [ ] Track multiple arcs; associate beats with arcs; compute `arc_progress`.
+
+- [ ] **Beat branching / alternative paths**
+  - [ ] Support optional/branching beats, reordering for pacing.
+
+- [ ] **Tension curve optimization**
+  - [ ] Use tension history + metrics to adjust future `tension_target`s.
+
+- [ ] **Metrics + dashboards**
+  - [ ] Track: loop progress rate, mode diversity, dialogue density, novelty vs N, QA compliance, beat completion rate.
