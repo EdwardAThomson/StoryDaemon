@@ -13,6 +13,34 @@ PLAN_SCHEMA = {
             "type": "string",
             "description": "What should happen in this scene"
         },
+        "key_change": {
+            "type": ["string", "null"],
+            "description": "One sentence describing what is fundamentally different after this scene"
+        },
+        "progress_milestone": {
+            "type": ["string", "null"],
+            "description": "Specific milestone achieved toward resolving an open loop (optional)"
+        },
+        "progress_step": {
+            "type": ["string", "null"],
+            "description": "High-level step type (setup|complication|reversal|revelation|decision|resolution)"
+        },
+        "scene_mode": {
+            "type": ["string", "null"],
+            "description": "Primary mode for this scene: dialogue|political|action|technical|introspective"
+        },
+        "palette_shift": {
+            "type": ["string", "null"],
+            "description": "Short description of the scene's sensory/emotional palette"
+        },
+        "transition_path": {
+            "type": ["string", "null"],
+            "description": "1-3 sentence outline of how we move from the previous scene/location to this one"
+        },
+        "dialogue_targets": {
+            "type": ["object", "string", "null"],
+            "description": "Dialogue goals for this scene (e.g. min_exchanges, conflict_axis, participants)"
+        },
         "pov_character": {
             "type": ["string", "null"],
             "description": "Character ID for POV (optional, can be inferred)"
@@ -46,6 +74,10 @@ PLAN_SCHEMA = {
             "type": "array",
             "items": {"type": "string"},
             "description": "What should result from this scene"
+        },
+        "metadata": {
+            "type": "object",
+            "description": "Optional metadata for planner hints (e.g. scene_length)"
         }
     }
 }

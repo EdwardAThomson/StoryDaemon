@@ -46,7 +46,7 @@ class SceneEvaluator:
         if not checks["continuity"]:
             continuity_flags.append("possible_continuity_issue")
 
-        qa_metrics = self._compute_qa_metrics(scene_text, scene_context, continuity_flags)
+        qa_metrics = self._compute_qa_metrics(scene_text, scene_context, continuity_flags, warnings)
 
         passed = all(checks.values()) and len(issues) == 0
 
@@ -144,7 +144,7 @@ class SceneEvaluator:
             # If checking fails, don't fail the scene
             return True
 
-    def _compute_qa_metrics(self, text: str, context: Dict[str, Any], continuity_flags: List[str]) -> Dict[str, Any]:
+    def _compute_qa_metrics(self, text: str, context: Dict[str, Any], continuity_flags: List[str], warnings: List[str]) -> Dict[str, Any]:
         key_change = context.get("key_change", "") or ""
         progress_milestone = context.get("progress_milestone", "") or ""
         scene_mode = context.get("scene_mode", "") or ""
@@ -195,7 +195,70 @@ class SceneEvaluator:
 
         mode_used = scene_mode or "unknown"
 
+        # Mode diversity warning based on recent QA history
+        mode_diversity_warning = False
+        recent_qa: List[Dict[str, Any]] = []
+        try:
+            recent_qa = self.memory.get_recent_scene_qa(count=3)
+        except Exception:
+            recent_qa = []
+
+        recent_modes: List[str] = []
+        for entry in recent_qa:
+            evaluation = entry.get("evaluation", {}) or {}
+            m = evaluation.get("mode_used")
+            if isinstance(m, str) and m:
+                recent_modes.append(m)
+
+        if mode_used != "unknown" and recent_modes:
+            last_modes = recent_modes[-3:]
+            # If the last few scenes all used the same mode and we are repeating it again,
+            # flag a diversity warning to encourage switching things up.
+            if len(last_modes) >= 2 and all(m == last_modes[-1] for m in last_modes) and mode_used == last_modes[-1]:
+                mode_diversity_warning = True
+            elif len(last_modes) >= 2 and all(m == mode_used for m in last_modes):
+                mode_diversity_warning = True
+
+        if mode_diversity_warning:
+            # Soft guidance only; planner can choose to ignore.
+            if mode_used == "technical":
+                warnings.append(
+                    "Recent scenes have repeated technical mode; consider a dialogue or political scene next for variety."
+                )
+            else:
+                warnings.append(
+                    f"Recent scenes have repeated scene_mode '{mode_used}'; consider choosing a different mode for variety."
+                )
+
+        # Novelty score: simple heuristic vs last scene using QA signals
         novelty_score = 5.0
+        if recent_qa:
+            last_eval = recent_qa[-1].get("evaluation", {}) or {}
+            last_mode = last_eval.get("mode_used")
+            last_achieved = (last_eval.get("achieved_change") or {}).get("value")
+            last_dialogue = last_eval.get("dialogue_count")
+
+            score = 5.0
+
+            if mode_used != "unknown" and isinstance(last_mode, str) and last_mode:
+                if mode_used != last_mode:
+                    score += 1.5
+                else:
+                    score -= 1.0
+
+            if isinstance(achieved_change_value, bool) and isinstance(last_achieved, bool):
+                if achieved_change_value != last_achieved:
+                    score += 0.5
+
+            if isinstance(dialogue_count, int) and isinstance(last_dialogue, int):
+                if dialogue_count == 0 and last_dialogue == 0:
+                    score -= 1.0
+                elif (dialogue_count == 0) != (last_dialogue == 0):
+                    score += 1.0
+                elif abs(dialogue_count - last_dialogue) <= 2:
+                    score -= 0.5
+
+            novelty_score = max(1.0, min(9.0, score))
 
         return {
             "achieved_change": achieved_change,
@@ -209,7 +272,7 @@ class SceneEvaluator:
                 "notes": transition_notes,
             },
             "mode_used": mode_used,
-            "mode_diversity_warning": False,
+            "mode_diversity_warning": mode_diversity_warning,
             "novelty_score": novelty_score,
             "continuity_flags": continuity_flags,
         }

@@ -78,7 +78,16 @@ Create a plan for the next scene that makes CONCRETE PROGRESS on the plot.
 
 ## Output Format
 
-Respond with a JSON object following this structure:
+Before you respond, make deliberate choices for these planning fields using the **Recent Scenes**, **Tension Pattern**, and **Recent QA Feedback** sections above:
+
+- `scene_mode`  Primary mode for this scene. Choose from `dialogue`, `political`, `action`, `technical`, or `introspective`.
+  - Prefer a different `scene_mode` than the last few scenes when possible.
+  - If recent QA or recent scenes show repeated `technical` mode, bias this scene toward `dialogue` or `political` to vary texture.
+- `palette_shift`  Short phrase or list that changes the sensory/emotional palette (e.g., `"heat, copper, crowd-noise"` or `"administrative neon, recycled air, clipped voices"`).
+- `transition_path`  1-3 sentence outline of how we move from the end of the previous scene into this one (physical/temporal bridge). Use this when changing location, time, or situation.
+- `dialogue_targets`  Optional dialogue goals. Prefer a structured object (e.g. `{ "min_exchanges": 6, "conflict_axis": "leverage vs trust", "participants": ["C0", "corp_proxy"] }`).
+
+Then emit the JSON object below:
 
 ```json
 {
@@ -185,7 +194,19 @@ Write a scene passage from {pov_character_name}'s deep POV that ACCOMPLISHES THE
    - Turning point: The moment something CHANGES
    - Resolution: Show the new situation
 
-3. **AVOID REPETITION** - Review the recent context above
+3. **USE THE PLANNED TRANSITION (IF PROVIDED)**
+   - If a transition path is provided in the plan, include a brief bridge sequence that moves the reader from the end of the previous scene into this one (anchor-from → traversal → anchor-to).
+   - Make the transition concrete in space/time or situation so the shift never feels like a hard cut.
+
+4. **HONOR DIALOGUE TARGETS (IF PROVIDED)**
+   - If the plan specifies a minimum number of dialogue exchanges, ensure at least that many back-and-forths between the specified participants.
+   - Use those exchanges to drive a visible power shift, decision, or change in leverage by the end of the scene.
+
+5. **APPLY THE PALETTE SHIFT**
+   - Weave in details that reflect the planned sensory/emotional palette (sounds, textures, light, smells, emotional tone), without simply repeating the palette list verbatim.
+   - Use these details throughout the scene to make this passage feel distinct from recent scenes.
+
+6. **AVOID REPETITION** - Review the recent context above
    - Do NOT repeat similar actions from recent scenes
    - Do NOT repeat similar emotional beats
    - Find fresh ways to show character state and conflict

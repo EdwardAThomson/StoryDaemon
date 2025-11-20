@@ -20,33 +20,33 @@ This checklist merges the plans from `ARCHITECTURE_PROPOSAL_EMERGENT_PLOTTING.md
 
 ### 1. Planner fields and heuristics
 
-- [ ] **Extend planner output schema** to include:
-  - [ ] `scene_mode`: `"dialogue" | "political" | "action" | "technical" | "introspective"`.
-  - [ ] `palette_shift`: short bullet list of sensory/emotional palette elements.
-  - [ ] `transition_path`: 1–3 sentence outline of how we move from previous location/time.
-  - [ ] `dialogue_targets`: e.g. `{ min_exchanges, conflict_axis, participants }`.
+- [x] **Extend planner output schema** to include:
+  - [x] `scene_mode`: `"dialogue" | "political" | "action" | "technical" | "introspective"`.
+  - [x] `palette_shift`: short bullet list of sensory/emotional palette elements.
+  - [x] `transition_path`: 1–3 sentence outline of how we move from previous location/time.
+  - [x] `dialogue_targets`: e.g. `{ min_exchanges, conflict_axis, participants }`.
 
-- [ ] **Prompt changes**
-  - [ ] Update planner prompt to explain each field and show examples.
-  - [ ] Add heuristics:
-    - [ ] Prefer a different `scene_mode` than the previous scene.
-    - [ ] If last scene was technical, bias to dialogue/political for next.
+- [x] **Prompt changes**
+  - [x] Update planner prompt to explain each field and show examples.
+  - [x] Add heuristics:
+    - [x] Prefer a different `scene_mode` than the previous scene.
+    - [x] If last scene was technical, bias to dialogue/political for next.
 
 ### 2. Writer enforcement
 
-- [ ] **Update writer prompt** to enforce new fields:
-  - [ ] If `transition_path` exists, include a brief bridge paragraph (anchor-from → traversal → anchor-to).
-  - [ ] If `dialogue_targets.min_exchanges` exists, ensure at least that many exchanges and a visible power shift or decision in dialogue.
-  - [ ] Use `palette_shift` elements in description (without overdoing it).
+- [x] **Update writer prompt** to enforce new fields:
+  - [x] If `transition_path` exists, include a brief bridge paragraph (anchor-from → traversal → anchor-to).
+  - [x] If `dialogue_targets.min_exchanges` exists, ensure at least that many exchanges and a visible power shift or decision in dialogue.
+  - [x] Use `palette_shift` elements in description (without overdoing it).
 
 ### 3. QA step + planner feedback
 
-- [ ] **Implement QA module** that runs after each scene:
+- [x] **Implement QA module** that runs after each scene:
   - [x] `achieved_change`: boolean + explanation (did `key_change`/milestone land?).
   - [x] `dialogue_count` and `met_target` vs `dialogue_targets`.
   - [x] `transition_clarity`: 0–10 + `notes`.
-  - [ ] `mode_used` and `mode_diversity_warning` if repeating modes.
-  - [ ] `novelty_score`: 0–10 against last N scenes.
+  - [x] `mode_used` and `mode_diversity_warning` if repeating modes.
+  - [x] `novelty_score`: 0–10 against last N scenes.
   - [x] `continuity_flags`: list of potential issues.
 
 - [x] **Persist QA results** (e.g., JSON per scene).
