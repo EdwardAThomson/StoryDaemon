@@ -35,6 +35,8 @@ PROBLEM: No long-term plot structure
          No arc awareness
 ```
 
+_Note (2025-11):_ The production system now layers additional **forward-momentum constraints** (planner `key_change` / `progress_milestone` and writer enforcement) and a per-scene **QA pass** that feeds back into planning on top of this reactive loop. Structurally, however, it still plans one scene at a time without a multi-beat plot outline, so this section remains a good description of the **current plot-level architecture** (reactive, but with stronger local constraints).
+
 ## Proposed Architecture: Emergent Plot-First
 
 ### Core Concept

@@ -63,7 +63,20 @@ class FactExtractor:
             return facts
             
         except Exception as e:
-            logger.error(f"Error extracting facts: {e}")
+            message = str(e)
+            lower_msg = message.lower()
+            if "timed out" in lower_msg:
+                logger.error(
+                    "Fact extraction timed out or was too slow; "
+                    "continuing without dynamic entity updates. Details: %s",
+                    message,
+                )
+            else:
+                logger.error(
+                    "Fact extraction failed; continuing without dynamic entity updates. "
+                    "Details: %s",
+                    message,
+                )
             # Return empty facts on error
             return self._empty_facts()
     

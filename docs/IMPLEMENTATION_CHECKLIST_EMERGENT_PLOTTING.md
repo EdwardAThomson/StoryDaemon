@@ -6,13 +6,13 @@ This checklist merges the plans from `ARCHITECTURE_PROPOSAL_EMERGENT_PLOTTING.md
 
 ## Phase 0 – Align with Reality (Current State)
 
-- [ ] **Confirm current planner/writer prompts**
-  - [ ] Verify planner is already producing `key_change` or `progress_milestone` / `progress_step`.
-  - [ ] Verify writer prompt explicitly requires accomplishing `key_change` or the milestone.
-  - [ ] Confirm tool guidance (memory.search, character/location/relationship tools) is present.
+- [x] **Confirm current planner/writer prompts**
+  - [x] Verify planner is already producing `key_change` or `progress_milestone` / `progress_step`.
+  - [x] Verify writer prompt explicitly requires accomplishing `key_change` or the milestone.
+  - [x] Confirm tool guidance (memory.search, character/location/relationship tools) is present.
 
-- [ ] **Update docs if needed**
-  - [ ] Make sure the “current architecture” description acknowledges existing forward-momentum constraints (so it’s not purely reactive anymore).
+- [x] **Update docs if needed**
+  - [x] Make sure the “current architecture” description acknowledges existing forward-momentum constraints (so it’s not purely reactive anymore).
 
 ---
 
@@ -42,18 +42,18 @@ This checklist merges the plans from `ARCHITECTURE_PROPOSAL_EMERGENT_PLOTTING.md
 ### 3. QA step + planner feedback
 
 - [ ] **Implement QA module** that runs after each scene:
-  - [ ] `achieved_change`: boolean + explanation (did `key_change`/milestone land?).
-  - [ ] `dialogue_count` and `met_target` vs `dialogue_targets`.
-  - [ ] `transition_clarity`: 0–10 + `notes`.
+  - [x] `achieved_change`: boolean + explanation (did `key_change`/milestone land?).
+  - [x] `dialogue_count` and `met_target` vs `dialogue_targets`.
+  - [x] `transition_clarity`: 0–10 + `notes`.
   - [ ] `mode_used` and `mode_diversity_warning` if repeating modes.
   - [ ] `novelty_score`: 0–10 against last N scenes.
-  - [ ] `continuity_flags`: list of potential issues.
+  - [x] `continuity_flags`: list of potential issues.
 
-- [ ] **Persist QA results** (e.g., JSON per scene).
+- [x] **Persist QA results** (e.g., JSON per scene).
 
-- [ ] **Feed QA into planner**
-  - [ ] Surface key QA warnings in planner context (e.g., “last scene repeated tech mode; prefer dialogue/political”).
-  - [ ] Update planner prompt to reference `qa_feedback` and self-correct.
+- [x] **Feed QA into planner**
+  - [x] Surface key QA warnings in planner context (e.g., “last scene repeated tech mode; prefer dialogue/political”).
+  - [x] Update planner prompt to reference `qa_feedback` and self-correct.
 
 ---
 

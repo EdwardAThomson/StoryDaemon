@@ -56,10 +56,34 @@ class PlanExecutor:
             "success": True
         }
         
+        # Track last name.generate result for simple tool chaining
+        last_name_result: Dict[str, Any] | None = None
+        
         # Execute each action - STOP ON FIRST ERROR
         for i, action in enumerate(plan.get("actions", [])):
             try:
+                tool_name = action.get("tool")
+                args = action.get("args", {})
+
+                # Simple placeholder substitution: "<from name.generate>" → last generated full name
+                if (
+                    tool_name == "character.generate"
+                    and isinstance(args.get("name"), str)
+                    and args["name"].strip().lower() == "<from name.generate>"
+                    and last_name_result
+                    and last_name_result.get("success")
+                ):
+                    full_name = last_name_result.get("full_name") or ""
+                    if full_name:
+                        args["name"] = full_name
+                        action["args"] = args
+                
                 result = self._execute_action(action, tick)
+
+                # Remember last successful name.generate result for future substitutions
+                if tool_name == "name.generate":
+                    last_name_result = result
+
                 results["actions_executed"].append({
                     "action_index": i,
                     "tool": action["tool"],

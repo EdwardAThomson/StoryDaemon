@@ -143,7 +143,7 @@ StoryDaemon uses a **story tick loop** where each tick produces one scene passag
 2. **Plan** - Planner LLM decides which tools to use, scene intention, and optional length guidance
 3. **Execute Tools** - Run character generation, memory search, etc.
 4. **Write** - Writer LLM generates prose in deep POV (flexible length based on scene needs)
-5. **Evaluate** - Check continuity and POV integrity
+5. **Evaluate** - Check continuity and POV integrity and compute QA metrics (change/milestone, dialogue density, transitions, mode, novelty) that feed back into planning
 6. **Evaluate Tension** - Analyze scene tension (0-10 scale) for pacing awareness
 7. **Commit** - Save scene and update memory
 8. **Extract Facts** - Update character/location state from scene content
