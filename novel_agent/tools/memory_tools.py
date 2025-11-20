@@ -514,7 +514,7 @@ class RelationshipQueryTool(Tool):
 class FactionGenerateTool(Tool):
     """Create a new faction/organization entity."""
     
-    def __init__(self, memory_manager: MemoryManager, vector_store: VectorStore):
+    def __init__(self, memory_manager: MemoryManager, vector_store: VectorStore, name_generator=None):
         super().__init__(
             name="faction.generate",
             description="Create a new faction (organization) with core attributes",
@@ -533,6 +533,7 @@ class FactionGenerateTool(Tool):
         )
         self.memory_manager = memory_manager
         self.vector_store = vector_store
+        self.name_generator = name_generator
     
     def execute(
         self,
@@ -548,9 +549,24 @@ class FactionGenerateTool(Tool):
         tags: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         faction_id = self.memory_manager.generate_id("faction")
+
+        # If no explicit name provided, optionally use the local name generator
+        # to create a more varied faction name. Fall back to the generic
+        # Faction_<id> pattern if no generator is available.
+        final_name = name
+        if not final_name and self.name_generator:
+            # Reuse the same syllable-based generator used for characters.
+            # Gender is irrelevant for factions; we just want variety.
+            gender = random.choice(["male", "female"])
+            name_result = self.name_generator.generate_name(gender=gender, genre="scifi")
+            final_name = name_result.get("full_name") or name_result.get("first_name")
+
+        if not final_name:
+            final_name = f"Faction_{faction_id}"
+
         faction = Faction(
             id=faction_id,
-            name=name or f"Faction_{faction_id}",
+            name=final_name,
             org_type=org_type,
             summary=summary,
             mandate_objectives=mandate_objectives or [],
