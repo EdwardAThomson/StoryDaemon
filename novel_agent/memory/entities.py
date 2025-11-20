@@ -548,3 +548,77 @@ class Lore:
     def from_dict(cls, data: Dict[str, Any]) -> "Lore":
         """Create from dictionary."""
         return cls(**data)
+
+
+@dataclass
+class PlotBeat:
+    """A single plot beat (factual event) for the plot outline layer."""
+    id: str
+    description: str
+    characters_involved: List[str] = field(default_factory=list)
+    location: Optional[str] = None
+    plot_threads: List[str] = field(default_factory=list)
+    tension_target: Optional[int] = None  # 0-10 target tension level
+    prerequisites: List[str] = field(default_factory=list)
+    status: str = "pending"  # pending, in_progress, completed, skipped
+    created_at: str = ""
+    executed_in_scene: Optional[str] = None
+    execution_notes: str = ""
+
+    # Metadata for validation / analysis
+    advances_character_arcs: List[str] = field(default_factory=list)
+    resolves_loops: List[str] = field(default_factory=list)
+    creates_loops: List[str] = field(default_factory=list)
+
+    def __post_init__(self):
+        if not self.created_at:
+            self.created_at = datetime.utcnow().isoformat() + "Z"
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "PlotBeat":
+        """Create from dictionary."""
+        return cls(**data)
+
+
+@dataclass
+class PlotOutline:
+    """Collection of plot beats and high-level arc metadata."""
+    beats: List[PlotBeat] = field(default_factory=list)
+    created_at: str = ""
+    last_updated: str = ""
+    current_arc: str = ""
+    arc_progress: float = 0.0
+
+    def __post_init__(self):
+        now = datetime.utcnow().isoformat() + "Z"
+        if not self.created_at:
+            self.created_at = now
+        if not self.last_updated:
+            self.last_updated = self.created_at
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
+        return {
+            "beats": [b.to_dict() for b in self.beats],
+            "created_at": self.created_at,
+            "last_updated": self.last_updated,
+            "current_arc": self.current_arc,
+            "arc_progress": self.arc_progress,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "PlotOutline":
+        """Create from dictionary."""
+        beats_data = data.get("beats", [])
+        beats = [PlotBeat.from_dict(b) for b in beats_data]
+        return cls(
+            beats=beats,
+            created_at=data.get("created_at", ""),
+            last_updated=data.get("last_updated", ""),
+            current_arc=data.get("current_arc", ""),
+            arc_progress=data.get("arc_progress", 0.0),
+        )

@@ -32,6 +32,7 @@ from ..memory.manager import MemoryManager
 from ..memory.vector_store import VectorStore
 from ..agent.agent import StoryAgent
 from .recent_projects import RecentProjects
+from .commands.plot import get_plot_status, display_plot_status, get_next_beat, display_next_beat
 
 
 def _show_stage_stats(stats: dict):
@@ -55,6 +56,7 @@ def _show_story_stats(project_dir: Path, state: dict):
     scene_ids = memory.list_scenes()
     all_chars = memory.list_characters()
     all_locs = memory.list_locations()
+    all_factions = memory.list_factions()
     all_loops = memory.load_open_loops()
     all_lore = memory.load_all_lore()
     
@@ -74,6 +76,7 @@ def _show_story_stats(project_dir: Path, state: dict):
     typer.echo(f"   Scenes: {len(scene_ids)} ({total_words:,} words)")
     typer.echo(f"   Characters: {len(all_chars)}")
     typer.echo(f"   Locations: {len(all_locs)}")
+    typer.echo(f"   Factions: {len(all_factions)}")
     typer.echo(f"   Open Loops: {len(all_loops)}")
     typer.echo(f"   Lore Items: {len(all_lore)}")
     if tensions:
@@ -85,6 +88,9 @@ app = typer.Typer(
     help="StoryDaemon - Agentic novel generation system",
     add_completion=False
 )
+
+plot_app = typer.Typer(name="plot", help="Plot outline (PlotBeat Phase 3) commands")
+app.add_typer(plot_app, name="plot")
 
 
 @app.command()
@@ -942,6 +948,73 @@ def compile(
         if not success:
             raise typer.Exit(1)
         
+    except ValueError as e:
+        typer.echo(f"❌ Error: {e}", err=True)
+        raise typer.Exit(1)
+
+
+@plot_app.command("status")
+def plot_status(
+    project: Optional[str] = typer.Option(
+        None,
+        "--project",
+        "-p",
+        help="Path to novel project (default: current directory)",
+    ),
+):
+    """Show plot outline status (beats and validation)."""
+    try:
+        project_dir = Path(find_project_dir(project))
+        info = get_plot_status(project_dir)
+        display_plot_status(info)
+    except ValueError as e:
+        typer.echo(f"❌ Error: {e}", err=True)
+        raise typer.Exit(1)
+
+
+@plot_app.command("next")
+def plot_next(
+    project: Optional[str] = typer.Option(
+        None,
+        "--project",
+        "-p",
+        help="Path to novel project (default: current directory)",
+    ),
+):
+    """Show the next pending plot beat, if any."""
+    try:
+        project_dir = Path(find_project_dir(project))
+        beat = get_next_beat(project_dir)
+        display_next_beat(beat)
+    except ValueError as e:
+        typer.echo(f"❌ Error: {e}", err=True)
+        raise typer.Exit(1)
+
+
+@plot_app.command("generate")
+def plot_generate(
+    count: int = typer.Option(
+        5,
+        "--count",
+        "-n",
+        help="Number of beats to generate (stub; Phase 3 prompt to be implemented)",
+    ),
+    project: Optional[str] = typer.Option(
+        None,
+        "--project",
+        "-p",
+        help="Path to novel project (default: current directory)",
+    ),
+):
+    """Stub for plot beat generation (LLM prompt to be implemented)."""
+    try:
+        project_dir = Path(find_project_dir(project))
+        typer.echo(f"📍 Project: {project_dir}")
+        typer.echo(
+            "TODO: plot beat generation is not implemented yet. "
+            "This command will call the PlotBeat Phase 3 prompt in a later step."
+        )
+        typer.echo(f"Requested beats: {count}")
     except ValueError as e:
         typer.echo(f"❌ Error: {e}", err=True)
         raise typer.Exit(1)

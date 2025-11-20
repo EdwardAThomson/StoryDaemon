@@ -81,30 +81,32 @@ This checklist merges the plans from `ARCHITECTURE_PROPOSAL_EMERGENT_PLOTTING.md
 
 ## Phase 3 – PlotBeat Phase 1 (CLI-Only, Non-Invasive)
 
-- [ ] **Implement PlotBeat / PlotOutline entities** (data layer)
-  - [ ] `PlotBeat` struct/class with fields from both docs:
-    - [ ] `id`, `description`, `characters_involved`, `location`, `plot_threads`,
+- [x] **Implement PlotBeat / PlotOutline entities** (data layer)
+  - [x] `PlotBeat` struct/class with fields from both docs:
+    - [x] `id`, `description`, `characters_involved`, `location`, `plot_threads`,
           `tension_target?`, `prerequisites`, `status`, `created_at`,
           `executed_in_scene?`, plus metadata like `advances_character_arcs`,
           `resolves_loops`, `creates_loops`.
-  - [ ] `PlotOutline` struct/class with:
-    - [ ] `beats`, `created_at`, `last_updated`, `current_arc`, `arc_progress`,
-          `to_json` / `from_json` (backed by `plot_outline.json` at project root).
+  - [x] `PlotOutline` struct/class with:
+    - [x] `beats`, `created_at`, `last_updated`, `current_arc`, `arc_progress`,
+          `to_dict` / `from_dict` (backed by `plot_outline.json` at project root).
 
-- [ ] **Implement PlotOutlineManager (non-agent)**
-  - [ ] `load_outline` / `save_outline`.
-  - [ ] `generate_next_beats(count)` using LLM + plot-generation prompt.
-  - [ ] `add_beats` (append validated beats).
-  - [ ] `get_next_beat` (next pending).
-  - [ ] Basic validation (duplicates, feasibility, prerequisites).
+- [x] **Implement PlotOutlineManager (non-agent, data-layer only)**
+  - [x] `load_outline` / `save_outline`.
+  - [ ] `generate_next_beats(count)` using LLM + plot-generation prompt (deferred to Plot generation prompt section).
+  - [x] `add_beats` (append validated beats).
+  - [x] `get_next_beat` (next pending).
+  - [x] Basic validation (duplicates, feasibility, prerequisites).
 
 - [ ] **CLI commands**
   - [ ] `novel plot generate --count N` → generate & append beats to outline.
-  - [ ] `novel plot status` → show pending/completed beats + arc progress.
-  - [ ] `novel plot next` → preview the next pending beat.
+  - [x] `novel plot status` → show pending/completed beats + arc progress (implemented via `novel plot status`).
+  - [x] `novel plot next` → preview the next pending beat (implemented via `novel plot next`).
+  - [x] CLI scaffolding for `novel plot generate --count N` stub (no LLM integration yet).
 
 - [ ] **Plot generation prompt**
   - [ ] Implement the factual, non-prose beat prompt (open loops, arcs, recent scenes, tension history in → JSON beats out).
+  - [ ] Wire prompt + parsing into `generate_next_beats(count)` and `novel plot generate`.
 
 - [ ] **Manual evaluation loop**
   - [ ] Run beats for the current story, review directionality & coherence manually.
