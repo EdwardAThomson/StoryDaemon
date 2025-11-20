@@ -69,6 +69,8 @@ class MemoryManager:
         """Load ID counters from disk."""
         self.counters = self._read_json(self.counters_file)
 
+        changed = False
+
         # Backfill missing counters for backward compatibility
         for key in [
             "character",
@@ -81,22 +83,107 @@ class MemoryManager:
         ]:
             if key not in self.counters:
                 self.counters[key] = 0
+                changed = True
 
         # Ensure the character counter is at least one past the highest
         # character ID present on disk, so existing projects with stale
         # counters.json do not reuse IDs.
-        max_existing = -1
+        max_char = -1
         for f in self.characters_path.glob("C*.json"):
             stem = f.stem
             try:
                 idx = int(stem[1:])
             except (ValueError, IndexError):
                 continue
-            if idx > max_existing:
-                max_existing = idx
+            if idx > max_char:
+                max_char = idx
 
-        if max_existing >= 0 and self.counters.get("character", 0) <= max_existing:
-            self.counters["character"] = max_existing + 1
+        if max_char >= 0 and self.counters.get("character", 0) <= max_char:
+            self.counters["character"] = max_char + 1
+            changed = True
+
+        # Ensure the location counter is at least one past the highest L* on disk
+        max_loc = -1
+        for f in self.locations_path.glob("L*.json"):
+            stem = f.stem
+            try:
+                idx = int(stem[1:])
+            except (ValueError, IndexError):
+                continue
+            if idx > max_loc:
+                max_loc = idx
+
+        if max_loc >= 0 and self.counters.get("location", 0) <= max_loc:
+            self.counters["location"] = max_loc + 1
+            changed = True
+
+        # Ensure the scene counter is at least one past the highest S* on disk
+        max_scene = -1
+        for f in self.scenes_path.glob("S*.json"):
+            stem = f.stem
+            try:
+                idx = int(stem[1:])
+            except (ValueError, IndexError):
+                continue
+            if idx > max_scene:
+                max_scene = idx
+
+        if max_scene >= 0 and self.counters.get("scene", 0) <= max_scene:
+            self.counters["scene"] = max_scene + 1
+            changed = True
+
+        # Ensure the faction counter is at least one past the highest F* on disk
+        max_faction = -1
+        for f in self.factions_path.glob("F*.json"):
+            stem = f.stem
+            try:
+                idx = int(stem[1:])
+            except (ValueError, IndexError):
+                continue
+            if idx > max_faction:
+                max_faction = idx
+
+        if max_faction >= 0 and self.counters.get("faction", 0) <= max_faction:
+            self.counters["faction"] = max_faction + 1
+            changed = True
+
+        # Ensure the open_loop counter is past any OL* IDs in open_loops.json
+        if self.open_loops_file.exists():
+            data = self._read_json(self.open_loops_file)
+            max_ol = -1
+            for loop in data.get("loops", []):
+                loop_id = loop.get("id")
+                if isinstance(loop_id, str) and loop_id.startswith("OL"):
+                    try:
+                        idx = int(loop_id[2:])
+                    except (ValueError, IndexError):
+                        continue
+                    if idx > max_ol:
+                        max_ol = idx
+
+            if max_ol >= 0 and self.counters.get("open_loop", 0) <= max_ol:
+                self.counters["open_loop"] = max_ol + 1
+                changed = True
+
+        # Ensure the relationship counter is past any R* IDs in relationships.json
+        if self.relationships_file.exists():
+            data = self._read_json(self.relationships_file)
+            max_rel = -1
+            for rel in data.get("relationships", []):
+                rel_id = rel.get("id")
+                if isinstance(rel_id, str) and rel_id.startswith("R"):
+                    try:
+                        idx = int(rel_id[1:])
+                    except (ValueError, IndexError):
+                        continue
+                    if idx > max_rel:
+                        max_rel = idx
+
+            if max_rel >= 0 and self.counters.get("relationship", 0) <= max_rel:
+                self.counters["relationship"] = max_rel + 1
+                changed = True
+
+        if changed:
             self._save_counters()
     
     def _save_counters(self):
