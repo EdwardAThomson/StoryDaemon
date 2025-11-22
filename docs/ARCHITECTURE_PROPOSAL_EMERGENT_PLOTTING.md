@@ -596,10 +596,10 @@ AI generates:
 
 ### Immediate (Phase 1)
 1. ✅ Design architecture (this document)
-2. ⬜ Implement `PlotBeat` and `PlotOutline` entities
-3. ⬜ Implement `PlotOutlineManager`
-4. ⬜ Create plot generation prompt
-5. ⬜ Add CLI command: `novel plot generate`
+2. ✅ Implement `PlotBeat` and `PlotOutline` entities (data layer)
+3. ✅ Implement `PlotOutlineManager` (CLI/data-layer usage only)
+4. ✅ Create plot generation prompt + Beat JSON contract for CLI
+5. ✅ Add CLI command: `novel plot generate`
 6. ⬜ Test plot generation on existing story
 
 ### Short-term (Phase 2)

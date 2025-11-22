@@ -99,14 +99,15 @@ This checklist merges the plans from `ARCHITECTURE_PROPOSAL_EMERGENT_PLOTTING.md
   - [x] Basic validation (duplicates, feasibility, prerequisites).
 
 - [ ] **CLI commands**
-  - [ ] `novel plot generate --count N` → generate & append beats to outline.
+  - [x] `novel plot generate --count N` → generate & append beats to outline.
   - [x] `novel plot status` → show pending/completed beats + arc progress (implemented via `novel plot status`).
   - [x] `novel plot next` → preview the next pending beat (implemented via `novel plot next`).
   - [x] CLI scaffolding for `novel plot generate --count N` stub (no LLM integration yet).
 
 - [ ] **Plot generation prompt**
-  - [ ] Implement the factual, non-prose beat prompt (open loops, arcs, recent scenes, tension history in → JSON beats out).
-  - [ ] Wire prompt + parsing into `generate_next_beats(count)` and `novel plot generate`.
+  - [x] Define Beat JSON contract for LLM output (see `docs/PLOTBEAT_BEAT_SCHEMA_AND_TRANSITIONS.md`).
+  - [x] Implement the factual, non-prose beat prompt + JSON parsing for CLI `novel plot generate` (open loops, arcs, recent scenes, tension history in → JSON beats out).
+  - [ ] Wire prompt + parsing into `PlotOutlineManager.generate_next_beats(count)` for future agent integration.
 
 - [ ] **Manual evaluation loop**
   - [ ] Run beats for the current story, review directionality & coherence manually.

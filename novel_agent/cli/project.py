@@ -93,9 +93,14 @@ def create_novel_project(
         
         write_json(os.path.join(project_dir, 'state.json'), initial_state)
         
-        # Create initial config
+        # Create initial config. Snapshot the current LLM backend/model settings so
+        # that this project keeps using the same defaults even if global config
+        # changes later.
         novel_config = {
             'llm': {
+                'backend': config.get('llm.backend'),
+                'codex_bin_path': config.get('llm.codex_bin_path'),
+                'model': config.get('llm.model'),
                 'planner_max_tokens': config.get('llm.planner_max_tokens'),
                 'writer_max_tokens': config.get('llm.writer_max_tokens'),
             },

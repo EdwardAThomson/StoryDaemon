@@ -32,7 +32,14 @@ from ..memory.manager import MemoryManager
 from ..memory.vector_store import VectorStore
 from ..agent.agent import StoryAgent
 from .recent_projects import RecentProjects
-from .commands.plot import get_plot_status, display_plot_status, get_next_beat, display_next_beat
+from .commands.plot import (
+    get_plot_status,
+    display_plot_status,
+    get_next_beat,
+    display_next_beat,
+    generate_and_append_beats_cli,
+    display_generated_beats,
+)
 
 
 def _show_stage_stats(stats: dict):
@@ -1006,15 +1013,37 @@ def plot_generate(
         help="Path to novel project (default: current directory)",
     ),
 ):
-    """Stub for plot beat generation (LLM prompt to be implemented)."""
+    """Generate plot beats using the PlotBeat Phase 3 prompt and append them.
+
+    This is CLI-only and does not change the agent tick loop. Beats are stored
+    in plot_outline.json and can be inspected with `novel plot status` and
+    `novel plot next`.
+    """
     try:
         project_dir = Path(find_project_dir(project))
-        typer.echo(f"📍 Project: {project_dir}")
-        typer.echo(
-            "TODO: plot beat generation is not implemented yet. "
-            "This command will call the PlotBeat Phase 3 prompt in a later step."
+        config = get_project_config(str(project_dir))
+
+        # Determine LLM backend/model from project config (no CLI overrides for now)
+        backend = config.get("llm.backend", "codex")
+        codex_bin_effective = config.get("llm.codex_bin_path", "codex")
+        model = (
+            config.get("llm.model")
+            or config.get("llm.openai_model", "gpt-5.1")
         )
-        typer.echo(f"Requested beats: {count}")
+
+        typer.echo(f"📍 Project: {project_dir}")
+        typer.echo(f"🔧 Using LLM backend: {backend} (model={model})")
+
+        # Initialize LLM and generate beats
+        try:
+            initialize_llm(backend=backend, codex_bin=codex_bin_effective, model=model)
+        except RuntimeError as e:
+            typer.echo(f"❌ Failed to initialize LLM backend: {e}", err=True)
+            raise typer.Exit(1)
+
+        result = generate_and_append_beats_cli(project_dir, count)
+        display_generated_beats(result)
+
     except ValueError as e:
         typer.echo(f"❌ Error: {e}", err=True)
         raise typer.Exit(1)
