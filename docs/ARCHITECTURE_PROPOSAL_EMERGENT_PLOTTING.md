@@ -600,7 +600,7 @@ AI generates:
 3. ✅ Implement `PlotOutlineManager` (CLI/data-layer usage only)
 4. ✅ Create plot generation prompt + Beat JSON contract for CLI
 5. ✅ Add CLI command: `novel plot generate`
-6. ⬜ Test plot generation on existing story
+6. ✅ Test plot generation on existing story
 
 ### Short-term (Phase 2)
 1. ⬜ Modify writer context to include beat

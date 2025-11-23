@@ -110,7 +110,7 @@ This checklist merges the plans from `ARCHITECTURE_PROPOSAL_EMERGENT_PLOTTING.md
   - [ ] Wire prompt + parsing into `PlotOutlineManager.generate_next_beats(count)` for future agent integration.
 
 - [ ] **Manual evaluation loop**
-  - [ ] Run beats for the current story, review directionality & coherence manually.
+  - [x] Run beats for the current story, review directionality & coherence manually.
   - [ ] Tweak prompt/validation based on observed beat quality.
 
 ---

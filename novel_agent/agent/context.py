@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 from ..memory.manager import MemoryManager
 from ..memory.vector_store import VectorStore
+from ..memory.plot_outline import PlotOutlineManager
 from ..tools.registry import ToolRegistry
 
 
@@ -89,8 +90,38 @@ class ContextBuilder:
         context["available_tools_description"] = self.tools.get_tools_description()
         
         context["qa_feedback"] = self._get_qa_feedback()
-        
+
+        # Optional: next plot beat hint from the plot outline, if any pending
+        context["next_plot_beat"] = self._get_next_plot_beat_hint(project_state)
+
         return context
+
+    def _get_next_plot_beat_hint(self, project_state: dict) -> str:
+        """Get a formatted hint for the next pending plot beat, if available.
+
+        This is a soft integration: it simply exposes the next pending beat's
+        ID and description as a hint to the planner. The planner remains free
+        to deviate if following the beat would clearly break story constraints.
+        """
+        try:
+            manager = PlotOutlineManager(self.memory.project_path)
+        except Exception:
+            return ""
+
+        try:
+            next_beat = manager.get_next_beat()
+        except Exception:
+            return ""
+
+        if not next_beat:
+            return "None (no pending beats in outline.)"
+
+        beat_id = getattr(next_beat, "id", "") or ""
+        description = getattr(next_beat, "description", "") or ""
+
+        if beat_id and description:
+            return f"{beat_id}: {description}"
+        return description or ""
     
     def _format_character(self, character) -> str:
         """Format character details for prompt.

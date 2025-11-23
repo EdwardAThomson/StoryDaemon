@@ -25,6 +25,9 @@ Your task is to analyze the current story state and create a plan for the next s
 ### Recent QA Feedback (Scene Quality & Momentum)
 {qa_feedback}
 
+### Next Plot Beat (Hint from Outline, Optional)
+{next_plot_beat}
+
 ### Active Character Details
 {active_character_details}
 
@@ -85,12 +88,12 @@ Before you respond, make deliberate choices for these planning fields using the 
   - If recent QA or recent scenes show repeated `technical` mode, bias this scene toward `dialogue` or `political` to vary texture.
 - `palette_shift`  Short phrase or list that changes the sensory/emotional palette (e.g., `"heat, copper, crowd-noise"` or `"administrative neon, recycled air, clipped voices"`).
 - `transition_path`  1-3 sentence outline of how we move from the end of the previous scene into this one (physical/temporal bridge). Use this when changing location, time, or situation.
-- `dialogue_targets`  Optional dialogue goals. Prefer a structured object (e.g. `{ "min_exchanges": 6, "conflict_axis": "leverage vs trust", "participants": ["C0", "corp_proxy"] }`).
+- `dialogue_targets`  Optional dialogue goals. Prefer a structured object (e.g. `{{ "min_exchanges": 6, "conflict_axis": "leverage vs trust", "participants": ["C0", "corp_proxy"] }}`).
 
 Then emit the JSON object below:
 
 ```json
-{
+{{
   "rationale": "Brief explanation focusing on HOW this scene advances the plot and WHAT changes",
   "scene_intention": "What CHANGES in this scene - be specific about the outcome/turning point",
   "key_change": "One sentence: What is fundamentally different after this scene?",
@@ -104,22 +107,22 @@ Then emit the JSON object below:
   "pov_character": "Character ID for POV (use {active_character_id} or specify another)",
   "target_location": "Location ID where scene takes place (or null for new location)",
   "actions": [
-    {
+    {{
       "tool": "tool.name",
-      "args": {
+      "args": {{
         "arg1": "value1"
-      },
+      }},
       "reason": "Why this tool is needed"
-    }
+    }}
   ],
   "expected_outcomes": [
     "Concrete outcome 1 (something that CHANGES)",
     "Concrete outcome 2 (something that CHANGES)"
   ],
-  "metadata": {
+  "metadata": {{
     "scene_length": "brief|short|long|extended (optional - only if you want to guide scene length)"
-  }
-}
+  }}
+}}
 ```
 
 ## Guidelines
@@ -131,6 +134,9 @@ Then emit the JSON object below:
 - Use relationship.create when characters first interact significantly
 - Use relationship.update to track relationship changes
 - Use faction.generate/update/query to ground organizations when referenced (avoid generic “corporate”)
+  - When you need a new organization, ALWAYS call faction.generate to create it; do not try to create factions by calling faction.update with a made-up id.
+  - When you call faction.update, the id parameter MUST be a real faction id returned from a previous faction.generate or faction.query call (for example, an id from the "faction_id" field in tool results).
+  - Never invent faction ids or guess ids (for example, do not use strings like FACTION_WEIRSPAN_IF_FOUND as ids). You may invent names and summaries for factions, but the ids are opaque tokens assigned by the system.
 - Scene intention must describe a CHANGE, not a continuation
 - Expected outcomes must be CONCRETE changes to story state (or a clear progress milestone)
 - Every scene should contain a turning point or a clear setup beat that commits to future change

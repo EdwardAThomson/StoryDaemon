@@ -466,13 +466,40 @@ class MemoryManager:
         self._write_json(path, faction.to_dict())
 
     def update_faction(self, faction_id: str, changes: Dict[str, Any]):
-        """Update specific fields of a faction."""
+        """Update specific fields of a faction.
+
+        If the faction does not yet exist on disk, this method will
+        auto-create a placeholder Faction with the given ID. This makes
+        planner-generated calls to faction.update more robust when the
+        planner references an implied or previously mentioned organization
+        that has not been explicitly created via faction.generate.
+        """
         faction = self.load_faction(faction_id)
+
         if not faction:
-            raise ValueError(f"Faction {faction_id} not found")
-        for key, value in changes.items():
-            if hasattr(faction, key):
-                setattr(faction, key, value)
+            # Auto-create a minimal placeholder faction. Use any fields
+            # present in "changes" to seed the new entity; fall back to
+            # generic defaults otherwise.
+            faction = Faction(
+                id=faction_id,
+                name=changes.get("name", faction_id),
+                org_type=changes.get("org_type", "unspecified"),
+                summary=changes.get("summary", ""),
+                mandate_objectives=changes.get("mandate_objectives", []),
+                influence_domains=changes.get("influence_domains", []),
+                assets_resources=changes.get("assets_resources", []),
+                methods_tactics=changes.get("methods_tactics", []),
+                stance_by_character=changes.get("stance_by_character", {}),
+                importance=changes.get("importance", "medium"),
+                tags=changes.get("tags", []),
+            )
+
+        else:
+            # Apply partial updates to the existing faction.
+            for key, value in changes.items():
+                if hasattr(faction, key):
+                    setattr(faction, key, value)
+
         self.save_faction(faction)
 
     def list_factions(self) -> List[str]:
