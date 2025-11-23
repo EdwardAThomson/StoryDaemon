@@ -2,6 +2,7 @@
 import typer
 from pathlib import Path
 from typing import Optional
+from ..configs.config import Config
 from .project import (
     create_novel_project,
     find_project_dir,
@@ -88,6 +89,75 @@ def _show_story_stats(project_dir: Path, state: dict):
     typer.echo(f"   Lore Items: {len(all_lore)}")
     if tensions:
         typer.echo(f"   Avg Tension: {avg_tension:.1f}/10")
+
+
+def _prompt_for_llm_selection() -> tuple[str, str]:
+    """Interactively select LLM backend and model for a new project.
+
+    Returns a (backend, model) tuple which will be stored in the
+    project's config.yaml. Defaults are derived from the global
+    configuration so users can just press Enter to accept them.
+    """
+    config = Config()
+
+    default_backend = config.get("llm.backend", "codex")
+    default_model = (
+        config.get("llm.model")
+        or config.get("llm.openai_model", "gpt-5.1")
+    )
+
+    typer.echo("\n🧠 LLM Backend & Model")
+    typer.echo("Select which LLM backend this project will use. This choice is "
+               "stored in the project's config.yaml and used by `novel tick`/`run` "
+               "unless you override it on the CLI.\n")
+
+    options = [
+        ("codex", "Codex CLI (default; uses local `codex` binary)"),
+        ("api", "API backend (OpenAI GPT-5.x, Claude 4.5, Gemini 2.5 Pro)"),
+        ("gemini-cli", "Gemini CLI (local `gemini` binary)"),
+        ("claude-cli", "Claude Code CLI (local `claude` binary)"),
+    ]
+
+    # Determine which option index corresponds to the current default backend
+    default_index = 1
+    for idx, (value, _label) in enumerate(options, start=1):
+        if value == default_backend:
+            default_index = idx
+            break
+
+    typer.echo("Available backends:")
+    for idx, (value, label) in enumerate(options, start=1):
+        marker = " (default)" if value == default_backend else ""
+        typer.echo(f"  {idx}. {label}{marker}")
+
+    # Prompt for backend choice
+    backend: Optional[str] = None
+    while backend is None:
+        choice = typer.prompt(
+            "Choose LLM backend [1-4]",
+            default=str(default_index),
+        ).strip()
+        try:
+            idx = int(choice)
+        except ValueError:
+            typer.echo("Please enter a number between 1 and 4.")
+            continue
+
+        if 1 <= idx <= len(options):
+            backend = options[idx - 1][0]
+        else:
+            typer.echo("Please enter a number between 1 and 4.")
+
+    # Prompt for model, defaulting based on global config
+    typer.echo(
+        f"\nModel name for backend '{backend}' "
+        f"(press Enter to use default: {default_model})"
+    )
+    model = typer.prompt("Model", default=default_model).strip()
+    if not model:
+        model = default_model
+
+    return backend, model
 
 
 app = typer.Typer(
@@ -185,9 +255,13 @@ def new(
         if foundation_file or has_foundation_args:
             interactive_effective = False
 
+        llm_backend_override: Optional[str] = None
+        llm_model_override: Optional[str] = None
+
         if interactive_effective:
             # Interactive prompting (recommended default)
             foundation = prompt_for_foundation()
+            llm_backend_override, llm_model_override = _prompt_for_llm_selection()
         elif foundation_file:
             # Load from file
             foundation = load_foundation_from_file(foundation_file)
@@ -203,8 +277,14 @@ def new(
                 themes=themes
             )
         
-        # Create project with optional foundation
-        project_dir = create_novel_project(name, dir, foundation=foundation)
+        # Create project with optional foundation and LLM overrides (if any)
+        project_dir = create_novel_project(
+            name,
+            dir,
+            foundation=foundation,
+            llm_backend=llm_backend_override,
+            llm_model=llm_model_override,
+        )
         typer.echo(f"✅ Created novel project: {project_dir}")
         
         if foundation:

@@ -15,9 +15,11 @@ if TYPE_CHECKING:
 
 
 def create_novel_project(
-    name: str, 
+    name: str,
     base_dir: Optional[str] = None,
-    foundation: Optional["StoryFoundation"] = None
+    foundation: Optional["StoryFoundation"] = None,
+    llm_backend: Optional[str] = None,
+    llm_model: Optional[str] = None,
 ) -> str:
     """Create a new novel project directory structure.
     
@@ -25,6 +27,8 @@ def create_novel_project(
         name: Name of the novel
         base_dir: Base directory (default: ~/novels from config)
         foundation: Optional story foundation (genre, premise, etc.)
+        llm_backend: Optional LLM backend override to store in project config
+        llm_model: Optional LLM model override to store in project config
         
     Returns:
         Path to created project directory
@@ -95,12 +99,13 @@ def create_novel_project(
         
         # Create initial config. Snapshot the current LLM backend/model settings so
         # that this project keeps using the same defaults even if global config
-        # changes later.
+        # changes later. If explicit overrides are provided (e.g., from the
+        # interactive setup wizard), prefer those over the global values.
         novel_config = {
             'llm': {
-                'backend': config.get('llm.backend'),
+                'backend': llm_backend or config.get('llm.backend'),
                 'codex_bin_path': config.get('llm.codex_bin_path'),
-                'model': config.get('llm.model'),
+                'model': llm_model or config.get('llm.model'),
                 'planner_max_tokens': config.get('llm.planner_max_tokens'),
                 'writer_max_tokens': config.get('llm.writer_max_tokens'),
             },

@@ -65,7 +65,8 @@ pip install -e ".[dev]"
 # Recommended: create a new novel project with interactive story foundation
 novel new my-story --dir work/novels
 #  Creates: work/novels/my-story_a1b2c3d4/
-#  You will be prompted for genre, premise, protagonist, setting, tone, etc.
+#  You will be prompted for genre, premise, protagonist, setting, tone, etc.,
+#  and to choose the LLM backend/model to store in this project's config.
 
 # Advanced: create a bare project without interactive setup
 novel new my-story --dir work/novels --no-interactive
