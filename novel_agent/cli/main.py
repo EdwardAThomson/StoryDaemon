@@ -96,16 +96,12 @@ def _prompt_for_llm_selection() -> tuple[str, str]:
 
     Returns a (backend, model) tuple which will be stored in the
     project's config.yaml. Defaults are derived from the global
-    configuration so users can just press Enter to accept them.
+    configuration and adjusted per backend so users can just press
+    Enter to accept sensible values.
     """
     config = Config()
 
     default_backend = config.get("llm.backend", "codex")
-    default_model = (
-        config.get("llm.model")
-        or config.get("llm.openai_model", "gpt-5.1")
-    )
-
     typer.echo("\n🧠 LLM Backend & Model")
     typer.echo("Select which LLM backend this project will use. This choice is "
                "stored in the project's config.yaml and used by `novel tick`/`run` "
@@ -148,7 +144,18 @@ def _prompt_for_llm_selection() -> tuple[str, str]:
         else:
             typer.echo("Please enter a number between 1 and 4.")
 
-    # Prompt for model, defaulting based on global config
+    # Choose a sensible default model for the selected backend
+    if backend == "gemini-cli":
+        default_model = "gemini-2.5-pro"
+    elif backend == "claude-cli":
+        default_model = "claude-4.5"
+    else:
+        # codex or api: fall back to configured defaults
+        default_model = (
+            config.get("llm.model")
+            or config.get("llm.openai_model", "gpt-5.1")
+        )
+
     typer.echo(
         f"\nModel name for backend '{backend}' "
         f"(press Enter to use default: {default_model})"
