@@ -48,7 +48,11 @@ StoryDaemon is a Python-based system that generates long-form fiction through an
 git clone https://github.com/EdwardAThomson/StoryDaemon.git
 cd StoryDaemon
 
-# Install dependencies
+# (Recommended) Create and activate a virtual environment
+python3 -m venv venv
+source venv/bin/activate  # On Windows use: venv\\Scripts\\activate
+
+# Install dependencies into the virtual environment
 pip install -e .
 
 # Or install with development dependencies
@@ -58,17 +62,18 @@ pip install -e ".[dev]"
 ### Create Your First Novel
 
 ```bash
-# Create a new novel project (gets unique UUID automatically)
+# Recommended: create a new novel project with interactive story foundation
 novel new my-story --dir work/novels
-# → Creates: work/novels/my-story_a1b2c3d4/
+#  Creates: work/novels/my-story_a1b2c3d4/
+#  You will be prompted for genre, premise, protagonist, setting, tone, etc.
 
-# Create with story foundation (interactive mode)
-novel new my-story --interactive
+# Advanced: create a bare project without interactive setup
+novel new my-story --dir work/novels --no-interactive
 
-# Or from a YAML file
+# Or create from a YAML foundation file (non-interactive)
 novel new my-story --foundation foundation.yaml
 
-# Or via command-line arguments
+# Or via command-line arguments (non-interactive)
 novel new my-story \
   --genre "science fiction" \
   --premise "A lone engineer discovers an alien signal" \
@@ -157,7 +162,7 @@ Here's what tension tracking looks like in a generated story:
 ```bash
 $ novel list scenes
 
-📝 Scenes (5 total)
+ Scenes (5 total)
 
   file          word_count  pov_character  tension_level
   ------------  ----------  -------------  -----------------
@@ -253,12 +258,14 @@ StoryDaemon/
 ### Core Generation Commands
 
 ```bash
-# Create new novel project (automatically gets UUID suffix)
+# Create new novel project (interactive foundation by default, UUID suffix)
 novel new <name> [--dir <path>]
-# Example: novel new my-story → creates my-story_a1b2c3d4/
+# Example: novel new my-story  creates my-story_a1b2c3d4/ and runs the foundation wizard
 
-# Create with story foundation
-novel new <name> --interactive                    # Interactive prompts
+# Disable interactive wizard (bare project)
+novel new <name> --no-interactive [--dir <path>]
+
+# Create with story foundation (non-interactive variants)
 novel new <name> --foundation <yaml_file>         # From YAML file
 novel new <name> --genre <genre> --premise <text> # Command-line args
 

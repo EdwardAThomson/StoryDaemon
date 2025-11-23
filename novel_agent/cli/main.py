@@ -110,10 +110,9 @@ def new(
         help="Base directory for novel (default: ~/novels)"
     ),
     interactive: bool = typer.Option(
-        False,
-        "--interactive",
-        "-i",
-        help="Interactively prompt for story foundation"
+        True,
+        "--interactive/--no-interactive",
+        help="Use interactive story foundation wizard (recommended for new users)"
     ),
     foundation_file: Optional[Path] = typer.Option(
         None,
@@ -153,37 +152,48 @@ def new(
     )
 ):
     """Create a new novel project with optional story foundation.
-    
+
     Creates a complete project structure with memory directories,
-    configuration files, and initial state. Optionally define the
-    story foundation (genre, premise, setting, etc.) at creation.
-    
+    configuration files, and initial state. By default, runs the
+    interactive story foundation wizard so the LLM has clear
+    constraints (genre, premise, setting, etc.). Advanced users
+    can disable the wizard with ``--no-interactive`` or supply a
+    foundation via file/CLI options.
+
     Examples:
-        # Basic project (no foundation)
+        # Recommended: interactive foundation setup (default)
         novel new my-story
-        
-        # Interactive foundation setup
-        novel new my-story --interactive
-        
-        # Load foundation from file
+
+        # Explicitly disable interactive wizard (bare project)
+        novel new my-story --no-interactive
+
+        # Load foundation from file (non-interactive)
         novel new my-story --foundation foundation.yaml
-        
-        # Specify foundation via command-line
+
+        # Specify foundation via command-line (non-interactive)
         novel new my-story --genre "science fiction" --premise "..." --protagonist "..." --setting "..." --tone "..."
     """
     try:
         # Determine foundation source
         foundation = None
-        
-        if interactive:
-            # Interactive prompting
+
+        # If the user has provided an explicit non-interactive source
+        # (foundation file or CLI foundation fields), disable the
+        # interactive wizard even though it is the default.
+        has_foundation_args = any([genre, premise, protagonist, setting, tone, themes])
+        interactive_effective = interactive
+        if foundation_file or has_foundation_args:
+            interactive_effective = False
+
+        if interactive_effective:
+            # Interactive prompting (recommended default)
             foundation = prompt_for_foundation()
         elif foundation_file:
             # Load from file
             foundation = load_foundation_from_file(foundation_file)
             typer.echo(f"✅ Loaded foundation from: {foundation_file}")
         else:
-            # Try to create from command-line args
+            # Try to create from command-line args (may return None)
             foundation = create_foundation_from_args(
                 genre=genre,
                 premise=premise,
