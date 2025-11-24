@@ -102,6 +102,78 @@ class MultiStagePlanner:
         
         return plan
     
+    def plan_for_beat(self, project_state: dict, beat: Any) -> dict:
+        """Plan a scene explicitly targeting a given plot beat.
+        
+        This entrypoint bypasses Stage 1 (strategic intention generation) and
+        instead derives the scene intention directly from the beat's
+        description, then reuses Stage 2 (context gathering) and Stage 3
+        (tactical planning). The returned plan includes a populated
+        ``beat_target`` field so downstream components can treat this scene
+        as being for that beat.
+        """
+        logger.info("Starting multi-stage planning for beat-first scene...")
+        
+        # Extract beat metadata (works with PlotBeat instances or dicts)
+        beat_id = getattr(beat, "id", None)
+        if not beat_id and isinstance(beat, dict):
+            beat_id = beat.get("id")
+        description = getattr(beat, "description", None)
+        if description is None and isinstance(beat, dict):
+            description = beat.get("description", "")
+        description = (description or "").strip()
+        
+        if beat_id and description:
+            scene_intention = f"Execute plot beat {beat_id}: {description}"
+        elif description:
+            scene_intention = f"Execute the following plot beat: {description}"
+        else:
+            scene_intention = "Execute the next pending plot beat in a concrete scene."
+        
+        # Stage 2: Semantic context gathering using beat-derived intention
+        logger.info("Stage 2 (beat-first): Gathering relevant context...")
+        relevant_context = self._gather_relevant_context(
+            scene_intention,
+            project_state,
+        )
+        logger.info("Found %d relevant items (beat-first)", self.stage_stats['stage2_items'])
+        
+        # Stage 3: Tactical planning with beat-focused intention
+        logger.info("Stage 3 (beat-first): Tactical planning...")
+        plan = self._tactical_planning(
+            scene_intention,
+            relevant_context,
+            project_state,
+        )
+        logger.info("Beat-first multi-stage planning complete")
+        
+        # Ensure scene_intention is present and consistent
+        plan.setdefault("scene_intention", scene_intention)
+        
+        # Populate beat_target so downstream components know this scene is
+        # explicitly for this beat. Notes are short to avoid bloating plans.
+        if beat_id:
+            notes_prefix = f"Planned explicitly for plot beat {beat_id}."
+        else:
+            notes_prefix = "Planned explicitly for a plot beat."
+        if description:
+            trimmed = description[:120]
+            notes = f"{notes_prefix} Description: {trimmed}"
+        else:
+            notes = notes_prefix
+        
+        plan.setdefault("beat_target", {
+            "beat_id": beat_id,
+            "strategy": "direct",
+            "notes": notes,
+        })
+        
+        # Add stage stats to plan for verbose output (Stage 1 will remain
+        # zeroed since we bypassed it for beat-first planning).
+        plan["_stage_stats"] = self.stage_stats
+        
+        return plan
+    
     def _strategic_planning(self, state: dict) -> str:
         """Stage 1: High-level scene intention.
         

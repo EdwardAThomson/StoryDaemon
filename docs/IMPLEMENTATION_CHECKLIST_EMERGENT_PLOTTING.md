@@ -103,6 +103,7 @@ This checklist merges the plans from `ARCHITECTURE_PROPOSAL_EMERGENT_PLOTTING.md
   - [x] `novel plot status` → show pending/completed beats + arc progress (implemented via `novel plot status`).
   - [x] `novel plot next` → preview the next pending beat (implemented via `novel plot next`).
   - [x] CLI scaffolding for `novel plot generate --count N` stub (no LLM integration yet).
+  - [x] `novel plot status --detailed` → show detailed beat list including status and execution info.
 
 - [ ] **Plot generation prompt**
   - [x] Define Beat JSON contract for LLM output (see `docs/PLOTBEAT_BEAT_SCHEMA_AND_TRANSITIONS.md`).
@@ -133,20 +134,20 @@ This checklist merges the plans from `ARCHITECTURE_PROPOSAL_EMERGENT_PLOTTING.md
 
 ### Phase 4B – Guided Beat Contract (Design)
 
-- [ ] **Planner beat targeting**
-  - [ ] Extend planner plan schema with optional `beat_target` object:
-    - [ ] `beat_id` (current pending beat ID or null).
-    - [ ] `strategy` (e.g. `direct | setup | followup | skip`).
-    - [ ] `notes` explaining why the beat is executed, deferred, or skipped.
+- [x] **Planner beat targeting**
+  - [x] Extend planner plan schema with optional `beat_target` object:
+    - [x] `beat_id` (current pending beat ID or null).
+    - [x] `strategy` (e.g. `direct | setup | followup | skip`).
+    - [x] `notes` explaining why the beat is executed, deferred, or skipped.
 
-- [ ] **Beat lifecycle tracking in plot_outline**
-  - [ ] Use `status` values such as `pending | in_progress | executed | skipped`.
-  - [ ] Record `executed_in_scene` when QA `beat_hint_alignment` is `medium`/`high` for `beat_target.beat_id`.
-  - [ ] Append brief auto-generated `execution_notes` describing how/when the beat was completed.
+- [x] **Beat lifecycle tracking in plot_outline**
+  - [x] Use `status` values such as `pending | in_progress | executed | skipped`.
+  - [x] Record `executed_in_scene` when QA `beat_hint_alignment` is `medium`/`high` for `beat_target.beat_id`.
+  - [x] Append brief auto-generated `execution_notes` describing how/when the beat was completed.
 
-- [ ] **Configuration for beat integration strictness**
-  - [ ] Add `plot.beat_mode` config: `off | soft_hint | guided | strict`.
-  - [ ] Implement `guided` mode first (planner fills `beat_target`, beats updated using QA), leaving `strict` as a future enhancement.
+- [x] **Configuration for beat integration strictness**
+  - [x] Add `plot.beat_mode` config: `off | soft_hint | guided | strict`.
+  - [x] Implement `guided` mode first (planner fills `beat_target`, beats updated using QA), leaving `strict` as a future enhancement.
 
 ---
 

@@ -642,6 +642,31 @@ class StoryAgent:
         """
         # Use multi-stage planner if enabled (Phase 7A.5)
         if self.use_multi_stage:
+            # In guided beat mode, attempt beat-first planning using the
+            # next pending beat from the plot outline. Fall back to normal
+            # multi-stage planning on any error or if no beat is available.
+            try:
+                if isinstance(self.config, dict):
+                    beat_mode = self.config.get("plot", {}).get("beat_mode", "soft_hint")
+                else:
+                    beat_mode = self.config.get("plot.beat_mode", "soft_hint")
+            except Exception:
+                beat_mode = "soft_hint"
+
+            if beat_mode == "guided":
+                try:
+                    manager = PlotOutlineManager(self.project_path)
+                    next_beat = manager.get_next_beat()
+                except Exception:
+                    next_beat = None
+
+                if next_beat is not None:
+                    try:
+                        return self.multi_stage_planner.plan_for_beat(self.state, next_beat)
+                    except Exception:
+                        # Fall back to normal planning if beat-first path fails
+                        pass
+
             return self.multi_stage_planner.plan(self.state)
         
         # Otherwise use legacy single-stage planning
