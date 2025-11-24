@@ -602,11 +602,11 @@ AI generates:
 5. ✅ Add CLI command: `novel plot generate`
 6. ✅ Test plot generation on existing story
 
-### Short-term (Phase 2)
-1. ⬜ Modify writer context to include beat
-2. ⬜ Update writer prompt
-3. ⬜ Add beat verification
-4. ⬜ Test on new story with plot-first mode
+### Short-term (Phase 2) - ✅ COMPLETE
+1. ✅ Modify writer context to include beat
+2. ✅ Update writer prompt
+3. ✅ Add beat verification
+4. ✅ Test on new story with plot-first mode
 
 ### Long-term (Phase 3+)
 1. ⬜ Make plot-first default
@@ -630,7 +630,8 @@ The plot layer acts as a **"narrative compiler"** - translating story state into
 
 ---
 
-**Created:** November 13, 2025
-**Status:** Proposal - Awaiting approval
-**Impact:** Major architectural change
-**Breaking:** No (with feature flag)
+**Created:** November 13, 2025  
+**Updated:** November 24, 2025  
+**Status:** ✅ Implemented (Phase 1 & 2 complete, Phase 5 integration complete)  
+**Impact:** Major architectural change  
+**Breaking:** No (opt-in via `generation.use_plot_first: true`)

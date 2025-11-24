@@ -153,33 +153,33 @@ This checklist merges the plans from `ARCHITECTURE_PROPOSAL_EMERGENT_PLOTTING.md
 
 ## Phase 5 – Full Emergent Plot-First Tick
 
-- [ ] **Integrate PlotOutlineManager into `StoryAgent`**
-  - [ ] Add `self.plot_manager` initialization.
-  - [ ] In `tick`:
-    - [ ] Call `needs_regeneration()` and `generate_next_beats()` when pending beats < threshold.
-    - [ ] Fallback to reactive tick if no beats and generation fails (per config).
+- [x] **Integrate PlotOutlineManager into `StoryAgent`**
+  - [x] Add `self.plot_manager` initialization.
+  - [x] In `tick`:
+    - [x] Call `needs_regeneration()` and `generate_next_beats()` when pending beats < threshold.
+    - [x] Fallback to reactive tick if no beats and generation fails (per config).
 
-- [ ] **Beat-constrained planning**
-  - [ ] Implement `_generate_plan_for_beat(beat)` or equivalent:
-    - [ ] Build planner context + beat info (description, characters, location).
-    - [ ] Call `planner.plan_for_beat`.
-  - [ ] Ensure this path is controlled by config (e.g. `use_plot_first: true`).
+- [x] **Beat-constrained planning**
+  - [x] Implement `_generate_plan_for_beat(beat)` or equivalent:
+    - [x] Build planner context + beat info (description, characters, location).
+    - [x] Call `planner.plan_for_beat`.
+  - [x] Ensure this path is controlled by config (e.g. `use_plot_first: true`).
 
-- [ ] **Beat-constrained writer context**
-  - [ ] Inject into writer context:
-    - [ ] `plot_beat` description.
-    - [ ] `plot_beat_requirements` (characters, location, tension target, etc.).
-  - [ ] Update writer prompt to treat the beat as a hard goal.
+- [x] **Beat-constrained writer context**
+  - [x] Inject into writer context:
+    - [x] `plot_beat` description.
+    - [x] `plot_beat_requirements` (characters, location, tension target, etc.).
+  - [x] Update writer prompt to treat the beat as a hard goal.
 
-- [ ] **Verification + status updates**
-  - [ ] Move beat-execution verification into QA (or `_verify_beat_execution` wrapper that uses QA).
-  - [ ] On verified completion:
-    - [ ] `plot.mark_beat_complete(beat.id, scene_id)`.
+- [x] **Verification + status updates**
+  - [x] Move beat-execution verification into QA (or `_verify_beat_execution` wrapper that uses QA).
+  - [x] On verified completion:
+    - [x] `plot.mark_beat_complete(beat.id, scene_id)`.
 
-- [ ] **Configuration & defaults**
-  - [ ] `use_plot_first`, `plot_beats_ahead`, `plot_regeneration_threshold`,
+- [x] **Configuration & defaults**
+  - [x] `use_plot_first`, `plot_beats_ahead`, `plot_regeneration_threshold`,
         `verify_beat_execution`, `allow_beat_skip`, `fallback_to_reactive`.
-  - [ ] Initially disabled / opt-in; later, make plot-first the default for new projects.
+  - [x] Initially disabled / opt-in; later, make plot-first the default for new projects.
   - [ ] Add migration note/tool for existing projects.
 
 ---

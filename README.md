@@ -12,6 +12,7 @@ StoryDaemon is a Python-based system that generates long-form fiction through an
 - 🎯 **Emergent Structure** - No pre-outlining; story develops organically
 - 📚 **Story Foundation** - Optional genre, premise, setting, tone to guide emergence
 - 🎯 **Goal Hierarchy** - Protagonist goals emerge naturally or can be user-specified
+- 📋 **Plot-First Mode** - Optional emergent plot beats guide scene generation for forward momentum
 - ⚡ **Tension Tracking** - Automatic scene tension scoring (0-10) for pacing awareness
 - 💰 **Flexible LLM Backends** - Codex CLI, Gemini CLI, Claude Code CLI (zero additional cost), or API backends (GPT-5/5.1, Claude 4.5, Gemini 2.5 Pro)
 - 🔧 **Tool-Based System** - Extensible tool registry for character generation, memory search, etc.
@@ -129,6 +130,11 @@ novel lore list
 novel lore list --category world_rules
 novel lore list --importance high
 
+# Plot-first mode commands
+novel plot generate --count 5    # Generate plot beats
+novel plot status --detailed     # View beat status
+novel plot next                  # See next pending beat
+
 # Use API backend instead of Codex
 novel tick --llm-backend api --llm-model gpt-5.1      # OpenAI GPT-5.1
 novel tick --llm-backend api --llm-model claude-4.5   # Anthropic Claude 4.5
@@ -145,16 +151,19 @@ novel tick --llm-backend claude-cli --llm-model claude-4.5
 
 StoryDaemon uses a **story tick loop** where each tick produces one scene passage:
 
-1. **Summarize State** - Collect context from previous passages and memory
-2. **Plan** - Planner LLM decides which tools to use, scene intention, and optional length guidance
-3. **Execute Tools** - Run character generation, memory search, etc.
-4. **Write** - Writer LLM generates prose in deep POV (flexible length based on scene needs)
-5. **Evaluate** - Check continuity and POV integrity and compute QA metrics (change/milestone, dialogue density, transitions, mode, novelty) that feed back into planning
-6. **Evaluate Tension** - Analyze scene tension (0-10 scale) for pacing awareness
-7. **Commit** - Save scene and update memory
-8. **Extract Facts** - Update character/location state from scene content
-9. **Extract Lore** - Identify world rules, constraints, and capabilities
-10. **Check Goals** - Promote story goals when conditions are met
+1. **Check Plot Beats** (if plot-first mode enabled) - Regenerate beats if needed, get next beat to execute
+2. **Summarize State** - Collect context from previous passages and memory
+3. **Plan** - Planner LLM decides which tools to use, scene intention, and optional length guidance
+4. **Execute Tools** - Run character generation, memory search, etc.
+5. **Write** - Writer LLM generates prose in deep POV (flexible length based on scene needs)
+   - In plot-first mode, beat constraints are injected into writer context as hard requirements
+6. **Evaluate** - Check continuity and POV integrity and compute QA metrics (change/milestone, dialogue density, transitions, mode, novelty) that feed back into planning
+7. **Evaluate Tension** - Analyze scene tension (0-10 scale) for pacing awareness
+8. **Commit** - Save scene and update memory
+9. **Verify Beat** (if plot-first mode enabled) - Check if scene accomplished the target beat, mark complete
+10. **Extract Facts** - Update character/location state from scene content
+11. **Extract Lore** - Identify world rules, constraints, and capabilities
+12. **Check Goals** - Promote story goals when conditions are met
 
 ### Real-World Example
 
@@ -186,6 +195,7 @@ The tension naturally oscillates between 5-6/10, maintaining engagement without 
 Each novel maintains its own working directory with:
 
 - **Story Foundation** - Optional immutable constraints (genre, premise, protagonist, setting, tone, themes, primary goal)
+- **Plot Outline** - Optional emergent plot beats for forward momentum (plot-first mode)
 - **Characters** - Dynamic character data with goals, relationships, emotional state
 - **Locations** - Evolving location descriptions with sensory details
 - **Scenes** - Scene metadata and summaries
@@ -215,6 +225,9 @@ StoryDaemon/
 │   │   ├── entities.py         # Entity dataclasses
 │   │   ├── vector_store.py     # ChromaDB integration
 │   │   └── checkpoint.py       # Checkpoint system
+│   ├── plot/            # Plot management (emergent plotting)
+│   │   ├── manager.py          # PlotOutlineManager
+│   │   └── entities.py         # PlotBeat, PlotOutline
 │   ├── cli/             # Command-line interface
 │   │   ├── main.py             # CLI entry point
 │   │   ├── project.py          # Project management
@@ -224,6 +237,7 @@ StoryDaemon/
 │   │       ├── status.py       # Status command
 │   │       ├── goals.py        # Goals command
 │   │       ├── lore.py         # Lore command
+│   │       ├── plot.py         # Plot commands (generate, status, next)
 │   │       ├── list.py         # List commands
 │   │       ├── inspect.py      # Inspect command
 │   │       ├── plan.py         # Plan preview
@@ -240,6 +254,7 @@ StoryDaemon/
 │   │       ├── memory/      # Entity storage
 │   │       ├── scenes/      # Generated scene markdown files
 │   │       ├── plans/       # Plan JSON files
+│   │       ├── plot_outline.json  # Plot beats (if using plot-first mode)
 │   │       ├── checkpoints/ # Project snapshots
 │   │       └── errors/      # Error logs
 │   ├── experiments/     # Quick experiments
@@ -327,6 +342,11 @@ novel checkpoint create [--message <msg>] [--project <path>]
 novel checkpoint list [--project <path>]
 novel checkpoint restore --id <checkpoint_id> [--project <path>]
 novel checkpoint delete --id <checkpoint_id> [--project <path>]
+
+# Plot-first mode commands
+novel plot generate [--count 5] [--project <path>]
+novel plot status [--detailed] [--project <path>]
+novel plot next [--project <path>]
 ```
 
 ## Configuration
@@ -350,6 +370,14 @@ generation:
   recent_scenes_count: 3           # Context for planner
   include_overall_summary: true    # Include story-wide summary
   # Scene length is flexible - planner can optionally suggest "brief", "short", "long", or "extended"
+  
+  # Plot-first mode (optional, disabled by default)
+  use_plot_first: false            # Enable emergent plot-first architecture
+  plot_beats_ahead: 5              # Generate this many beats at a time
+  plot_regeneration_threshold: 2   # Regenerate when pending beats < this
+  verify_beat_execution: true      # Verify beat was accomplished via LLM
+  allow_beat_skip: false           # Allow skipping beats that aren't accomplished
+  fallback_to_reactive: true       # Fall back to reactive mode if beat generation fails
 ```
 
 Project-specific configuration in `<project>/config.yaml`.
@@ -366,14 +394,18 @@ GEMINI_API_KEY   # Gemini 2.5 Pro
 
 ## Development Status & Roadmap
 
-StoryDaemon has a mature end-to-end pipeline (agent, memory, writer, evaluator, CLI, and multi-stage planner) and is actively evolving around **emergent plotting and beat-guided planning**.
+StoryDaemon has a mature end-to-end pipeline (agent, memory, writer, evaluator, CLI, and multi-stage planner) and is actively evolving around **emergent plotting and plot-first generation**.
 
-- **High-level status:** Phases 1–6 and Phase 7A (bounded emergence) are implemented and used in real projects.
-- **Current focus:** Emergent plotting, plot beats, and guided beat integration in the planner.
+- **High-level status:** Phases 1–7A (bounded emergence) are implemented and used in real projects.
+- **Latest:** Phase 5 (Full Emergent Plot-First Tick) is complete - optional plot-first mode with automatic beat generation, beat-constrained writing, and beat verification.
+- **Current focus:** Testing plot-first mode in production, Phase 6 enhancements (multi-arc management, beat branching).
 
-For a detailed, phase-by-phase checklist and ongoing work notes, see:
+For detailed documentation on plot-first mode and emergent plotting:
 
+- [Plot-First Mode User Guide](docs/PLOT_FIRST_MODE_GUIDE.md)
+- [Phase 5 Implementation Summary](docs/PHASE5_IMPLEMENTATION_SUMMARY.md)
 - [Emergent Plotting Implementation Checklist](docs/IMPLEMENTATION_CHECKLIST_EMERGENT_PLOTTING.md)
+- [Architecture Proposal](docs/ARCHITECTURE_PROPOSAL_EMERGENT_PLOTTING.md)
 - [Implementation Plan](docs/plan.md)
 
 Historical phase documents and older roadmap notes live under `docs/archive/`.
@@ -432,6 +464,8 @@ python tests/manual_tension_test.py
 
 ### Feature Documentation
 - [Phase 7A: Bounded Emergence Framework](docs/archive/phase7a_bounded_emergence.md) - Story foundation and goal hierarchy
+- [Plot-First Mode Guide](docs/PLOT_FIRST_MODE_GUIDE.md) - User guide for emergent plot-first generation
+- [Phase 5 Implementation Summary](docs/PHASE5_IMPLEMENTATION_SUMMARY.md) - Technical details of plot-first implementation
 - [Name Generator Implementation](docs/archive/name_generator_implementation_plan.md) - Syllable-based name generation
 - [Project Safety Improvements](docs/archive/project_safety_improvements.md) - UUID system and scene titles
 - [Resume Workflow](docs/archive/resume_workflow.md) - Recent projects and resume commands

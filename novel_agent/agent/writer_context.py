@@ -71,6 +71,9 @@ class WriterContextBuilder:
         # Get optional length guidance from plan metadata
         scene_length_guidance = self._get_length_guidance(plan)
         
+        # Format plot beat section (Phase 5)
+        plot_beat_section = self._format_plot_beat_section(plan)
+        
         return {
             "novel_name": novel_name,
             "current_tick": current_tick,
@@ -78,6 +81,7 @@ class WriterContextBuilder:
             "key_change": key_change,
             "progress_milestone": progress_milestone,
             "progress_step": progress_step,
+            "plot_beat_section": plot_beat_section,
             "scene_mode": scene_mode,
             "palette_shift": palette_shift,
             "transition_path": transition_path,
@@ -314,3 +318,44 @@ class WriterContextBuilder:
         else:
             # No guidance - let the scene be whatever length it needs
             return ""
+    
+    def _format_plot_beat_section(self, plan: Dict[str, Any]) -> str:
+        """Format plot beat section for writer prompt (Phase 5).
+        
+        Args:
+            plan: The plan dictionary (may contain plot_beat from agent)
+        
+        Returns:
+            Formatted plot beat section or empty string
+        """
+        # Check if plot_beat was injected by the agent
+        plot_beat = plan.get("plot_beat")
+        if not plot_beat or not isinstance(plot_beat, dict):
+            return ""
+        
+        description = plot_beat.get("description", "")
+        if not description:
+            return ""
+        
+        section = f"\n**🎯 PLOT BEAT TO EXECUTE:** {description}\n"
+        
+        # Add additional beat constraints if present
+        characters = plot_beat.get("characters_involved", [])
+        if characters:
+            section += f"**Required Characters:** {', '.join(characters)}\n"
+        
+        location = plot_beat.get("location")
+        if location:
+            section += f"**Required Location:** {location}\n"
+        
+        tension_target = plot_beat.get("tension_target")
+        if tension_target:
+            section += f"**Target Tension Level:** {tension_target}/10\n"
+        
+        plot_threads = plot_beat.get("plot_threads", [])
+        if plot_threads:
+            section += f"**Advances Plot Threads:** {', '.join(plot_threads)}\n"
+        
+        section += "\n**THIS BEAT MUST BE ACCOMPLISHED IN THIS SCENE.**\n"
+        
+        return section

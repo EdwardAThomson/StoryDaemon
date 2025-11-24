@@ -25,7 +25,7 @@ from ..tools.registry import ToolRegistry
 from ..memory.manager import MemoryManager
 from ..memory.vector_store import VectorStore
 from ..memory.summarizer import SceneSummarizer
-from ..memory.plot_outline import PlotOutlineManager
+from ..plot.manager import PlotOutlineManager
 
 
 class StoryAgent:
@@ -120,6 +120,9 @@ class StoryAgent:
                 prompts_dir=prompts_dir
             )
         
+        # Plot-first components
+        self.plot_manager = PlotOutlineManager(self.project_path, llm_interface)
+        
         # Load state
         self.state = self._load_state()
     
@@ -153,6 +156,32 @@ class StoryAgent:
         tick = self.state["current_tick"]
         
         try:
+            # Check if plot-first mode is enabled
+            use_plot_first = self.config.get('generation.use_plot_first', False)
+            current_beat = None
+            
+            if use_plot_first:
+                # Check if we need to regenerate beats
+                if self._needs_beat_regeneration():
+                    print("   📖 Generating plot beats...")
+                    beats_ahead = self.config.get('generation.plot_beats_ahead', 5)
+                    try:
+                        new_beats = self.plot_manager.generate_next_beats(count=beats_ahead)
+                        self.plot_manager.add_beats(new_beats)
+                        print(f"        Generated {len(new_beats)} new plot beats")
+                    except Exception as e:
+                        print(f"        ⚠️  Beat generation failed: {e}")
+                        # Fallback to reactive mode if configured
+                        if not self.config.get('generation.fallback_to_reactive', True):
+                            raise
+                
+                # Get next beat to execute
+                current_beat = self.plot_manager.get_next_beat()
+                if current_beat:
+                    print(f"   🎯 Executing beat: {current_beat.description}")
+                elif not self.config.get('generation.fallback_to_reactive', True):
+                    raise RuntimeError("No plot beats available and fallback disabled")
+            
             # Step 1: Gather context
             print("   1. Gathering context...")
             context = self.context_builder.build_planner_context(self.state)
@@ -193,11 +222,23 @@ class StoryAgent:
             
             # Step 6: Write scene prose (Phase 4)
             print("   6. Writing scene prose...")
+            
+            # Inject beat constraints into plan before building writer context
+            if use_plot_first and current_beat:
+                plan["plot_beat"] = {
+                    "description": current_beat.description,
+                    "characters_involved": current_beat.characters_involved,
+                    "location": current_beat.location,
+                    "tension_target": current_beat.tension_target,
+                    "plot_threads": current_beat.plot_threads
+                }
+            
             writer_context = self.writer_context_builder.build_writer_context(
                 plan,
                 execution_results,
                 self.state
             )
+            
             scene_data = self.writer.write_scene(writer_context)
             
             print("   7. Evaluating scene...")
@@ -234,6 +275,26 @@ class StoryAgent:
                     self._update_beats_from_evaluation(scene_id, plan, eval_result)
                 except Exception:
                     pass
+            
+            # Verify beat execution and mark complete
+            if use_plot_first and current_beat:
+                print("   8.5. Verifying beat execution...")
+                if self.config.get('generation.verify_beat_execution', True):
+                    beat_accomplished = self._verify_beat_execution(
+                        scene_data["text"],
+                        current_beat
+                    )
+                    if beat_accomplished:
+                        print(f"        ✓ Beat {current_beat.id} accomplished")
+                        self._mark_beat_complete(current_beat.id, scene_id)
+                    else:
+                        print(f"        ⚠️  Beat may not have been fully executed")
+                        # Mark as in_progress or keep pending based on config
+                        if not self.config.get('generation.allow_beat_skip', False):
+                            print(f"        Keeping beat {current_beat.id} as pending")
+                else:
+                    # Auto-mark complete without verification
+                    self._mark_beat_complete(current_beat.id, scene_id)
             
             # Step 8.5: Update scene with tension data (Phase 7A.3)
             if tension_result.get('enabled'):
@@ -962,3 +1023,76 @@ class StoryAgent:
             except Exception as e:
                 logger.error(f"Failed to save lore item: {e}")
                 continue
+    
+    def _needs_beat_regeneration(self) -> bool:
+        """Check if we need to generate more plot beats (Phase 5).
+        
+        Returns:
+            True if pending beats are below threshold
+        """
+        threshold = self.config.get('generation.plot_regeneration_threshold', 2)
+        outline = self.plot_manager.load_outline()
+        pending_count = sum(1 for beat in outline.beats if beat.status == "pending")
+        return pending_count < threshold
+    
+    def _verify_beat_execution(self, scene_text: str, beat) -> bool:
+        """Verify that the scene accomplished the plot beat (Phase 5).
+        
+        Args:
+            scene_text: The scene prose text
+            beat: The PlotBeat that was supposed to be executed
+        
+        Returns:
+            True if beat was accomplished, False otherwise
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        try:
+            prompt = f"""Did this scene accomplish the following plot beat?
+
+Plot Beat: {beat.description}
+
+Scene Text:
+{scene_text[:2000]}...
+
+Answer with YES or NO and a brief explanation (1-2 sentences)."""
+            
+            response = self.llm.generate(prompt, max_tokens=150)
+            result = response.strip().upper().startswith("YES")
+            
+            if result:
+                logger.info(f"Beat {beat.id} verified as accomplished")
+            else:
+                logger.warning(f"Beat {beat.id} may not be fully accomplished: {response[:100]}")
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Beat verification failed: {e}")
+            # Default to True on error (graceful degradation)
+            return True
+    
+    def _mark_beat_complete(self, beat_id: str, scene_id: str):
+        """Mark a plot beat as completed (Phase 5).
+        
+        Args:
+            beat_id: ID of the beat to mark complete
+            scene_id: ID of the scene where beat was executed
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        try:
+            outline = self.plot_manager.load_outline()
+            for beat in outline.beats:
+                if beat.id == beat_id:
+                    beat.status = "completed"
+                    beat.executed_in_scene = scene_id
+                    beat.execution_notes = f"Executed in {scene_id}"
+                    break
+            self.plot_manager.save_outline(outline)
+            logger.info(f"Marked beat {beat_id} as completed")
+            
+        except Exception as e:
+            logger.error(f"Failed to mark beat complete: {e}")

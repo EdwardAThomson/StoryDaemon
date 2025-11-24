@@ -93,12 +93,16 @@ class SceneWriter:
                 cleaned_lines.append(line)
         text = "\n".join(cleaned_lines).strip()
         
-        # Calculate word count
-        word_count = len(text.split())
-        
-        # Extract or generate title
+        # Extract title first (before stripping it from text)
         lines = text.split('\n')
         title = self._extract_title(lines, context)
+        
+        # Strip the LLM-generated title/header from the text to avoid duplication
+        # The scene_committer will add its own standardized header
+        text = self._strip_llm_header(text)
+        
+        # Calculate word count
+        word_count = len(text.split())
         
         return {
             "text": text,
@@ -153,3 +157,50 @@ class SceneWriter:
         # Fallback to tick number
         tick = context.get('current_tick', 0)
         return f"Scene {tick}"
+    
+    def _strip_llm_header(self, text: str) -> str:
+        """Strip LLM-generated markdown header and metadata from scene text.
+        
+        The LLM often generates a title like "# Title" followed by metadata
+        like "*Scene ID: ...*" and "---". We strip this to avoid duplication
+        since the scene_committer adds its own standardized header.
+        
+        Args:
+            text: Raw scene text from LLM
+        
+        Returns:
+            Text with header stripped
+        """
+        lines = text.split('\n')
+        start_index = 0
+        
+        # Skip leading markdown title (# Title)
+        if lines and lines[0].strip().startswith('#'):
+            start_index = 1
+        
+        # Skip blank lines after title
+        while start_index < len(lines) and not lines[start_index].strip():
+            start_index += 1
+        
+        # Skip metadata lines (*Scene ID: ...*, *Tick: ...*)
+        while start_index < len(lines):
+            stripped = lines[start_index].strip()
+            if stripped.startswith('*') and stripped.endswith('*'):
+                start_index += 1
+            else:
+                break
+        
+        # Skip blank lines after metadata
+        while start_index < len(lines) and not lines[start_index].strip():
+            start_index += 1
+        
+        # Skip horizontal rule (---)
+        if start_index < len(lines) and lines[start_index].strip().startswith('---'):
+            start_index += 1
+        
+        # Skip blank lines after horizontal rule
+        while start_index < len(lines) and not lines[start_index].strip():
+            start_index += 1
+        
+        # Return remaining text
+        return '\n'.join(lines[start_index:]).strip()

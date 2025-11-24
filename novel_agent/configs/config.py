@@ -31,6 +31,14 @@ DEFAULT_CONFIG = {
         'enable_entity_updates': True,
         'enable_tension_tracking': True,  # Phase 7A.3: Track scene tension levels
         'enable_lore_tracking': True,  # Phase 7A.4: Track world rules and lore
+        
+        # Plot-first mode configuration
+        'use_plot_first': False,  # Enable emergent plot-first architecture
+        'plot_beats_ahead': 5,  # Generate this many beats at a time
+        'plot_regeneration_threshold': 2,  # Regenerate when pending beats < this
+        'verify_beat_execution': True,  # Verify beat was accomplished via LLM
+        'allow_beat_skip': False,  # Allow skipping beats that aren't accomplished
+        'fallback_to_reactive': True,  # Fall back to reactive mode if beat generation fails
     },
     'lore': {
         'contradiction_threshold': 0.5,  # Similarity threshold for flagging contradictions (0.0-2.0)
