@@ -364,110 +364,19 @@ CLAUDE_API_KEY   # Claude 4.5 (Anthropic)
 GEMINI_API_KEY   # Gemini 2.5 Pro
 ```
 
-## Development Status
+## Development Status & Roadmap
 
-**Phase 1: Core Framework** ✅ Complete
-- [x] Project structure
-- [x] File I/O utilities
-- [x] Codex CLI interface
-- [x] Configuration management
-- [x] Basic CLI commands
-- [x] Tool base classes
+StoryDaemon has a mature end-to-end pipeline (agent, memory, writer, evaluator, CLI, and multi-stage planner) and is actively evolving around **emergent plotting and beat-guided planning**.
 
-**Phase 2: Memory System** ✅ Complete
-- [x] Character/Location/Scene/OpenLoop dataclasses
-- [x] Relationship graph with bidirectional perspectives
-- [x] Memory manager with CRUD operations
-- [x] ChromaDB vector database integration
-- [x] Memory tools (search, character.generate, location.generate)
-- [x] Relationship tools (create, update, query)
-- [x] Scene summarization
-- [x] 39 tests passing
+- **High-level status:** Phases 1–6 and Phase 7A (bounded emergence) are implemented and used in real projects.
+- **Current focus:** Emergent plotting, plot beats, and guided beat integration in the planner.
 
-**Phase 3: Planner and Execution Loop** ✅ Complete
-- [x] Tool base class and ToolRegistry
-- [x] Planner LLM prompt template
-- [x] Plan JSON schema validation
-- [x] Context builder for story state
-- [x] Plan executor with error handling
-- [x] Plan storage and error logging
-- [x] StoryAgent orchestrator
-- [x] CLI integration
-- [x] 52 tests passing
+For a detailed, phase-by-phase checklist and ongoing work notes, see:
 
-**Phase 4: Writer and Evaluator** ✅ Complete
-- [x] Writer LLM prompt template with deep POV instructions
-- [x] WriterContextBuilder for gathering scene context
-- [x] SceneWriter for generating 500-900 word prose
-- [x] SceneEvaluator for quality checks (word count, POV, continuity)
-- [x] SceneCommitter for persisting scenes to disk and memory
-- [x] Full integration into StoryAgent tick cycle
-- [x] Enhanced CLI output with scene generation steps
-- [x] Complete end-to-end scene generation pipeline
+- [Emergent Plotting Implementation Checklist](docs/IMPLEMENTATION_CHECKLIST_EMERGENT_PLOTTING.md)
+- [Implementation Plan](docs/plan.md)
 
-**Phase 5: Dynamic Memory Updates** ✅ Complete
-- [x] Fact extraction from scene prose
-- [x] Character emotional state updates
-- [x] Character inventory, goals, and beliefs tracking
-- [x] Location state changes
-- [x] Open loop creation/resolution from text
-- [x] Relationship tracking and updates
-- [x] Entity history tracking
-- [x] Enhanced continuity checking
-- [x] Graceful error handling with retry logic
-
-**Phase 6: CLI Enhancements and Workflow** ✅ Complete
-- [x] Enhanced status command with statistics
-- [x] List commands (characters, locations, loops, scenes)
-- [x] Inspect command for deep entity examination
-- [x] Plan preview command (non-destructive)
-- [x] Compile command (Markdown/HTML export)
-- [x] Checkpoint system (create, list, restore, delete)
-- [x] Automatic checkpointing in `novel run`
-- [x] JSON output support for all commands
-- [x] 10 tests passing
-
-**Phase 7A: Bounded Emergence Framework** 🚧 In Progress
-- [x] **7A.1: Story Foundation** - Optional immutable constraints (genre, premise, protagonist, setting, tone, themes, primary goal)
-  - [x] Interactive/file/CLI input modes
-  - [x] Foundation display in `novel status`
-  - [x] Tests for foundation functionality
-- [x] **7A.2: Goal Hierarchy** - Protagonist goals and auto-promotion
-  - [x] Character goal fields (immediate, arc, story goals)
-  - [x] OpenLoop tracking fields (scenes_mentioned, is_story_goal)
-  - [x] Auto-promotion logic (ticks 10-15, 5+ mentions)
-  - [x] User-specified primary goal support
-  - [x] `novel goals` command to view hierarchy
-  - [x] Tests for goal promotion logic
-- [x] **7A.3: Tension Tracking** - Scene-level tension scoring (0-10 scale) ✅ **TESTED IN PRODUCTION**
-  - [x] TensionEvaluator with keyword/structure/emotion analysis
-  - [x] Configurable on/off via `enable_tension_tracking`
-  - [x] Tension history in planner context with gentle pacing guidance
-  - [x] Adaptive suggestions (steady/high/low tension patterns)
-  - [x] Visualization in `novel status` and `novel list scenes`
-  - [x] Tests for tension evaluation and guidance
-  - [x] Real-world story generation test (5 scenes, accurate scoring)
-- [x] **7A.4: Lore Consistency** - World rules and constraint checking ✅ **COMPLETE**
-  - [x] Lore dataclass with comprehensive fields
-  - [x] LLM-based extraction (rules, constraints, facts, capabilities, limitations)
-  - [x] VectorStore integration for semantic search
-  - [x] Contradiction detection using similarity threshold
-  - [x] `novel lore` command with filtering and grouping
-  - [x] 12 unit tests covering all operations
-  - [x] Configurable via `enable_lore_tracking`
-- [x] **7A.5: Multi-Stage Prompts** - Semantic context selection with 3-stage planning ✅ **COMPLETE**
-  - [x] Stage 1: Strategic planning (~200 tokens, high-level intention)
-  - [x] Stage 2: Semantic context gathering (vector search, no LLM)
-  - [x] Stage 3: Tactical planning (~1,000 tokens, detailed plan)
-  - [x] 50-70% token reduction vs single-stage
-  - [x] Prompt logging with `--save-prompts` flag
-  - [x] Performance statistics display
-  - [x] Story stats summary after each tick
-  - [x] Configurable via `use_multi_stage_planner`
-
-**Phase 7A Status:** ✅ Production ready with comprehensive test coverage
-
-**Phase 7B+:** See [docs/phase7a_bounded_emergence.md](docs/phase7a_bounded_emergence.md) for full roadmap.
+Historical phase documents and older roadmap notes live under `docs/archive/`.
 
 ## Testing
 
@@ -510,25 +419,25 @@ All Phase 7A.1-7A.4 features have comprehensive test coverage and are production
 - [Implementation Plan](docs/plan.md) - Phase-by-phase roadmap
 
 ### Phase Documentation
-- [Phase 1 Guide](docs/phase1_implementation.md) - Core framework implementation
-- [Phase 2 Detailed Plan](docs/phase2_detailed.md) - Memory system design
-- [Phase 2 Completion](docs/phase2_completion.md) - Implementation summary
-- [Phase 3 Detailed Plan](docs/phase3_detailed.md) - Planner and execution loop design
-- [Phase 3 Completion](docs/phase3_completion.md) - Implementation summary
-- [Phase 4 Detailed Plan](docs/phase4_detailed.md) - Writer and evaluator design
-- [Phase 4 Implementation Summary](docs/phase4_implementation_summary.md) - Implementation summary
-- [Phase 5 Detailed Plan](docs/phase5_detailed.md) - Dynamic entity updates design
-- [Phase 6 Detailed Plan](docs/phase6_detailed_plan.md) - CLI enhancements design
-- [Phase 6 Implementation Summary](docs/phase6_implementation_summary.md) - Implementation summary
-- [Phase 6 Quick Reference](docs/phase6_quick_reference.md) - Command reference guide
-- [Phase 6 Complete](docs/PHASE6_COMPLETE.md) - Completion summary
+- [Phase 1 Guide](docs/archive/phase1_implementation.md) - Core framework implementation
+- [Phase 2 Detailed Plan](docs/archive/phase2_detailed.md) - Memory system design
+- [Phase 2 Completion](docs/archive/phase2_completion.md) - Implementation summary
+- [Phase 3 Detailed Plan](docs/archive/phase3_detailed.md) - Planner and execution loop design
+- [Phase 3 Completion](docs/archive/phase3_completion.md) - Implementation summary
+- [Phase 4 Detailed Plan](docs/archive/phase4_detailed.md) - Writer and evaluator design
+- [Phase 4 Implementation Summary](docs/archive/phase4_implementation_summary.md) - Implementation summary
+- [Phase 5 Detailed Plan](docs/archive/phase5_detailed.md) - Dynamic entity updates design
+- [Phase 6 Detailed Plan](docs/archive/phase6_detailed_plan.md) - CLI enhancements design
+- [Phase 6 Implementation Summary](docs/archive/phase6_implementation_summary.md) - Implementation summary
+- [Phase 6 Quick Reference](docs/archive/phase6_quick_reference.md) - Command reference guide
+- [Phase 6 Complete](docs/archive/PHASE6_COMPLETE.md) - Completion summary
 
 ### Feature Documentation
-- [Phase 7A: Bounded Emergence Framework](docs/phase7a_bounded_emergence.md) - Story foundation and goal hierarchy
-- [Name Generator Implementation](docs/name_generator_implementation_plan.md) - Syllable-based name generation
-- [Project Safety Improvements](docs/project_safety_improvements.md) - UUID system and scene titles
-- [Resume Workflow](docs/resume_workflow.md) - Recent projects and resume commands
-- [Agent vs CLI Tools](docs/agent_vs_cli_tools.md) - Understanding tool layers
+- [Phase 7A: Bounded Emergence Framework](docs/archive/phase7a_bounded_emergence.md) - Story foundation and goal hierarchy
+- [Name Generator Implementation](docs/archive/name_generator_implementation_plan.md) - Syllable-based name generation
+- [Project Safety Improvements](docs/archive/project_safety_improvements.md) - UUID system and scene titles
+- [Resume Workflow](docs/archive/resume_workflow.md) - Recent projects and resume commands
+- [Agent vs CLI Tools](docs/archive/agent_vs_cli_tools.md) - Understanding tool layers
 
 ## Philosophy
 
