@@ -353,6 +353,9 @@ class ContextBuilder:
             mode_used = evaluation.get("mode_used", "unknown")
             dialogue_count = evaluation.get("dialogue_count", None)
             novelty = evaluation.get("novelty_score", None)
+            beat_align = evaluation.get("beat_hint_alignment", {}) or {}
+            beat_align_label = beat_align.get("label")
+            beat_align_score = beat_align.get("score")
             warnings = evaluation.get("warnings", [])
             prefix = f"Tick {tick} ({scene_id})" if tick is not None else f"Scene {scene_id}"
             summary_parts = [f"change={achieved_label}", f"mode={mode_used}"]
@@ -360,6 +363,11 @@ class ContextBuilder:
                 summary_parts.append(f"dialogue={dialogue_count}")
             if novelty is not None:
                 summary_parts.append(f"novelty={novelty}")
+            if beat_align_label:
+                if isinstance(beat_align_score, (int, float)):
+                    summary_parts.append(f"beat_align={beat_align_label}({beat_align_score:.2f})")
+                else:
+                    summary_parts.append(f"beat_align={beat_align_label}")
             line = f"- {prefix}: " + ", ".join(summary_parts)
             if warnings:
                 joined = "; ".join(warnings[:3])

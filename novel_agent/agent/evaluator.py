@@ -1,6 +1,7 @@
 """Scene evaluator for quality and consistency checking."""
 
 from typing import Dict, Any, List
+from ..memory.plot_outline import PlotOutlineManager
 
 
 class SceneEvaluator:
@@ -260,6 +261,41 @@ class SceneEvaluator:
 
             novelty_score = max(1.0, min(9.0, score))
 
+        # Beat hint alignment: compare current scene text against the next
+        # pending plot beat description using simple keyword overlap. This is
+        # a soft signal only and does not affect pass/fail.
+        beat_hint_alignment: Dict[str, Any] = {
+            "beat_id": None,
+            "score": None,
+            "label": "none",
+        }
+        try:
+            manager = PlotOutlineManager(self.memory.project_path)
+            next_beat = manager.get_next_beat()
+        except Exception:
+            next_beat = None
+
+        if next_beat is not None:
+            beat_id = getattr(next_beat, "id", None)
+            description = getattr(next_beat, "description", "") or ""
+            beat_hint_alignment["beat_id"] = beat_id
+
+            beat_keywords = extract_keywords(description)
+            if beat_keywords:
+                unique_keywords = set(beat_keywords)
+                shared = sum(1 for w in unique_keywords if w in text_lower)
+                ratio = shared / max(1, len(unique_keywords))
+                beat_hint_alignment["score"] = round(ratio, 2)
+                if ratio >= 0.6:
+                    label = "high"
+                elif ratio >= 0.3:
+                    label = "medium"
+                elif ratio > 0:
+                    label = "low"
+                else:
+                    label = "none"
+                beat_hint_alignment["label"] = label
+
         return {
             "achieved_change": achieved_change,
             "dialogue_count": dialogue_count,
@@ -271,8 +307,9 @@ class SceneEvaluator:
                 "score": transition_clarity_score,
                 "notes": transition_notes,
             },
-            "mode_used": mode_used,
+            "mode_used": scene_mode or "unknown",
             "mode_diversity_warning": mode_diversity_warning,
             "novelty_score": novelty_score,
             "continuity_flags": continuity_flags,
+            "beat_hint_alignment": beat_hint_alignment,
         }
