@@ -21,6 +21,7 @@ from .tension_evaluator import TensionEvaluator
 from .lore_extractor import LoreExtractor
 from .lore_contradiction_detector import LoreContradictionDetector
 from .multi_stage_planner import MultiStagePlanner
+from .character_detector import CharacterDetector
 from ..tools.registry import ToolRegistry
 from ..memory.manager import MemoryManager
 from ..memory.vector_store import VectorStore
@@ -98,6 +99,7 @@ class StoryAgent:
         # Phase 5 components
         self.fact_extractor = FactExtractor(llm_interface, self.memory, config)
         self.entity_updater = EntityUpdater(self.memory, config)
+        self.character_detector = CharacterDetector(self.memory, config)
         
         # Phase 7A.3 components
         self.tension_evaluator = TensionEvaluator(config)
@@ -306,6 +308,28 @@ class StoryAgent:
                     scene.tension_category = tension_result['tension_category']
                     self.memory.save_scene(scene)
                     print(f"        Tension: {tension_result['tension_level']}/10 ({tension_result['tension_category']})")
+            
+            # Step 8.6: Detect new characters (Phase 6)
+            if self.config.get('generation.auto_detect_characters', True):
+                print("   8.6. Detecting new characters...")
+                new_characters = self.character_detector.find_new_characters(scene_data["text"])
+                if new_characters:
+                    print(f"        Found {len(new_characters)} new character(s): {', '.join(new_characters)}")
+                    
+                    # Check if we should prompt or auto-create
+                    prompt_for_creation = self.config.get('generation.prompt_for_character_creation', True)
+                    auto_create = self.config.get('generation.auto_create_minor_characters', False)
+                    
+                    if auto_create:
+                        # Auto-create stubs for all new characters
+                        for name in new_characters:
+                            char_id = self.character_detector.create_character_stub(name)
+                            print(f"        ✓ Created stub for '{name}' ({char_id})")
+                    elif prompt_for_creation:
+                        # Prompt user for each character
+                        print(f"        💡 Tip: Run 'novel list characters' to see tracked characters")
+                        print(f"        💡 Consider creating entities for: {', '.join(new_characters)}")
+                        print(f"        💡 Use character.generate tool in next tick or enable auto_create_minor_characters")
             
             # Step 9: Extract facts (Phase 5)
             print("   9. Extracting facts...")

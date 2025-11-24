@@ -33,9 +33,21 @@ def list_characters(project_dir: Path, verbose: bool = False) -> List[Dict[str, 
     for char_file in sorted(chars_dir.glob("*.json")):
         data = load_entity_file(char_file)
         if data:
+            # Build name from first_name and family_name
+            first_name = data.get('first_name', '')
+            family_name = data.get('family_name', '')
+            if first_name and family_name:
+                name = f"{first_name} {family_name}"
+            elif first_name:
+                name = first_name
+            elif family_name:
+                name = family_name
+            else:
+                name = data.get('name', 'Unknown')  # Fallback for old format
+            
             char_info = {
                 'id': data.get('id', char_file.stem),
-                'name': data.get('name', 'Unknown'),
+                'name': name,
                 'role': data.get('role', ''),
                 'type': data.get('type', ''),
             }

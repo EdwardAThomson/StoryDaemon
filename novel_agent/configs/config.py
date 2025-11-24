@@ -32,6 +32,11 @@ DEFAULT_CONFIG = {
         'enable_tension_tracking': True,  # Phase 7A.3: Track scene tension levels
         'enable_lore_tracking': True,  # Phase 7A.4: Track world rules and lore
         
+        # Character detection (Phase 6)
+        'auto_detect_characters': True,  # Detect new character names in scenes
+        'auto_create_minor_characters': False,  # Auto-create stubs for detected characters
+        'prompt_for_character_creation': True,  # Show tips about detected characters
+        
         # Plot-first mode configuration
         'use_plot_first': False,  # Enable emergent plot-first architecture
         'plot_first_start_tick': 2,  # Start plot-first mode from this tick (allows character setup)
