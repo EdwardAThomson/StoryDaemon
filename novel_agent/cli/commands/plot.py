@@ -17,7 +17,8 @@ def get_plot_status(project_dir: Path) -> Dict[str, Any]:
     total_beats = len(outline.beats)
     pending = sum(1 for b in outline.beats if b.status == "pending")
     in_progress = sum(1 for b in outline.beats if b.status == "in_progress")
-    completed = sum(1 for b in outline.beats if b.status == "completed")
+    # Treat legacy "executed" status as completed for summary purposes.
+    completed = sum(1 for b in outline.beats if b.status in ("completed", "executed"))
     skipped = sum(1 for b in outline.beats if b.status == "skipped")
 
     return {

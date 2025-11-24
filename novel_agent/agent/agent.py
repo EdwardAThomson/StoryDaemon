@@ -610,7 +610,9 @@ class StoryAgent:
         updated = False
         for beat in outline.beats:
             if getattr(beat, "id", None) == beat_id:
-                setattr(beat, "status", "executed")
+                # Mark beat as completed for consistency with CLI summary,
+                # while keeping executed_in_scene/execution_notes as metadata.
+                setattr(beat, "status", "completed")
                 setattr(beat, "executed_in_scene", scene_id)
                 notes = getattr(beat, "execution_notes", "") or ""
                 extra = f"Executed in {scene_id} with alignment {label}"

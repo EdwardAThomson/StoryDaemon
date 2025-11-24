@@ -122,12 +122,12 @@ This checklist merges the plans from `ARCHITECTURE_PROPOSAL_EMERGENT_PLOTTING.md
   - [x] Pass `next_beat.description` (and maybe characters/location) into planner context as a hint, not a hard constraint.
   - [x] Observe whether planner naturally moves in that direction.
 
-- [ ] **Add `plan_for_beat` path**
-  - [ ] Implement `planner.plan_for_beat(beat, context=story_state())`.
-  - [ ] Ensure resulting plan still includes:
-    - [ ] `key_change` / `progress_milestone`.
-    - [ ] `scene_mode`, `palette_shift`, `transition_path`, `dialogue_targets`.
-  - [ ] Use this path under a feature flag/config (e.g. `use_plot_first_soft`).
+- [x] **Add `plan_for_beat` path**
+  - [x] Implement `planner.plan_for_beat(beat, context=story_state())`.
+  - [x] Ensure resulting plan still includes:
+    - [x] `key_change` / `progress_milestone`.
+    - [x] `scene_mode`, `palette_shift`, `transition_path`, `dialogue_targets`.
+  - [x] Use this path under a feature flag/config (e.g. `use_plot_first_soft`).
 
 - [x] **Integrate with QA**
   - [x] Add QA field `beat_hint_alignment` (did the scene generally follow the suggested beat?).
