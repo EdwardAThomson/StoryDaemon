@@ -53,11 +53,11 @@ class StoryFoundation:
         )
 
 
-def prompt_for_foundation() -> StoryFoundation:
-    """Interactively prompt user for story foundation.
+def prompt_for_foundation() -> tuple[StoryFoundation, Dict[str, Any]]:
+    """Interactively prompt user for story foundation and plot-first configuration.
     
     Returns:
-        StoryFoundation object with user inputs
+        Tuple of (StoryFoundation object, plot_config dict)
     """
     typer.echo("\n📚 Story Foundation Setup")
     typer.echo("━" * 60)
@@ -109,6 +109,87 @@ def prompt_for_foundation() -> StoryFoundation:
     
     primary_goal = primary_goal if primary_goal else None
     
+    # Plot-First Mode Configuration
+    typer.echo("\n" + "━" * 60)
+    typer.echo("📋 Plot-First Mode Configuration")
+    typer.echo("━" * 60)
+    typer.echo("\nPlot-first mode generates plot beats that guide scene generation.")
+    typer.echo("This provides forward momentum and reduces repetition.\n")
+    
+    use_plot_first = typer.confirm(
+        "Enable plot-first mode? (Recommended for structured stories)",
+        default=False
+    )
+    
+    plot_config = {}
+    
+    if use_plot_first:
+        typer.echo("\n📖 Plot-First Settings:")
+        
+        # Enforcement level
+        typer.echo("\nEnforcement level:")
+        typer.echo("  1. Lenient - Beats guide but don't block (fallback to reactive)")
+        typer.echo("  2. Standard - Verify beats, allow skipping if not accomplished")
+        typer.echo("  3. Strict - Beats must be accomplished, no fallback (recommended)")
+        
+        enforcement = typer.prompt(
+            "\nSelect enforcement level",
+            type=int,
+            default=3
+        )
+        
+        if enforcement == 1:
+            # Lenient mode
+            plot_config = {
+                "use_plot_first": True,
+                "plot_first_start_tick": 2,
+                "plot_beats_ahead": 5,
+                "plot_regeneration_threshold": 2,
+                "verify_beat_execution": True,
+                "allow_beat_skip": True,
+                "fallback_to_reactive": True
+            }
+        elif enforcement == 2:
+            # Standard mode
+            plot_config = {
+                "use_plot_first": True,
+                "plot_first_start_tick": 2,
+                "plot_beats_ahead": 5,
+                "plot_regeneration_threshold": 2,
+                "verify_beat_execution": True,
+                "allow_beat_skip": True,
+                "fallback_to_reactive": False
+            }
+        else:
+            # Strict mode (default)
+            plot_config = {
+                "use_plot_first": True,
+                "plot_first_start_tick": 2,
+                "plot_beats_ahead": 5,
+                "plot_regeneration_threshold": 2,
+                "verify_beat_execution": True,
+                "allow_beat_skip": False,
+                "fallback_to_reactive": False
+            }
+        
+        # Advanced options
+        if typer.confirm("\nCustomize advanced settings?", default=False):
+            plot_config["plot_beats_ahead"] = typer.prompt(
+                "  Beats to generate at once",
+                type=int,
+                default=5
+            )
+            plot_config["plot_regeneration_threshold"] = typer.prompt(
+                "  Regenerate when pending beats drop below",
+                type=int,
+                default=2
+            )
+    else:
+        # Plot-first disabled
+        plot_config = {
+            "use_plot_first": False
+        }
+    
     # Confirmation
     typer.echo("\n" + "━" * 60)
     typer.echo("📋 Foundation Summary:")
@@ -121,14 +202,25 @@ def prompt_for_foundation() -> StoryFoundation:
         typer.echo(f"  Themes: {', '.join(themes)}")
     if primary_goal:
         typer.echo(f"  Primary Goal: {primary_goal}")
+    
+    typer.echo("\n📖 Plot Configuration:")
+    if plot_config.get("use_plot_first"):
+        if not plot_config.get("allow_beat_skip") and not plot_config.get("fallback_to_reactive"):
+            typer.echo("  Mode: Strict (beats enforced)")
+        elif plot_config.get("allow_beat_skip"):
+            typer.echo("  Mode: Lenient/Standard (beats guide)")
+        typer.echo(f"  Beats ahead: {plot_config.get('plot_beats_ahead', 5)}")
+        typer.echo(f"  Regeneration threshold: {plot_config.get('plot_regeneration_threshold', 2)}")
+    else:
+        typer.echo("  Mode: Reactive (no plot beats)")
     typer.echo("━" * 60)
     
-    confirm = typer.confirm("\nProceed with this foundation?", default=True)
+    confirm = typer.confirm("\nProceed with this configuration?", default=True)
     if not confirm:
-        typer.echo("Foundation setup cancelled.")
+        typer.echo("Setup cancelled.")
         raise typer.Abort()
     
-    return StoryFoundation(
+    foundation = StoryFoundation(
         genre=genre,
         premise=premise,
         protagonist_archetype=protagonist_archetype,
@@ -137,6 +229,8 @@ def prompt_for_foundation() -> StoryFoundation:
         themes=themes,
         primary_goal=primary_goal
     )
+    
+    return foundation, plot_config
 
 
 def load_foundation_from_file(file_path: Path) -> StoryFoundation:

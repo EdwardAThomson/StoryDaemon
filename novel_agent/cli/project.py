@@ -6,7 +6,7 @@ import os
 import uuid
 import yaml
 from datetime import datetime
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, Dict, Any, TYPE_CHECKING
 from ..utils.file_ops import write_json, write_file, read_json
 from ..configs.config import Config
 
@@ -20,6 +20,7 @@ def create_novel_project(
     foundation: Optional["StoryFoundation"] = None,
     llm_backend: Optional[str] = None,
     llm_model: Optional[str] = None,
+    plot_config: Optional[Dict[str, Any]] = None,
 ) -> str:
     """Create a new novel project directory structure.
     
@@ -29,6 +30,7 @@ def create_novel_project(
         foundation: Optional story foundation (genre, premise, etc.)
         llm_backend: Optional LLM backend override to store in project config
         llm_model: Optional LLM model override to store in project config
+        plot_config: Optional plot-first mode configuration
         
     Returns:
         Path to created project directory
@@ -114,6 +116,10 @@ def create_novel_project(
                 'target_word_count_max': config.get('generation.target_word_count_max'),
             }
         }
+        
+        # Add plot-first configuration if provided
+        if plot_config:
+            novel_config['generation'].update(plot_config)
         
         config_path = os.path.join(project_dir, 'config.yaml')
         with open(config_path, 'w', encoding='utf-8') as f:

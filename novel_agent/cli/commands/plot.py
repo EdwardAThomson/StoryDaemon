@@ -380,3 +380,47 @@ def display_generated_beats(result: Dict[str, Any]) -> None:
         if missing:
             for item in missing:
                 print(f"  Beat {item['beat_id']} has missing prerequisite {item['prerequisite']}")
+
+
+def clear_plot_outline(project_dir: Path, confirm: bool = True) -> bool:
+    """Clear all plot beats from the project.
+    
+    Args:
+        project_dir: Path to project directory
+        confirm: Whether to ask for confirmation (default: True)
+    
+    Returns:
+        True if cleared, False if cancelled
+    """
+    outline_path = project_dir / "plot_outline.json"
+    
+    if not outline_path.exists():
+        print("❌ No plot outline found.")
+        return False
+    
+    # Load current outline to show what will be deleted
+    manager = PlotOutlineManager(project_dir)
+    outline = manager.load_outline()
+    
+    total_beats = len(outline.beats)
+    pending = sum(1 for b in outline.beats if b.status == "pending")
+    completed = sum(1 for b in outline.beats if b.status in ("completed", "executed"))
+    
+    print(f"\n⚠️  About to delete plot outline:")
+    print(f"   Total beats: {total_beats}")
+    print(f"   Pending: {pending}")
+    print(f"   Completed: {completed}")
+    
+    if confirm:
+        import typer
+        proceed = typer.confirm("\nAre you sure you want to delete all plot beats?", default=False)
+        if not proceed:
+            print("❌ Cancelled.")
+            return False
+    
+    # Delete the file
+    outline_path.unlink()
+    print("✅ Plot outline cleared.")
+    print("   Beats will auto-regenerate when plot-first mode is active.")
+    
+    return True

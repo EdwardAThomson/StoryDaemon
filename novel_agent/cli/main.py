@@ -1,7 +1,7 @@
 """Main CLI entry point for StoryDaemon."""
 import typer
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict, Any
 from ..configs.config import Config
 from .project import (
     create_novel_project,
@@ -265,10 +265,11 @@ def new(
 
         llm_backend_override: Optional[str] = None
         llm_model_override: Optional[str] = None
+        plot_config: Optional[Dict[str, Any]] = None
 
         if interactive_effective:
             # Interactive prompting (recommended default)
-            foundation = prompt_for_foundation()
+            foundation, plot_config = prompt_for_foundation()
             llm_backend_override, llm_model_override = _prompt_for_llm_selection()
         elif foundation_file:
             # Load from file
@@ -285,13 +286,14 @@ def new(
                 themes=themes
             )
         
-        # Create project with optional foundation and LLM overrides (if any)
+        # Create project with optional foundation, LLM overrides, and plot config
         project_dir = create_novel_project(
             name,
             dir,
             foundation=foundation,
             llm_backend=llm_backend_override,
             llm_model=llm_model_override,
+            plot_config=plot_config,
         )
         typer.echo(f"✅ Created novel project: {project_dir}")
         
@@ -300,9 +302,19 @@ def new(
             typer.echo(f"   Genre: {foundation.genre}")
             typer.echo(f"   Setting: {foundation.setting}")
         
+        if plot_config and plot_config.get("use_plot_first"):
+            typer.echo(f"\n📋 Plot-first mode enabled:")
+            if not plot_config.get("allow_beat_skip") and not plot_config.get("fallback_to_reactive"):
+                typer.echo(f"   Mode: Strict (beats enforced)")
+            else:
+                typer.echo(f"   Mode: Lenient/Standard")
+            typer.echo(f"   Beats will auto-generate starting from tick 2")
+        
         typer.echo(f"\n📝 Next steps:")
         typer.echo(f"  cd {project_dir}")
-        typer.echo(f"  novel tick")
+        typer.echo(f"  novel tick  # Run a few ticks to establish characters/world")
+        if plot_config and plot_config.get("use_plot_first"):
+            typer.echo(f"  # Plot beats will auto-generate from tick 2 onwards")
     except ValueError as e:
         typer.echo(f"❌ Error: {e}", err=True)
         raise typer.Exit(1)
@@ -1150,6 +1162,42 @@ def plot_generate(
         result = generate_and_append_beats_cli(project_dir, count)
         display_generated_beats(result)
 
+    except ValueError as e:
+        typer.echo(f"❌ Error: {e}", err=True)
+        raise typer.Exit(1)
+
+
+@plot_app.command("clear")
+def plot_clear(
+    project: Optional[str] = typer.Option(
+        None,
+        "--project",
+        "-p",
+        help="Path to novel project (default: current directory)",
+    ),
+    yes: bool = typer.Option(
+        False,
+        "--yes",
+        "-y",
+        help="Skip confirmation prompt",
+    ),
+):
+    """Clear all plot beats from the project.
+    
+    This deletes the plot_outline.json file. Beats will auto-regenerate
+    when plot-first mode is active and the agent reaches the configured
+    start tick (default: tick 2).
+    
+    Examples:
+        novel plot clear              # With confirmation
+        novel plot clear --yes        # Skip confirmation
+    """
+    try:
+        from .commands.plot import clear_plot_outline
+        
+        project_dir = Path(find_project_dir(project))
+        clear_plot_outline(project_dir, confirm=not yes)
+        
     except ValueError as e:
         typer.echo(f"❌ Error: {e}", err=True)
         raise typer.Exit(1)

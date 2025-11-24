@@ -134,6 +134,7 @@ novel lore list --importance high
 novel plot generate --count 5    # Generate plot beats
 novel plot status --detailed     # View beat status
 novel plot next                  # See next pending beat
+novel plot clear                 # Clear all beats (with confirmation)
 
 # Use API backend instead of Codex
 novel tick --llm-backend api --llm-model gpt-5.1      # OpenAI GPT-5.1
@@ -347,6 +348,7 @@ novel checkpoint delete --id <checkpoint_id> [--project <path>]
 novel plot generate [--count 5] [--project <path>]
 novel plot status [--detailed] [--project <path>]
 novel plot next [--project <path>]
+novel plot clear [--yes] [--project <path>]
 ```
 
 ## Configuration

@@ -157,10 +157,12 @@ class StoryAgent:
         
         try:
             # Check if plot-first mode is enabled
+            # Skip plot-first for tick 1 to allow character/world establishment
             use_plot_first = self.config.get('generation.use_plot_first', False)
+            plot_first_start_tick = self.config.get('generation.plot_first_start_tick', 2)
             current_beat = None
             
-            if use_plot_first:
+            if use_plot_first and tick >= plot_first_start_tick:
                 # Check if we need to regenerate beats
                 if self._needs_beat_regeneration():
                     print("   📖 Generating plot beats...")

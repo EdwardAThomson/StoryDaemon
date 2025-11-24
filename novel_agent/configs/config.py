@@ -34,6 +34,7 @@ DEFAULT_CONFIG = {
         
         # Plot-first mode configuration
         'use_plot_first': False,  # Enable emergent plot-first architecture
+        'plot_first_start_tick': 2,  # Start plot-first mode from this tick (allows character setup)
         'plot_beats_ahead': 5,  # Generate this many beats at a time
         'plot_regeneration_threshold': 2,  # Regenerate when pending beats < this
         'verify_beat_execution': True,  # Verify beat was accomplished via LLM
