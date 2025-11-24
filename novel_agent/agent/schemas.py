@@ -49,6 +49,24 @@ PLAN_SCHEMA = {
             "type": ["string", "null"],
             "description": "Location ID where scene takes place (optional)"
         },
+        "beat_target": {
+            "type": ["object", "null"],
+            "description": "Optional targeting of a specific plot beat for this scene",
+            "properties": {
+                "beat_id": {
+                    "type": ["string", "null"],
+                    "description": "ID of the plot beat this scene is primarily serving (or null)"
+                },
+                "strategy": {
+                    "type": ["string", "null"],
+                    "description": "How this scene relates to the beat: direct|setup|followup|skip"
+                },
+                "notes": {
+                    "type": ["string", "null"],
+                    "description": "Planner explanation of why the beat is executed, deferred, or skipped"
+                }
+            }
+        },
         "actions": {
             "type": "array",
             "items": {

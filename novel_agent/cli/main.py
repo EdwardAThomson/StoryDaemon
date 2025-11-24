@@ -36,6 +36,7 @@ from .recent_projects import RecentProjects
 from .commands.plot import (
     get_plot_status,
     display_plot_status,
+    display_plot_status_detailed,
     get_next_beat,
     display_next_beat,
     generate_and_append_beats_cli,
@@ -1065,12 +1066,20 @@ def plot_status(
         "-p",
         help="Path to novel project (default: current directory)",
     ),
+    detailed: bool = typer.Option(
+        False,
+        "--detailed",
+        "-d",
+        help="Show detailed beat list with status and execution info",
+    ),
 ):
     """Show plot outline status (beats and validation)."""
     try:
         project_dir = Path(find_project_dir(project))
         info = get_plot_status(project_dir)
         display_plot_status(info)
+        if detailed:
+            display_plot_status_detailed(project_dir)
     except ValueError as e:
         typer.echo(f"❌ Error: {e}", err=True)
         raise typer.Exit(1)

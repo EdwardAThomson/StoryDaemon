@@ -34,6 +34,15 @@ DEFAULT_CONFIG = {
     },
     'lore': {
         'contradiction_threshold': 0.5,  # Similarity threshold for flagging contradictions (0.0-2.0)
+    },
+    'plot': {
+        # Beat integration mode: controls how strongly the agent treats plot beats.
+        #
+        #   off       - no beat hints or QA integration
+        #   soft_hint - expose next_plot_beat and compute beat_hint_alignment (default)
+        #   guided    - planner expected to fill beat_target and beats may be updated
+        #   strict    - future: hard validation around beat usage
+        'beat_mode': 'soft_hint',
     }
 }
 

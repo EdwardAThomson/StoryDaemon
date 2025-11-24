@@ -60,6 +60,39 @@ def display_plot_status(info: Dict[str, Any]) -> None:
         print("✅ No validation issues detected.")
 
 
+def display_plot_status_detailed(project_dir: Path) -> None:
+    """Display a detailed list of beats with execution info.
+
+    Intended for use with the ``novel plot status --detailed`` flag.
+    """
+    manager = PlotOutlineManager(project_dir)
+    outline: PlotOutline = manager.load_outline()
+
+    if not outline.beats:
+        print()
+        print("No beats in plot outline.")
+        return
+
+    print()
+    print("Detailed beats:")
+    for beat in outline.beats:
+        status = getattr(beat, "status", "pending")
+        executed_in_scene = getattr(beat, "executed_in_scene", None)
+        execution_notes = getattr(beat, "execution_notes", "") or ""
+
+        # Main line: ID, status, and description
+        print(f"  {beat.id} [{status}]: {beat.description}")
+
+        # Secondary line: execution metadata, if any
+        if executed_in_scene or execution_notes:
+            parts = []
+            if executed_in_scene:
+                parts.append(f"executed_in_scene={executed_in_scene}")
+            if execution_notes:
+                parts.append(f"notes={execution_notes}")
+            print(f"    -> " + "; ".join(parts))
+
+
 def get_next_beat(project_dir: Path) -> Optional[PlotBeat]:
     manager = PlotOutlineManager(project_dir)
     return manager.get_next_beat()

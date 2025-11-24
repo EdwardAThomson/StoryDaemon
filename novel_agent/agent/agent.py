@@ -25,6 +25,7 @@ from ..tools.registry import ToolRegistry
 from ..memory.manager import MemoryManager
 from ..memory.vector_store import VectorStore
 from ..memory.summarizer import SceneSummarizer
+from ..memory.plot_outline import PlotOutlineManager
 
 
 class StoryAgent:
@@ -229,6 +230,10 @@ class StoryAgent:
                     self.memory.save_scene_qa(scene_id, tick, eval_result)
                 except Exception:
                     pass
+                try:
+                    self._update_beats_from_evaluation(scene_id, plan, eval_result)
+                except Exception:
+                    pass
             
             # Step 8.5: Update scene with tension data (Phase 7A.3)
             if tension_result.get('enabled'):
@@ -414,6 +419,10 @@ class StoryAgent:
                     self.memory.save_scene_qa(scene_id, tick, eval_result)
                 except Exception:
                     pass
+                try:
+                    self._update_beats_from_evaluation(scene_id, plan, eval_result)
+                except Exception:
+                    pass
             
             # Step 12: Extract facts
             print("   11. Extracting facts...")
@@ -570,6 +579,54 @@ class StoryAgent:
             ),
             "success": entity_results.get("success", True) and remaining_results.get("success", True)
         }
+    
+    def _update_beats_from_evaluation(self, scene_id: str, plan: Dict[str, Any], eval_result: Dict[str, Any]) -> None:
+        if isinstance(self.config, dict):
+            mode = self.config.get("plot", {}).get("beat_mode", "soft_hint")
+        else:
+            mode = self.config.get("plot.beat_mode", "soft_hint")
+        if mode != "guided":
+            return
+        beat_target = plan.get("beat_target") or {}
+        if not isinstance(beat_target, dict):
+            return
+        beat_id = beat_target.get("beat_id")
+        if not beat_id:
+            return
+        alignment = eval_result.get("beat_hint_alignment") or {}
+        if not isinstance(alignment, dict):
+            return
+        if alignment.get("beat_id") != beat_id:
+            return
+        label = alignment.get("label")
+        if label not in ("medium", "high"):
+            return
+        score = alignment.get("score")
+        try:
+            manager = PlotOutlineManager(self.project_path)
+            outline = manager.load_outline()
+        except Exception:
+            return
+        updated = False
+        for beat in outline.beats:
+            if getattr(beat, "id", None) == beat_id:
+                setattr(beat, "status", "executed")
+                setattr(beat, "executed_in_scene", scene_id)
+                notes = getattr(beat, "execution_notes", "") or ""
+                extra = f"Executed in {scene_id} with alignment {label}"
+                if isinstance(score, (int, float)):
+                    extra += f" (score={score})"
+                if notes:
+                    notes = notes.rstrip()
+                    extra = notes + " " + extra
+                setattr(beat, "execution_notes", extra)
+                updated = True
+                break
+        if updated:
+            try:
+                manager.save_outline(outline)
+            except Exception:
+                return
     
     def _generate_plan(self, context: dict) -> dict:
         """Generate a plan using the planner LLM.

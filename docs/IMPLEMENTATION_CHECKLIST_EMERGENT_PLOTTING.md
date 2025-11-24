@@ -117,9 +117,9 @@ This checklist merges the plans from `ARCHITECTURE_PROPOSAL_EMERGENT_PLOTTING.md
 
 ## Phase 4 – Soft Integration into the Agent Loop
 
-- [ ] **Expose beats softly to planner**
-  - [ ] Pass `next_beat.description` (and maybe characters/location) into planner context as a hint, not a hard constraint.
-  - [ ] Observe whether planner naturally moves in that direction.
+- [x] **Expose beats softly to planner**
+  - [x] Pass `next_beat.description` (and maybe characters/location) into planner context as a hint, not a hard constraint.
+  - [x] Observe whether planner naturally moves in that direction.
 
 - [ ] **Add `plan_for_beat` path**
   - [ ] Implement `planner.plan_for_beat(beat, context=story_state())`.
@@ -128,8 +128,25 @@ This checklist merges the plans from `ARCHITECTURE_PROPOSAL_EMERGENT_PLOTTING.md
     - [ ] `scene_mode`, `palette_shift`, `transition_path`, `dialogue_targets`.
   - [ ] Use this path under a feature flag/config (e.g. `use_plot_first_soft`).
 
-- [ ] **Integrate with QA**
-  - [ ] Add QA field `beat_hint_alignment` (did the scene generally follow the suggested beat?).
+- [x] **Integrate with QA**
+  - [x] Add QA field `beat_hint_alignment` (did the scene generally follow the suggested beat?).
+
+### Phase 4B – Guided Beat Contract (Design)
+
+- [ ] **Planner beat targeting**
+  - [ ] Extend planner plan schema with optional `beat_target` object:
+    - [ ] `beat_id` (current pending beat ID or null).
+    - [ ] `strategy` (e.g. `direct | setup | followup | skip`).
+    - [ ] `notes` explaining why the beat is executed, deferred, or skipped.
+
+- [ ] **Beat lifecycle tracking in plot_outline**
+  - [ ] Use `status` values such as `pending | in_progress | executed | skipped`.
+  - [ ] Record `executed_in_scene` when QA `beat_hint_alignment` is `medium`/`high` for `beat_target.beat_id`.
+  - [ ] Append brief auto-generated `execution_notes` describing how/when the beat was completed.
+
+- [ ] **Configuration for beat integration strictness**
+  - [ ] Add `plot.beat_mode` config: `off | soft_hint | guided | strict`.
+  - [ ] Implement `guided` mode first (planner fills `beat_target`, beats updated using QA), leaving `strict` as a future enhancement.
 
 ---
 

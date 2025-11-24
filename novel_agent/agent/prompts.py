@@ -28,6 +28,14 @@ Your task is to analyze the current story state and create a plan for the next s
 ### Next Plot Beat (Hint from Outline, Optional)
 {next_plot_beat}
 
+If a Next Plot Beat is shown above, you must make an explicit choice about how this scene relates to it:
+
+- If this scene will EXECUTE that beat, set `beat_target.beat_id` to that beat's ID and `strategy` to `"direct"`, and explain briefly in `notes`.
+- If this scene will primarily SET UP or FOLLOW UP that beat instead of executing it, use `strategy` = `"setup"` or `"followup"` and explain in `notes`.
+- If you decide this scene should NOT focus on that beat, set `beat_target.beat_id` to `null`, `strategy` to `"skip"`, and give a clear justification in `notes` (e.g., necessary character beat, pacing, or constraints).
+
+Do not invent beat IDs. Only use the ID shown in Next Plot Beat, or null.
+
 ### Active Character Details
 {active_character_details}
 
@@ -89,6 +97,7 @@ Before you respond, make deliberate choices for these planning fields using the 
 - `palette_shift`  Short phrase or list that changes the sensory/emotional palette (e.g., `"heat, copper, crowd-noise"` or `"administrative neon, recycled air, clipped voices"`).
 - `transition_path`  1-3 sentence outline of how we move from the end of the previous scene into this one (physical/temporal bridge). Use this when changing location, time, or situation.
 - `dialogue_targets`  Optional dialogue goals. Prefer a structured object (e.g. `{{ "min_exchanges": 6, "conflict_axis": "leverage vs trust", "participants": ["C0", "corp_proxy"] }}`).
+- `beat_target`  Specify how this scene relates to the Next Plot Beat (if shown above). Choose from `"direct"`, `"setup"`, `"followup"`, or `"skip"` and provide a brief explanation in `notes`.
 
 Then emit the JSON object below:
 
@@ -103,6 +112,11 @@ Then emit the JSON object below:
   "palette_shift": "Short description of the scene's sensory/emotional palette (e.g., 'heat, copper, crowd-noise')",
   "transition_path": "1–3 sentence description of how we move from the previous scene/location to this one (optional if no transition is needed)",
   "dialogue_targets": "Optional description of dialogue goals (e.g., 'at least 6 exchanges, conflict axis: leverage vs trust, participants: C0 and corp_proxy')",
+  "beat_target": {{
+    "beat_id": "{optional beat id from Next Plot Beat or null}",
+    "strategy": "direct|setup|followup|skip",
+    "notes": "Brief explanation of how/why this scene does or does not execute the beat"
+  }},
   "loops_addressed": ["OL4", "OL5"],
   "pov_character": "Character ID for POV (use {active_character_id} or specify another)",
   "target_location": "Location ID where scene takes place (or null for new location)",
