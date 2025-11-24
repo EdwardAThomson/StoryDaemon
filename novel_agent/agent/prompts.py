@@ -235,6 +235,11 @@ Write a scene passage from {pov_character_name}'s deep POV that ACCOMPLISHES THE
 8. **Length:** Write as much as the scene needs - no arbitrary limits
 9. **Ground factions** - When an organization appears for the first time, include a brief identity line (who they are) or use a generated faction representative in dialogue
 
+**OUTPUT FORMAT:** 
+Begin directly with the scene prose (optionally a markdown scene title).
+Do NOT include notes about what you are about to do.
+Do NOT mention files, directories, code, prompts, commands, or being an AI/model.
+
 **AVOID:**
 - Ending with the same situation as the start
 - Repeating actions/beats from recent scenes

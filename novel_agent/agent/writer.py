@@ -65,6 +65,34 @@ class SceneWriter:
         # Clean up response
         text = response.strip()
         
+        # Strip obvious meta-reasoning header that some backends may emit
+        # (e.g., lines about listing directories or inspecting project files
+        #  before starting the actual scene prose). We only remove a leading
+        #  block of such lines; once we see normal prose, we keep everything.
+        lines = text.split('\n')
+        cleaned_lines = []
+        skipping_meta = True
+        meta_markers = [
+            "I'll start by listing the current directory",
+            "I'll start by listing the current directory's files",
+            "current directory's files",
+            "I'll check `docs`",
+            "I'll check `work`",
+            "Python project, `novel_agent` package",
+            "I'm writing a scene for",
+        ]
+        for line in lines:
+            stripped = line.strip()
+            if skipping_meta and stripped:
+                if any(marker in stripped for marker in meta_markers):
+                    # Skip this meta line and continue looking for real prose
+                    continue
+                else:
+                    skipping_meta = False
+            if not skipping_meta or not stripped:
+                cleaned_lines.append(line)
+        text = "\n".join(cleaned_lines).strip()
+        
         # Calculate word count
         word_count = len(text.split())
         
