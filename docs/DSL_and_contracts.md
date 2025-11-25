@@ -4,7 +4,7 @@ We need to improve our beats system. Make it more structured / formalized.
 
 The LLM still has a lot of control over the story, which is good for emergence, but is poor for reliability.
 
-Characters are not generated via the tool reliably. Names may not be unique (i.e. duplicate characters). We need strict protections against duplication. We don't want duplicate characters, locations, inventory items, etc.
+Characters are not generated via the tool reliably. Names may not be unique (i.e. duplicate characters). We need strict protections against duplication. We don't want duplicate characters, locations, inventory items, etc. Every minor character needs to come from the generator too.
 
 Do we make it based on Python?
 

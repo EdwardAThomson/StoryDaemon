@@ -39,11 +39,12 @@ class ContextBuilder:
         self.recent_scenes_count = config.get('generation.recent_scenes_count', 3)
         self.include_overall_summary = config.get('generation.include_overall_summary', True)
     
-    def build_planner_context(self, project_state: dict) -> dict:
+    def build_planner_context(self, project_state: dict, current_beat=None) -> dict:
         """Build context dictionary for planner prompt.
         
         Args:
             project_state: Current project state from state.json
+            current_beat: Optional PlotBeat to execute in this tick
         
         Returns:
             Dictionary with all context variables for prompt formatting
@@ -91,8 +92,19 @@ class ContextBuilder:
         
         context["qa_feedback"] = self._get_qa_feedback()
 
-        # Optional: next plot beat hint from the plot outline, if any pending
-        context["next_plot_beat"] = self._get_next_plot_beat_hint(project_state)
+        # Next plot beat - use passed beat if available, otherwise query
+        if current_beat:
+            beat_id = getattr(current_beat, "id", "") or ""
+            description = getattr(current_beat, "description", "") or ""
+            if beat_id and description:
+                context["next_plot_beat"] = f"{beat_id}: {description}"
+            else:
+                context["next_plot_beat"] = description or "None"
+            # Store beat object for multi-stage planner (internal use)
+            context["_current_beat"] = current_beat
+        else:
+            context["next_plot_beat"] = self._get_next_plot_beat_hint(project_state)
+            context["_current_beat"] = None
         
         # Beat enforcement instructions based on config
         context["beat_enforcement_instructions"] = self._get_beat_enforcement_instructions()

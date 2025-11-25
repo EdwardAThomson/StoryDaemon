@@ -170,7 +170,7 @@ class CharacterGenerateTool(Tool):
             character_id = self.memory_manager.generate_id("character")
             first_name = f"Character_{character_id}"
         
-        # Check for duplicate names before creating
+        # Check for duplicate names and roles before creating
         existing_chars = self.memory_manager.list_characters()
         for char_id in existing_chars:
             existing = self.memory_manager.load_character(char_id)
@@ -185,13 +185,28 @@ class CharacterGenerateTool(Tool):
                 if existing_first and new_first:
                     if existing_first == new_first:
                         if (not existing_family and not new_family) or (existing_family == new_family):
-                            # Duplicate found - return existing character
+                            # Duplicate name found - return existing character
                             return {
                                 "success": True,
                                 "character_id": char_id,
                                 "message": f"Character '{first_name} {family_name}'.strip() already exists as {char_id}",
                                 "duplicate": True
                             }
+                
+                # Check for duplicate unique roles (Protagonist, Antagonist)
+                unique_roles = ["protagonist", "antagonist"]
+                existing_role = (existing.role or "").lower()
+                new_role = role.lower()
+                
+                if new_role in unique_roles and existing_role == new_role:
+                    # Duplicate unique role found - return existing character
+                    return {
+                        "success": True,
+                        "character_id": char_id,
+                        "message": f"A {role} already exists ({char_id}: {existing.first_name} {existing.family_name}). Cannot create another.",
+                        "duplicate": True,
+                        "existing_role": existing_role
+                    }
         
         # Generate ID for new character
         character_id = self.memory_manager.generate_id("character")

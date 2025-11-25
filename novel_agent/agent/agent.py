@@ -188,7 +188,7 @@ class StoryAgent:
             
             # Step 1: Gather context
             print("   1. Gathering context...")
-            context = self.context_builder.build_planner_context(self.state)
+            context = self.context_builder.build_planner_context(self.state, current_beat=current_beat)
             
             # Step 2: Generate plan with LLM
             print("   2. Generating plan with LLM...")
@@ -731,9 +731,20 @@ class StoryAgent:
         """
         # Use multi-stage planner if enabled (Phase 7A.5)
         if self.use_multi_stage:
-            # In guided beat mode, attempt beat-first planning using the
-            # next pending beat from the plot outline. Fall back to normal
-            # multi-stage planning on any error or if no beat is available.
+            # Check if we have a current beat to execute (from plot-first mode)
+            # Get beat from context if it was passed in
+            beat_to_execute = context.get('_current_beat')  # Internal key
+            
+            if beat_to_execute is not None:
+                # Use beat-first planning
+                try:
+                    return self.multi_stage_planner.plan_for_beat(self.state, beat_to_execute)
+                except Exception as e:
+                    print(f"        ⚠️  Beat-first planning failed: {e}")
+                    # Fall back to normal planning
+                    pass
+            
+            # Legacy beat_mode check for backwards compatibility
             try:
                 if isinstance(self.config, dict):
                     beat_mode = self.config.get("plot", {}).get("beat_mode", "soft_hint")
@@ -1075,16 +1086,25 @@ class StoryAgent:
         logger = logging.getLogger(__name__)
         
         try:
-            prompt = f"""Did this scene accomplish the following plot beat?
+            prompt = f"""Evaluate if this scene accomplishes the following plot beat.
 
 Plot Beat: {beat.description}
 
 Scene Text:
-{scene_text[:2000]}...
+{scene_text[:2500]}
 
-Answer with YES or NO and a brief explanation (1-2 sentences)."""
+The beat is considered ACCOMPLISHED if the scene depicts the event happening, even if:
+- It's shown through flashback or memory
+- It's interwoven with other events
+- The scene continues after the beat event
+- The scene shows both setup and execution
+
+Answer with YES if the beat event clearly occurs in the scene, or NO if it doesn't happen at all.
+Provide a brief explanation (1-2 sentences).
+
+Answer:"""
             
-            response = self.llm.generate(prompt, max_tokens=150)
+            response = self.llm.generate(prompt, max_tokens=200)
             result = response.strip().upper().startswith("YES")
             
             if result:
