@@ -33,6 +33,14 @@ class CharacterDetector:
             'August', 'September', 'October', 'November', 'December',
             'Earth', 'Mars', 'Moon', 'Sun', 'God', 'Gods'
         }
+        
+        # Common prefixes that indicate non-character entities
+        self.non_character_prefixes = {
+            'Project', 'Operation', 'Mission', 'Protocol', 'System', 'Program',
+            'Initiative', 'Plan', 'Code', 'File', 'Database', 'Network',
+            'Corporation', 'Company', 'Agency', 'Department', 'Division',
+            'Ship', 'Station', 'Base', 'Facility', 'Building', 'Tower'
+        }
     
     def detect_character_names(self, scene_text: str) -> List[str]:
         """Detect potential character names in scene text.
@@ -69,8 +77,17 @@ class CharacterDetector:
             name = match.group(1).strip()
             # Check if it's not a false positive
             words = name.split()
-            if not any(w in self.common_false_positives for w in words):
-                potential_names.add(name)
+            first_word = words[0] if words else ""
+            
+            # Skip if any word is a false positive
+            if any(w in self.common_false_positives for w in words):
+                continue
+            
+            # Skip if first word is a non-character prefix (e.g., "Project Chimera")
+            if first_word in self.non_character_prefixes:
+                continue
+            
+            potential_names.add(name)
         
         # Pattern 4: Possessive names (e.g., "Chen's", "Marcus's")
         possessive_pattern = r"\b([A-Z][a-z]+)'s\b"

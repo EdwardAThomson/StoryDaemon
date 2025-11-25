@@ -98,8 +98,8 @@ class PlotOutlineManager:
         loops = self.memory.load_open_loops()
         open_loops_desc = []
         for l in loops:
-            if l.get("status") == "open":
-                line = f"{l.get('id')}: ({l.get('importance','normal')}) {l.get('description','')}"
+            if l.status == "open":
+                line = f"{l.id}: ({l.importance}) {l.description}"
                 open_loops_desc.append(line)
         open_loops_text = "\n".join(open_loops_desc) if open_loops_desc else "None"
 
@@ -126,20 +126,35 @@ class PlotOutlineManager:
         }
 
     def _parse_beats_response(self, response: str) -> List[PlotBeat]:
-        # Try JSON extraction
+        # Try JSON extraction - look for code blocks first
         import re
-        match = re.search(r"\{\s*\"beats\"\s*:\s*\[.*?\]\s*\}", response, re.S)
-        json_str = match.group(0) if match else None
+        
+        # Try to extract from markdown code block
+        code_block_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", response, re.S)
+        if code_block_match:
+            json_str = code_block_match.group(1)
+        else:
+            # Try to find raw JSON object with beats array
+            # Use greedy match to get the full JSON object
+            match = re.search(r"\{\s*\"beats\"\s*:\s*\[.*\]\s*\}", response, re.S)
+            json_str = match.group(0) if match else None
+        
         data = None
         if json_str:
             try:
                 data = json.loads(json_str)
-            except Exception:
+            except Exception as e:
+                print(f"        ⚠️  JSON parse error: {e}")
                 data = None
+        
         if not data:
             # Fallback: try to parse line-based bullets into descriptions
             lines = [ln.strip(" -\t") for ln in response.splitlines() if ln.strip()]
-            descs = [ln for ln in lines if ln and not ln.startswith("BEAT")]
+            # Filter out JSON syntax lines
+            descs = [ln for ln in lines if ln and not ln.startswith("BEAT") 
+                     and not ln.startswith("{") and not ln.startswith("}")
+                     and not ln.startswith("[") and not ln.startswith("]")
+                     and not ln.startswith('"beats"')]
             return [PlotBeat(id="", description=d) for d in descs[:5]]
 
         beats_data = data.get("beats", [])

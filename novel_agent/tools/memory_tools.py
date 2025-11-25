@@ -143,17 +143,21 @@ class CharacterGenerateTool(Tool):
         family_name = ""
         title = ""
         
-        # Generate ID up front so we can optionally use it in a fallback name
-        character_id = self.memory_manager.generate_id("character")
-
-        if not name and self.name_generator:
+        # Check if name looks like a placeholder
+        is_placeholder = False
+        if name:
+            placeholder_indicators = ['placeholder', 'generated', 'tbd', 'todo', 'will use', 'to be']
+            name_lower = name.lower()
+            is_placeholder = any(indicator in name_lower for indicator in placeholder_indicators)
+        
+        if (not name or is_placeholder) and self.name_generator:
             # Random 50/50 if gender not specified (to avoid LLM bias)
             char_gender = gender or random.choice(["male", "female"])
             name_result = self.name_generator.generate_name(gender=char_gender, genre="scifi")
             first_name = name_result["first_name"]
             family_name = name_result["last_name"]
             title = name_result.get("title", "")
-        elif name:
+        elif name and not is_placeholder:
             # Split provided name
             parts = name.strip().split()
             if len(parts) >= 2:
@@ -162,8 +166,35 @@ class CharacterGenerateTool(Tool):
             elif len(parts) == 1:
                 first_name = parts[0]
         else:
-            # Fallback if no generator available
+            # Fallback if no generator available - generate ID here for fallback name
+            character_id = self.memory_manager.generate_id("character")
             first_name = f"Character_{character_id}"
+        
+        # Check for duplicate names before creating
+        existing_chars = self.memory_manager.list_characters()
+        for char_id in existing_chars:
+            existing = self.memory_manager.load_character(char_id)
+            if existing:
+                # Check if names match (case-insensitive)
+                existing_first = (existing.first_name or "").lower()
+                existing_family = (existing.family_name or "").lower()
+                new_first = first_name.lower()
+                new_family = family_name.lower()
+                
+                # Match if both first and family name match, or if single name matches
+                if existing_first and new_first:
+                    if existing_first == new_first:
+                        if (not existing_family and not new_family) or (existing_family == new_family):
+                            # Duplicate found - return existing character
+                            return {
+                                "success": True,
+                                "character_id": char_id,
+                                "message": f"Character '{first_name} {family_name}'.strip() already exists as {char_id}",
+                                "duplicate": True
+                            }
+        
+        # Generate ID for new character
+        character_id = self.memory_manager.generate_id("character")
         
         # Create character entity
         character = Character(

@@ -25,16 +25,10 @@ Your task is to analyze the current story state and create a plan for the next s
 ### Recent QA Feedback (Scene Quality & Momentum)
 {qa_feedback}
 
-### Next Plot Beat (Hint from Outline, Optional)
+### Next Plot Beat
 {next_plot_beat}
 
-If a Next Plot Beat is shown above, you must make an explicit choice about how this scene relates to it:
-
-- If this scene will EXECUTE that beat, set `beat_target.beat_id` to that beat's ID and `strategy` to `"direct"`, and explain briefly in `notes`.
-- If this scene will primarily SET UP or FOLLOW UP that beat instead of executing it, use `strategy` = `"setup"` or `"followup"` and explain in `notes`.
-- If you decide this scene should NOT focus on that beat, set `beat_target.beat_id` to `null`, `strategy` to `"skip"`, and give a clear justification in `notes` (e.g., necessary character beat, pacing, or constraints).
-
-Do not invent beat IDs. Only use the ID shown in Next Plot Beat, or null.
+{beat_enforcement_instructions}
 
 ### Active Character Details
 {active_character_details}

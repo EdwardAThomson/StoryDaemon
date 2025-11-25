@@ -93,6 +93,9 @@ class ContextBuilder:
 
         # Optional: next plot beat hint from the plot outline, if any pending
         context["next_plot_beat"] = self._get_next_plot_beat_hint(project_state)
+        
+        # Beat enforcement instructions based on config
+        context["beat_enforcement_instructions"] = self._get_beat_enforcement_instructions()
 
         return context
 
@@ -404,3 +407,65 @@ class ContextBuilder:
             summary = getattr(f, 'summary', '')
             lines.append(f"- {name} ({f.id}) — type: {org_type}, importance: {imp}. {summary}")
         return "\n".join(lines)
+    
+    def _get_beat_enforcement_instructions(self) -> str:
+        """Generate beat enforcement instructions based on plot-first config.
+        
+        Returns:
+            Instructions for how to handle the plot beat
+        """
+        use_plot_first = self.config.get('generation.use_plot_first', False)
+        
+        if not use_plot_first:
+            return ""
+        
+        allow_beat_skip = self.config.get('generation.allow_beat_skip', False)
+        fallback_to_reactive = self.config.get('generation.fallback_to_reactive', True)
+        
+        if not allow_beat_skip and not fallback_to_reactive:
+            # STRICT MODE - Beat is REQUIRED
+            return """**⚠️ CRITICAL REQUIREMENT - STRICT PLOT-FIRST MODE ⚠️**
+
+The plot beat shown above is MANDATORY and MUST be executed in this scene.
+
+You MUST:
+- Set `beat_target.beat_id` to the beat's ID shown above
+- Set `strategy` to `"direct"` 
+- Create a plan that will ACCOMPLISH this beat in this scene
+- The scene prose MUST show this beat happening
+
+You CANNOT:
+- Skip this beat (strategy="skip" is FORBIDDEN)
+- Defer this beat to a future scene
+- Only set up or follow up the beat - it must be EXECUTED NOW
+
+If you believe the beat cannot be accomplished due to story constraints, you must still attempt it.
+The beat verification system will check if you succeeded."""
+        
+        elif allow_beat_skip and not fallback_to_reactive:
+            # STANDARD MODE - Beat should be attempted, can be skipped with justification
+            return """**Plot-First Mode: Standard Enforcement**
+
+If a Next Plot Beat is shown above, you should strongly prefer to execute it:
+
+- **PREFERRED**: Set `beat_target.beat_id` to the beat's ID and `strategy` to `"direct"` to execute it
+- If you need to set up the beat first, use `strategy` = `"setup"` and explain in `notes`
+- If you must skip this beat, set `beat_target.beat_id` to `null`, `strategy` to `"skip"`, and provide a strong justification in `notes`
+
+Skipping should be rare and only for compelling story reasons (e.g., critical character development, pacing emergency).
+
+Do not invent beat IDs. Only use the ID shown in Next Plot Beat, or null."""
+        
+        else:
+            # LENIENT MODE - Beat is a hint, can fall back to reactive
+            return """**Plot-First Mode: Lenient (Hint-Based)**
+
+If a Next Plot Beat is shown above, you may choose how to relate to it:
+
+- If this scene will EXECUTE that beat, set `beat_target.beat_id` to that beat's ID and `strategy` to `"direct"`
+- If this scene will SET UP or FOLLOW UP that beat, use `strategy` = `"setup"` or `"followup"`
+- If you decide this scene should NOT focus on that beat, set `beat_target.beat_id` to `null`, `strategy` to `"skip"`, and explain in `notes`
+
+The beat is a suggestion to maintain forward momentum. You may deviate if story needs require it.
+
+Do not invent beat IDs. Only use the ID shown in Next Plot Beat, or null."""
