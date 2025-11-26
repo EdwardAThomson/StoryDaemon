@@ -565,6 +565,10 @@ class PlotBeat:
     executed_in_scene: Optional[str] = None
     execution_notes: str = ""
 
+    # Verification metadata
+    verification_score: Optional[float] = None  # 0.0-1.0 confidence score
+    verification_method: Optional[str] = None   # trusted_planner, semantic, llm, manual
+
     # Metadata for validation / analysis
     advances_character_arcs: List[str] = field(default_factory=list)
     resolves_loops: List[str] = field(default_factory=list)

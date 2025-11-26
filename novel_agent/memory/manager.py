@@ -232,6 +232,24 @@ class MemoryManager:
 
             if max_existing >= 0 and current <= max_existing:
                 current = max_existing + 1
+        
+        # For scenes, sync counter with actual scene files on disk
+        # This handles cases where scenes were manually deleted
+        elif entity_type == "scene":
+            scenes_path = self.project_path / "scenes"
+            max_existing = -1
+            for f in scenes_path.glob("scene_*.md"):
+                stem = f.stem  # e.g., "scene_005"
+                try:
+                    idx = int(stem.split("_")[1])
+                except (ValueError, IndexError):
+                    continue
+                if idx > max_existing:
+                    max_existing = idx
+            
+            # Next scene should be max_existing + 1
+            if max_existing >= 0:
+                current = max_existing + 1
 
         self.counters[entity_type] = current + 1
         self._save_counters()

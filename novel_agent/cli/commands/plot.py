@@ -80,17 +80,25 @@ def display_plot_status_detailed(project_dir: Path) -> None:
         status = getattr(beat, "status", "pending")
         executed_in_scene = getattr(beat, "executed_in_scene", None)
         execution_notes = getattr(beat, "execution_notes", "") or ""
+        verification_score = getattr(beat, "verification_score", None)
+        verification_method = getattr(beat, "verification_method", None)
 
         # Main line: ID, status, and description
         print(f"  {beat.id} [{status}]: {beat.description}")
 
         # Secondary line: execution metadata, if any
-        if executed_in_scene or execution_notes:
+        if executed_in_scene or execution_notes or verification_score is not None:
             parts = []
             if executed_in_scene:
-                parts.append(f"executed_in_scene={executed_in_scene}")
-            if execution_notes:
-                parts.append(f"notes={execution_notes}")
+                parts.append(f"scene={executed_in_scene}")
+            if verification_score is not None:
+                # Add warning indicator for low scores
+                score_str = f"score={verification_score:.2f}"
+                if verification_score < 0.4:
+                    score_str += " ⚠️"
+                parts.append(score_str)
+            if verification_method:
+                parts.append(f"method={verification_method}")
             print(f"    -> " + "; ".join(parts))
 
 

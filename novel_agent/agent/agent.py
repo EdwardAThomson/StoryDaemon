@@ -283,22 +283,52 @@ class StoryAgent:
             # Verify beat execution and mark complete
             if use_plot_first and current_beat:
                 print("   8.5. Verifying beat execution...")
-                if self.config.get('generation.verify_beat_execution', True):
-                    beat_accomplished = self._verify_beat_execution(
-                        scene_data["text"],
-                        current_beat
+                
+                # Check if planner explicitly targeted this beat
+                beat_target = plan.get("beat_target", {}) or {}
+                planner_targeted = beat_target.get("beat_id") == current_beat.id
+                
+                # Compute semantic similarity score (always, for visibility)
+                semantic_score = self.vector.compute_semantic_similarity(
+                    current_beat.description,
+                    scene_data["text"][:3000]  # Use first 3000 chars
+                )
+                
+                if planner_targeted:
+                    # Trust the planner - mark complete with semantic score for reference
+                    print(f"        ✓ Beat {current_beat.id} accomplished (trusted planner, score={semantic_score:.2f})")
+                    self._mark_beat_complete(
+                        current_beat.id, 
+                        scene_id,
+                        verification_score=semantic_score,
+                        verification_method="trusted_planner"
                     )
-                    if beat_accomplished:
-                        print(f"        ✓ Beat {current_beat.id} accomplished")
-                        self._mark_beat_complete(current_beat.id, scene_id)
+                    if semantic_score < 0.4:
+                        print(f"        ⚠️  Low confidence score - consider manual review")
+                elif self.config.get('generation.verify_beat_execution', True):
+                    # No explicit target - use semantic score with threshold
+                    score_threshold = self.config.get('generation.beat_verification_threshold', 0.5)
+                    
+                    if semantic_score >= score_threshold:
+                        print(f"        ✓ Beat {current_beat.id} accomplished (semantic, score={semantic_score:.2f})")
+                        self._mark_beat_complete(
+                            current_beat.id,
+                            scene_id,
+                            verification_score=semantic_score,
+                            verification_method="semantic"
+                        )
                     else:
-                        print(f"        ⚠️  Beat may not have been fully executed")
-                        # Mark as in_progress or keep pending based on config
+                        print(f"        ⚠️  Beat may not have been fully executed (score={semantic_score:.2f} < {score_threshold})")
                         if not self.config.get('generation.allow_beat_skip', False):
                             print(f"        Keeping beat {current_beat.id} as pending")
                 else:
                     # Auto-mark complete without verification
-                    self._mark_beat_complete(current_beat.id, scene_id)
+                    self._mark_beat_complete(
+                        current_beat.id, 
+                        scene_id,
+                        verification_score=semantic_score,
+                        verification_method="auto"
+                    )
             
             # Step 8.5: Update scene with tension data (Phase 7A.3)
             if tension_result.get('enabled'):
@@ -1127,12 +1157,20 @@ Answer:"""
             # Default to True on error (graceful degradation)
             return True
     
-    def _mark_beat_complete(self, beat_id: str, scene_id: str):
+    def _mark_beat_complete(
+        self, 
+        beat_id: str, 
+        scene_id: str,
+        verification_score: float = None,
+        verification_method: str = None
+    ):
         """Mark a plot beat as completed (Phase 5).
         
         Args:
             beat_id: ID of the beat to mark complete
             scene_id: ID of the scene where beat was executed
+            verification_score: Optional confidence score (0.0-1.0)
+            verification_method: How verification was done (trusted_planner, semantic, llm, manual)
         """
         import logging
         logger = logging.getLogger(__name__)
@@ -1144,9 +1182,13 @@ Answer:"""
                     beat.status = "completed"
                     beat.executed_in_scene = scene_id
                     beat.execution_notes = f"Executed in {scene_id}"
+                    if verification_score is not None:
+                        beat.verification_score = verification_score
+                    if verification_method:
+                        beat.verification_method = verification_method
                     break
             self.plot_manager.save_outline(outline)
-            logger.info(f"Marked beat {beat_id} as completed")
+            logger.info(f"Marked beat {beat_id} as completed (score={verification_score}, method={verification_method})")
             
         except Exception as e:
             logger.error(f"Failed to mark beat complete: {e}")

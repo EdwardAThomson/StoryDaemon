@@ -468,3 +468,65 @@ class VectorStore:
             n_results=n_results + 1,  # +1 because it might return itself
             category=lore.category  # Search within same category
         )
+
+    def compute_semantic_similarity(self, text_a: str, text_b: str) -> float:
+        """Compute semantic similarity between two texts using embeddings.
+        
+        Uses a temporary collection to embed both texts and compute distance.
+        Returns a score from 0.0 (dissimilar) to 1.0 (identical).
+        
+        Args:
+            text_a: First text (e.g., beat description)
+            text_b: Second text (e.g., scene content)
+        
+        Returns:
+            Similarity score between 0.0 and 1.0
+        """
+        try:
+            # Create a temporary collection for comparison
+            # ChromaDB requires names to start with alphanumeric
+            temp_collection = self.client.get_or_create_collection(
+                name="temp_similarity_calc",
+                metadata={"description": "Temporary collection for similarity computation"}
+            )
+            
+            # Clear any existing data
+            try:
+                temp_collection.delete(ids=["text_a", "text_b"])
+            except:
+                pass
+            
+            # Add both texts
+            temp_collection.add(
+                ids=["text_a"],
+                documents=[text_a]
+            )
+            
+            # Query with text_b to get distance to text_a
+            results = temp_collection.query(
+                query_texts=[text_b],
+                n_results=1
+            )
+            
+            # Clean up
+            try:
+                self.client.delete_collection("temp_similarity_calc")
+            except:
+                pass
+            
+            # Extract distance and convert to similarity
+            distances = results.get("distances", [[]])[0]
+            if distances:
+                distance = distances[0]
+                # ChromaDB uses L2 distance by default
+                # Convert to 0-1 similarity (lower distance = higher similarity)
+                # Cap at 2.0 for normalization (typical L2 distances are 0-2 for normalized embeddings)
+                similarity = max(0.0, 1.0 - (distance / 2.0))
+                return round(similarity, 3)
+            
+            return 0.0
+            
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Semantic similarity computation failed: {e}")
+            return 0.0
