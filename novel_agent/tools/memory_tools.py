@@ -78,7 +78,7 @@ class MemorySearchTool(Tool):
 class CharacterGenerateTool(Tool):
     """Create a new character."""
     
-    def __init__(self, memory_manager: MemoryManager, vector_store: VectorStore, name_generator=None):
+    def __init__(self, memory_manager: MemoryManager, vector_store: VectorStore, name_generator=None, beat_mode: str = "soft_hint"):
         super().__init__(
             name="character.generate",
             description="Create a new character with initial attributes. Name will be auto-generated if not provided.",
@@ -119,6 +119,7 @@ class CharacterGenerateTool(Tool):
         self.memory_manager = memory_manager
         self.vector_store = vector_store
         self.name_generator = name_generator
+        self.beat_mode = beat_mode
     
     def execute(self, role: str, description: str,
                 name: Optional[str] = None,
@@ -150,7 +151,10 @@ class CharacterGenerateTool(Tool):
             name_lower = name.lower()
             is_placeholder = any(indicator in name_lower for indicator in placeholder_indicators)
         
-        if (not name or is_placeholder) and self.name_generator:
+        # In strict mode, always use name generator (ignore LLM-provided names)
+        force_generate = self.beat_mode == "strict"
+        
+        if (not name or is_placeholder or force_generate) and self.name_generator:
             # Random 50/50 if gender not specified (to avoid LLM bias)
             char_gender = gender or random.choice(["male", "female"])
             name_result = self.name_generator.generate_name(gender=char_gender, genre="scifi")

@@ -432,9 +432,12 @@ def tick(
         data_dir = Path(__file__).parent.parent / "data" / "names"
         name_gen_tool = NameGeneratorTool(data_dir)
         
+        # Get beat_mode for strict name generation enforcement
+        beat_mode = config.get('plot.beat_mode', 'soft_hint')
+        
         tool_registry.register(name_gen_tool)
         tool_registry.register(MemorySearchTool(memory_manager, vector_store))
-        tool_registry.register(CharacterGenerateTool(memory_manager, vector_store, name_gen_tool.generator))
+        tool_registry.register(CharacterGenerateTool(memory_manager, vector_store, name_gen_tool.generator, beat_mode=beat_mode))
         tool_registry.register(LocationGenerateTool(memory_manager, vector_store))
         tool_registry.register(RelationshipCreateTool(memory_manager))
         tool_registry.register(RelationshipUpdateTool(memory_manager))
@@ -627,9 +630,12 @@ def run(
                 data_dir = Path(__file__).parent.parent / "data" / "names"
                 name_gen_tool = NameGeneratorTool(data_dir)
                 
+                # Get beat_mode for strict name generation enforcement
+                beat_mode = config.get('plot.beat_mode', 'soft_hint')
+                
                 tool_registry.register(name_gen_tool)
                 tool_registry.register(MemorySearchTool(memory_manager, vector_store))
-                tool_registry.register(CharacterGenerateTool(memory_manager, vector_store, name_gen_tool.generator))
+                tool_registry.register(CharacterGenerateTool(memory_manager, vector_store, name_gen_tool.generator, beat_mode=beat_mode))
                 tool_registry.register(LocationGenerateTool(memory_manager, vector_store))
                 tool_registry.register(RelationshipCreateTool(memory_manager))
                 tool_registry.register(RelationshipUpdateTool(memory_manager))

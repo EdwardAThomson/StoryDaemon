@@ -117,6 +117,9 @@ class PlotOutlineManager:
         missing_prereqs: List[Dict[str, Any]] = []
         for beat in outline.beats:
             for prereq in beat.prerequisites:
+                # Scene IDs (S###) are valid prerequisites - beats can depend on scenes
+                if prereq.startswith("S") and prereq[1:].isdigit():
+                    continue
                 if prereq not in known_ids:
                     missing_prereqs.append({"beat_id": beat.id, "prerequisite": prereq})
 

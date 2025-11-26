@@ -1091,17 +1091,25 @@ class StoryAgent:
 Plot Beat: {beat.description}
 
 Scene Text:
-{scene_text[:2500]}
+{scene_text[:3000]}
 
-The beat is considered ACCOMPLISHED if the scene depicts the event happening, even if:
-- It's shown through flashback or memory
+IMPORTANT: Focus on SEMANTIC MEANING, not exact wording. The scene may use:
+- Different character names/titles than the beat description
+- Synonyms or alternative phrasings (e.g., "hunter" = "cleaner" = "assassin")
+- Implicit rather than explicit depiction of events
+- Different terminology for the same concepts
+
+The beat is ACCOMPLISHED if the scene depicts the CORE EVENT happening, even if:
+- Character names differ from the beat description
+- The vocabulary/terminology differs
+- It's shown through flashback, memory, or implication
 - It's interwoven with other events
 - The scene continues after the beat event
-- The scene shows both setup and execution
 
-Answer with YES if the beat event clearly occurs in the scene, or NO if it doesn't happen at all.
-Provide a brief explanation (1-2 sentences).
+Answer YES if the essential meaning of the beat occurs in the scene.
+Answer NO only if the core event genuinely does not happen at all.
 
+Brief explanation (1 sentence), then your answer:
 Answer:"""
             
             response = self.llm.generate(prompt, max_tokens=200)
