@@ -1044,7 +1044,7 @@ def compile(
     format: str = typer.Option(
         "markdown",
         "--format",
-        help="Output format: markdown, html"
+        help="Output format: markdown, html, prose (prose = clean text, no headers)"
     ),
     include_metadata: bool = typer.Option(
         True,
@@ -1063,6 +1063,7 @@ def compile(
         novel compile
         novel compile --output draft.md --scenes 1-10
         novel compile --format html --output manuscript.html
+        novel compile --format prose --output story.txt  # Clean prose, no headers
     """
     from .commands.compile import compile_manuscript
     
@@ -1477,6 +1478,50 @@ def resume(
         typer.echo(f"❌ Error: {e}", err=True)
         raise typer.Exit(1)
     except Exception as e:
+        typer.echo(f"❌ Error: {e}", err=True)
+        raise typer.Exit(1)
+
+
+@app.command()
+def titles(
+    project: Optional[str] = typer.Option(
+        None,
+        "--project",
+        "-p",
+        help="Path to novel project (default: current directory)",
+    ),
+    count: int = typer.Option(
+        10,
+        "--count",
+        "-n",
+        help="Number of title suggestions to generate",
+    ),
+    output: Optional[str] = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Output file for suggestions (default: print to console only)",
+    ),
+):
+    """Generate title suggestions for the story.
+    
+    Uses the LLM to suggest compelling titles based on the story's
+    foundation, themes, characters, and content.
+    
+    Examples:
+        novel titles
+        novel titles --count 15
+        novel titles --output title_ideas.txt
+    """
+    from .commands.titles import generate_titles
+    
+    try:
+        project_dir = Path(find_project_dir(project))
+        output_path = Path(output) if output else None
+        
+        generate_titles(project_dir, count=count, output_file=output_path)
+        
+    except ValueError as e:
         typer.echo(f"❌ Error: {e}", err=True)
         raise typer.Exit(1)
 

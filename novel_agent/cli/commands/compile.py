@@ -60,18 +60,36 @@ def get_scene_files(scenes_dir: Path, scene_range: Optional[str] = None) -> List
     return filtered
 
 
-def read_scene_content(scene_file: Path) -> str:
+def read_scene_content(scene_file: Path, strip_header: bool = False) -> str:
     """Read scene content from file.
     
     Args:
         scene_file: Path to scene file
+        strip_header: If True, remove the scene header (title, metadata, separator)
         
     Returns:
         Scene content as string
     """
     try:
         with open(scene_file, 'r', encoding='utf-8') as f:
-            return f.read().strip()
+            content = f.read().strip()
+        
+        if strip_header:
+            # Scene files have format:
+            # # Title line
+            # *Scene ID: ...*
+            # *Tick: ...*
+            #
+            # ---
+            #
+            # [prose content]
+            #
+            # Strip everything up to and including the first "---" separator
+            separator_match = re.search(r'^---\s*$', content, re.MULTILINE)
+            if separator_match:
+                content = content[separator_match.end():].strip()
+        
+        return content
     except Exception as e:
         return f"[Error reading scene: {e}]"
 
@@ -189,6 +207,42 @@ def compile_to_markdown(project_dir: Path, scene_files: List[Path],
     return "\n".join(lines)
 
 
+def compile_to_prose(project_dir: Path, scene_files: List[Path],
+                     include_metadata: bool = False) -> str:
+    """Compile scenes to prose-only format (no headers, just concatenated text).
+    
+    Args:
+        project_dir: Path to project directory
+        scene_files: List of scene files to compile
+        include_metadata: Include word count at end (default False for clean prose)
+        
+    Returns:
+        Compiled prose as string
+    """
+    lines = []
+    total_words = 0
+    
+    for i, scene_file in enumerate(scene_files):
+        content = read_scene_content(scene_file, strip_header=True)
+        words = count_words(content)
+        total_words += words
+        
+        lines.append(content)
+        
+        # Add scene break (blank line) between scenes, but not after last
+        if i < len(scene_files) - 1:
+            lines.append("")
+            lines.append("* * *")  # Scene break marker
+            lines.append("")
+    
+    if include_metadata:
+        lines.append("")
+        lines.append("---")
+        lines.append(f"*Total words: {total_words:,}*")
+    
+    return "\n".join(lines)
+
+
 def compile_to_html(project_dir: Path, scene_files: List[Path],
                    include_metadata: bool = True) -> str:
     """Compile scenes to HTML format.
@@ -298,7 +352,7 @@ def compile_manuscript(project_dir: Path, output: Path, format: str = "markdown"
     Args:
         project_dir: Path to project directory
         output: Output file path
-        format: Output format (markdown, html, pdf)
+        format: Output format (markdown, html, prose, pdf)
         include_metadata: Include metadata appendix
         scene_range: Optional scene range filter
         
@@ -325,11 +379,13 @@ def compile_manuscript(project_dir: Path, output: Path, format: str = "markdown"
         content = compile_to_markdown(project_dir, scene_files, include_metadata)
     elif format == "html":
         content = compile_to_html(project_dir, scene_files, include_metadata)
+    elif format == "prose":
+        content = compile_to_prose(project_dir, scene_files, include_metadata)
     elif format == "pdf":
         print("❌ PDF format requires pandoc (not yet implemented)")
         return False
     else:
-        print(f"❌ Unknown format: {format}")
+        print(f"❌ Unknown format: {format}. Supported: markdown, html, prose")
         return False
     
     # Write output

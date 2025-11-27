@@ -211,7 +211,7 @@ class MemoryManager:
             entity_type: Type of entity (character, location, scene, open_loop, relationship)
         
         Returns:
-            New ID string (e.g., C0, L000, S001, OL0, R0)
+            New ID string (e.g., C000, L000, S001, OL0, R0)
         """
         current = self.counters.get(entity_type, 0)
 
@@ -256,7 +256,7 @@ class MemoryManager:
         
         # Format based on type
         if entity_type == "character":
-            return f"C{current}"
+            return f"C{current:03d}"
         elif entity_type == "location":
             return f"L{current:03d}"
         elif entity_type == "scene":
