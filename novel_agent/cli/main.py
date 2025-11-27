@@ -579,6 +579,16 @@ def run(
         state = load_project_state(project_dir)
         recent.add_project(str(project_dir), state.get('novel_name'))
         
+        # Show LLM backend info once before the loop
+        config = get_project_config(project_dir)
+        backend_display = llm_backend or config.get('llm.backend', 'codex')
+        model_display = (
+            llm_model
+            or config.get('llm.model')
+            or config.get('llm.openai_model', 'gpt-5.1')
+        )
+        typer.echo(f"🤖 LLM backend: {backend_display} (model={model_display})")
+        
         if checkpoint_interval > 0:
             typer.echo(f"💾 Checkpoints enabled (every {checkpoint_interval} ticks)\n")
         else:
