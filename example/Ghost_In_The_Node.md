@@ -1,3 +1,5 @@
+# Ghost In The Node (work in progress)
+
 The OmniCorp sub-network K-1138 was a monument to corporate mediocrity, rendered in light and logic. Prisoss drifted through its architecture, a ghost in their pristine machine. Data nodes pulsed around them in a placid, orderly rhythm—great, glowing cubes of personnel files, marketing projections, and quarterly earnings reports, all neatly labeled and sorted. It was the digital equivalent of a suburban office park, and just as soul-crushingly dull.
 
 Prisoss’s scavenging rig filtered the data streams, plucking out the usual detritus: unredacted executive comms, payroll inconsistencies, customer data that wasn’t as anonymized as OmniCorp’s privacy policy claimed. Small-fry stuff. Enough to sell on the grey market for a few creds, enough to pay the rent and keep the rig’s coolers running. The work was tedious, a far cry from the elegant system-cracking of legend. This wasn't a duel; it was janitorial service.
