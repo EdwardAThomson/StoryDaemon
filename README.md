@@ -8,7 +8,7 @@ StoryDaemon is a Python-based system that generates long-form fiction through an
 
 An introduction and overview.
 
-* [StoryDaemon: The Future of Story Generation?]((https://youtu.be/vIBRLavyxbs)
+* [StoryDaemon: The Future of Story Generation?](https://youtu.be/vIBRLavyxbs)
 
 ## Features
 
