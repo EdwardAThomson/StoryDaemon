@@ -2,7 +2,13 @@
 
 **Agentic Novel Generation System with Emergent Narrative**
 
-StoryDaemon is a Python-based system that generates long-form fiction through an autonomous agent that plans, writes, and evolves stories organically. Unlike traditional story generators, StoryDaemon emphasizes emergence over pre-planning, allowing narrative structure to develop naturally through iterative "story ticks."
+StoryDaemon is a Python-based system that generates long-form fiction through an autonomous agent that plans, writes, and evolves stories organically. Unlike my previous [story generator](https://github.com/EdwardAThomson/NovelWriter), StoryDaemon emphasizes emergence over pre-planning, allowing narrative structure to develop naturally through iterative "story ticks."
+
+## YouTube Explainer
+
+An introduction and overview.
+
+* [StoryDaemon: The Future of Story Generation?]((https://youtu.be/vIBRLavyxbs)
 
 ## Features
 
