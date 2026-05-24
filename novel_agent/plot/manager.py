@@ -5,7 +5,7 @@ import json
 from datetime import datetime
 
 from ..memory.manager import MemoryManager
-from ..agent.prompts import format_plot_generation_prompt
+from ..memory.entity_resolver import EntityResolver
 from .entities import PlotBeat, PlotOutline
 
 
@@ -66,6 +66,10 @@ class PlotOutlineManager:
         """Generate candidate beats from current story state via LLM.
         Returns beats without assigning IDs; call add_beats() to persist.
         """
+        # Imported lazily to avoid a module-load circular import
+        # (agent package __init__ imports StoryAgent, which imports this module).
+        from ..agent.prompts import format_plot_generation_prompt
+
         ctx = self._build_generation_context(count)
         prompt = format_plot_generation_prompt(ctx)
         # Use planner token budget as a safe default
@@ -77,9 +81,26 @@ class PlotOutlineManager:
     def add_beats(self, beats: List[PlotBeat]) -> List[PlotBeat]:
         outline = self.load_outline()
         beats_assigned = self._assign_ids(outline, beats)
+        self._resolve_beat_references(beats_assigned)
         outline.beats.extend(beats_assigned)
         self.save_outline(outline)
         return beats_assigned
+
+    def _resolve_beat_references(self, beats: List[PlotBeat]) -> None:
+        """Force every beat's entity references to real IDs; drop phantoms.
+
+        The roster in the generation prompt tells the LLM the real IDs, but it
+        can still emit one that matches nothing (or a short form like "C0").
+        Resolution here is the deterministic guardrail: references become
+        canonical IDs by selection, never free-typed.
+        """
+        resolver = EntityResolver(self.memory)
+        for beat in beats:
+            dropped_chars, dropped_loc = resolver.resolve_beat(beat)
+            if dropped_chars:
+                print(f"        ⚠️  Beat {beat.id}: dropped unresolved character refs {dropped_chars}")
+            if dropped_loc:
+                print(f"        ⚠️  Beat {beat.id}: dropped unresolved location ref '{dropped_loc}'")
 
     def get_next_beat(self) -> Optional[PlotBeat]:
         outline = self.load_outline()
