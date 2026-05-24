@@ -434,11 +434,13 @@ def tick(
         
         # Get beat_mode for strict name generation enforcement
         beat_mode = config.get('plot.beat_mode', 'soft_hint')
-        
+        # Genre drives grounded name generation (falls back to scifi banks)
+        genre = (state.get('story_foundation') or {}).get('genre') or 'scifi'
+
         tool_registry.register(name_gen_tool)
         tool_registry.register(MemorySearchTool(memory_manager, vector_store))
-        tool_registry.register(CharacterGenerateTool(memory_manager, vector_store, name_gen_tool.generator, beat_mode=beat_mode))
-        tool_registry.register(LocationGenerateTool(memory_manager, vector_store))
+        tool_registry.register(CharacterGenerateTool(memory_manager, vector_store, name_gen_tool.generator, beat_mode=beat_mode, genre=genre))
+        tool_registry.register(LocationGenerateTool(memory_manager, vector_store, name_gen_tool.generator, genre=genre))
         tool_registry.register(RelationshipCreateTool(memory_manager))
         tool_registry.register(RelationshipUpdateTool(memory_manager))
         tool_registry.register(RelationshipQueryTool(memory_manager))
@@ -642,11 +644,13 @@ def run(
                 
                 # Get beat_mode for strict name generation enforcement
                 beat_mode = config.get('plot.beat_mode', 'soft_hint')
-                
+                # Genre drives grounded name generation (falls back to scifi banks)
+                genre = (state.get('story_foundation') or {}).get('genre') or 'scifi'
+
                 tool_registry.register(name_gen_tool)
                 tool_registry.register(MemorySearchTool(memory_manager, vector_store))
-                tool_registry.register(CharacterGenerateTool(memory_manager, vector_store, name_gen_tool.generator, beat_mode=beat_mode))
-                tool_registry.register(LocationGenerateTool(memory_manager, vector_store))
+                tool_registry.register(CharacterGenerateTool(memory_manager, vector_store, name_gen_tool.generator, beat_mode=beat_mode, genre=genre))
+                tool_registry.register(LocationGenerateTool(memory_manager, vector_store, name_gen_tool.generator, genre=genre))
                 tool_registry.register(RelationshipCreateTool(memory_manager))
                 tool_registry.register(RelationshipUpdateTool(memory_manager))
                 tool_registry.register(RelationshipQueryTool(memory_manager))

@@ -78,22 +78,11 @@ class MemorySearchTool(Tool):
 class CharacterGenerateTool(Tool):
     """Create a new character."""
     
-    def __init__(self, memory_manager: MemoryManager, vector_store: VectorStore, name_generator=None, beat_mode: str = "soft_hint"):
+    def __init__(self, memory_manager: MemoryManager, vector_store: VectorStore, name_generator=None, beat_mode: str = "soft_hint", genre: str = "scifi"):
         super().__init__(
             name="character.generate",
-            description="Create a new character with initial attributes. Name will be auto-generated if not provided.",
+            description="Create a new character. The canonical name is system-generated; you supply only hints (gender, optional title) plus role and description.",
             parameters={
-                "name": {
-                    "type": "string",
-                    "description": "Character name (optional - will be auto-generated if omitted)",
-                    "optional": True
-                },
-                "gender": {
-                    "type": "string",
-                    "enum": ["male", "female"],
-                    "description": "Character gender for name generation (defaults to random 50/50 if not specified)",
-                    "optional": True
-                },
                 "role": {
                     "type": "string",
                     "description": "Character role (protagonist, antagonist, supporting, minor)"
@@ -101,6 +90,17 @@ class CharacterGenerateTool(Tool):
                 "description": {
                     "type": "string",
                     "description": "Brief character description"
+                },
+                "gender": {
+                    "type": "string",
+                    "enum": ["male", "female"],
+                    "description": "Hint for name generation (defaults to random 50/50 if not specified)",
+                    "optional": True
+                },
+                "title": {
+                    "type": "string",
+                    "description": "Optional honorific/rank hint (e.g. Captain, Dr.)",
+                    "optional": True
                 },
                 "traits": {
                     "type": "array",
@@ -120,59 +120,59 @@ class CharacterGenerateTool(Tool):
         self.vector_store = vector_store
         self.name_generator = name_generator
         self.beat_mode = beat_mode
+        self.genre = genre
+        self._seed_used_names()
+
+    def _seed_used_names(self) -> None:
+        """Mark existing character names as taken so the generator won't reuse them."""
+        if not self.name_generator:
+            return
+        for cid in self.memory_manager.list_characters():
+            existing = self.memory_manager.load_character(cid)
+            if existing:
+                self.name_generator.register_used_name(existing.full_name)
     
     def execute(self, role: str, description: str,
                 name: Optional[str] = None,
                 gender: Optional[str] = None,
-                traits: Optional[List[str]] = None, 
+                title: Optional[str] = None,
+                traits: Optional[List[str]] = None,
                 goals: Optional[List[str]] = None) -> Dict[str, Any]:
         """Create a new character.
-        
+
+        The canonical name is always system-generated. ``gender`` and ``title``
+        are hints; any ``name`` passed by the LLM is ignored.
+
         Args:
             role: Character role
             description: Character description
-            name: Character name (optional - will be auto-generated)
-            gender: Character gender for name generation
+            name: Ignored (kept for backward compatibility)
+            gender: Hint for name generation
+            title: Optional honorific/rank hint
             traits: Optional personality traits
             goals: Optional initial goals
-        
+
         Returns:
             Success status and character ID
         """
-        # Auto-generate name if not provided
         first_name = ""
         family_name = ""
-        title = ""
-        
-        # Check if name looks like a placeholder
-        is_placeholder = False
-        if name:
-            placeholder_indicators = ['placeholder', 'generated', 'tbd', 'todo', 'will use', 'to be']
-            name_lower = name.lower()
-            is_placeholder = any(indicator in name_lower for indicator in placeholder_indicators)
-        
-        # In strict mode, always use name generator (ignore LLM-provided names)
-        force_generate = self.beat_mode == "strict"
-        
-        if (not name or is_placeholder or force_generate) and self.name_generator:
+        gen_title = title or ""
+
+        if self.name_generator:
             # Random 50/50 if gender not specified (to avoid LLM bias)
             char_gender = gender or random.choice(["male", "female"])
-            name_result = self.name_generator.generate_name(gender=char_gender, genre="scifi")
+            name_result = self.name_generator.generate_name(
+                gender=char_gender, genre=self.genre, title=title or None
+            )
             first_name = name_result["first_name"]
             family_name = name_result["last_name"]
-            title = name_result.get("title", "")
-        elif name and not is_placeholder:
-            # Split provided name
-            parts = name.strip().split()
-            if len(parts) >= 2:
-                first_name = parts[0]
-                family_name = ' '.join(parts[1:])
-            elif len(parts) == 1:
-                first_name = parts[0]
+            gen_title = name_result.get("title", "") or (title or "")
         else:
             # Fallback if no generator available - generate ID here for fallback name
             character_id = self.memory_manager.generate_id("character")
             first_name = f"Character_{character_id}"
+        title = gen_title
         
         # Check for duplicate names and roles before creating
         existing_chars = self.memory_manager.list_characters()
@@ -193,7 +193,7 @@ class CharacterGenerateTool(Tool):
                             return {
                                 "success": True,
                                 "character_id": char_id,
-                                "message": f"Character '{first_name} {family_name}'.strip() already exists as {char_id}",
+                                "message": f"Character '{(first_name + ' ' + family_name).strip()}' already exists as {char_id}",
                                 "duplicate": True
                             }
                 
@@ -247,14 +247,15 @@ class CharacterGenerateTool(Tool):
 class LocationGenerateTool(Tool):
     """Create a new location."""
     
-    def __init__(self, memory_manager: MemoryManager, vector_store: VectorStore):
+    def __init__(self, memory_manager: MemoryManager, vector_store: VectorStore, name_generator=None, genre: str = "scifi"):
         super().__init__(
             name="location.generate",
-            description="Create a new location with initial attributes",
+            description="Create a new location. The canonical proper name is system-generated; supply an optional 'descriptor' common noun (e.g. 'town hall', 'spaceport') plus a description.",
             parameters={
-                "name": {
+                "descriptor": {
                     "type": "string",
-                    "description": "Location name"
+                    "description": "Optional common-noun type for the place (e.g. 'town hall', 'tavern', 'spaceport'). The proper name is generated.",
+                    "optional": True
                 },
                 "description": {
                     "type": "string",
@@ -275,43 +276,66 @@ class LocationGenerateTool(Tool):
         )
         self.memory_manager = memory_manager
         self.vector_store = vector_store
-    
-    def execute(self, name: str, description: str,
+        self.name_generator = name_generator
+        self.genre = genre
+        self._seed_used_places()
+
+    def _seed_used_places(self) -> None:
+        """Mark existing location names as taken so the generator won't reuse them."""
+        if not self.name_generator:
+            return
+        for lid in self.memory_manager.list_locations():
+            existing = self.memory_manager.load_location(lid)
+            if existing:
+                self.name_generator.register_used_place(existing.name)
+
+    def execute(self, description: str,
+                descriptor: Optional[str] = None,
+                name: Optional[str] = None,
                 atmosphere: Optional[str] = None,
                 features: Optional[List[str]] = None) -> Dict[str, Any]:
         """Create a new location.
-        
-        Args:
-            name: Location name
-            description: Location description
-            atmosphere: Optional atmosphere
-            features: Optional features
-        
+
+        The canonical proper name is system-generated from an optional
+        ``descriptor`` common noun. Any ``name`` passed by the LLM is ignored
+        when a generator is available.
+
         Returns:
             Success status and location ID
         """
-        # Generate ID
+        if self.name_generator:
+            place = self.name_generator.generate_place_name(descriptor=descriptor, genre=self.genre)
+            loc_name = place["full_name"]
+        else:
+            loc_name = (name or descriptor or "Unnamed Location").strip()
+
+        # Dedup against existing locations (case-insensitive)
+        for lid in self.memory_manager.list_locations():
+            existing = self.memory_manager.load_location(lid)
+            if existing and (existing.name or "").strip().lower() == loc_name.lower():
+                return {
+                    "success": True,
+                    "location_id": lid,
+                    "name": existing.name,
+                    "duplicate": True,
+                    "message": f"Location '{existing.name}' already exists as {lid}"
+                }
+
         location_id = self.memory_manager.generate_id("location")
-        
-        # Create location entity
         location = Location(
             id=location_id,
-            name=name,
+            name=loc_name,
             description=description,
             atmosphere=atmosphere or "",
             features=features or []
         )
-        
-        # Save to disk
         self.memory_manager.save_location(location)
-        
-        # Index in vector store
         self.vector_store.index_location(location)
-        
+
         return {
             "success": True,
             "location_id": location_id,
-            "name": name
+            "name": loc_name
         }
 
 
