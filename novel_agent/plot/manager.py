@@ -116,11 +116,31 @@ class PlotOutlineManager:
             recent_lines.append(f"{sid}: {s.title or ''} — {summ}")
         recent_text = "\n".join(recent_lines) if recent_lines else "None"
 
+        # Character roster (real IDs the beat generator must reference)
+        char_lines = []
+        for cid in sorted(self.memory.list_characters()):
+            c = self.memory.load_character(cid)
+            if not c:
+                continue
+            char_lines.append(f"{c.id}: {c.name} ({c.role})")
+        characters_text = "\n".join(char_lines) if char_lines else "None"
+
+        # Location roster (real IDs the beat generator must reference)
+        loc_lines = []
+        for lid in sorted(self.memory.list_locations()):
+            loc = self.memory.load_location(lid)
+            if not loc:
+                continue
+            loc_lines.append(f"{loc.id}: {loc.name}")
+        locations_text = "\n".join(loc_lines) if loc_lines else "None"
+
         return {
             "novel_name": novel_name,
             "current_tick": current_tick,
             "open_loops": open_loops_text,
             "recent_scenes": recent_text,
+            "characters": characters_text,
+            "locations": locations_text,
             "count": count,
             "planner_max_tokens": 1000,
         }

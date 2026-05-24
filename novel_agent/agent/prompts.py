@@ -386,8 +386,8 @@ Return your answer as JSON only, with no explanations, no markdown fences, and n
   "beats": [
     {{
       "description": "...",
-      "characters_involved": ["C0", "C1"],
-      "location": "L2",
+      "characters_involved": ["C000", "C001"],
+      "location": "L000",
       "plot_threads": ["thread_a"],
       "tension_target": 7,
       "prerequisites": [],
@@ -404,6 +404,12 @@ Do not include the fields id, status, created_at, executed_in_scene, or executio
 Novel: {novel_name}
 Current tick: {current_tick}
 
+## Characters (use these exact IDs)
+{characters}
+
+## Locations (use these exact IDs)
+{locations}
+
 ## Open loops
 {open_loops}
 
@@ -419,6 +425,7 @@ Each beat must follow these constraints:
 - Avoid more than 2–3 proper nouns or technical terms in a single description.
 - Favor concrete external actions and observable changes over vague summaries or internal monologue.
 - The "plot_threads" field should list at most 3 concise thread names per beat; pick only the most relevant threads.
+- For "characters_involved" and "location", use ONLY the exact IDs listed in the Characters and Locations sections above (for example C000, L000). Never invent new IDs or abbreviate them; omit the field or use an empty list if no existing entity fits.
 
 # Your task
 

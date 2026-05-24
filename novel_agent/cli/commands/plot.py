@@ -262,8 +262,8 @@ def _build_plot_generation_prompt(
   "beats": [
     {
       "description": "...",
-      "characters_involved": ["C0", "C1"],
-      "location": "L2",
+      "characters_involved": ["C000", "C001"],
+      "location": "L000",
       "plot_threads": ["thread_a"],
       "tension_target": 7,
       "prerequisites": [],
@@ -274,10 +274,26 @@ def _build_plot_generation_prompt(
   ]
 }"""
 
+    # Entity rosters (real IDs the beat generator must reference)
+    char_lines = []
+    for cid in sorted(memory.list_characters()):
+        c = memory.load_character(cid)
+        if not c:
+            continue
+        char_lines.append(f"{c.id}: {c.name} ({c.role})")
+    loc_lines = []
+    for lid in sorted(memory.list_locations()):
+        loc = memory.load_location(lid)
+        if not loc:
+            continue
+        loc_lines.append(f"{loc.id}: {loc.name}")
+
     open_loops_block = "\n".join(open_loop_lines) if open_loop_lines else "None"
     recent_summaries_block = "\n".join(reversed(recent_summaries)) if recent_summaries else "None"
     tension_block = "\n".join(tension_lines) if tension_lines else "None"
     recent_beats_block = "\n".join(recent_beats_lines) if recent_beats_lines else "None"
+    characters_block = "\n".join(char_lines) if char_lines else "None"
+    locations_block = "\n".join(loc_lines) if loc_lines else "None"
 
     prompt = f"""You are a plot architect for a long-form story. Your job is to generate the next {count} factual plot beats.
 
@@ -296,6 +312,12 @@ Genre: {foundation.get("genre", "unknown")}
 Premise: {foundation.get("premise", "unknown")}
 Setting: {foundation.get("setting", "unknown")}
 Tone: {foundation.get("tone", "unknown")}
+
+## Characters (use these exact IDs)
+{characters_block}
+
+## Locations (use these exact IDs)
+{locations_block}
 
 ## Open loops
 {open_loops_block}
@@ -318,6 +340,7 @@ Each beat must follow these constraints:
 - Avoid more than 2–3 proper nouns or technical terms in a single description.
 - Favor concrete external actions and observable changes over vague summaries or internal monologue.
 - The "plot_threads" field should list at most 3 concise thread names per beat; pick only the most relevant threads.
+- For "characters_involved" and "location", use ONLY the exact IDs listed in the Characters and Locations sections above (for example C000, L000). Never invent new IDs or abbreviate them; omit the field or use an empty list if no existing entity fits.
 
 # Your task
 
