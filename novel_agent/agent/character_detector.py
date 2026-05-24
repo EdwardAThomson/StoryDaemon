@@ -173,6 +173,12 @@ class CharacterDetector:
         Returns:
             Character ID of created entity
         """
+        # Don't duplicate an existing character (matches ID, name, or nickname).
+        from ..memory.entity_resolver import EntityResolver
+        existing_id = EntityResolver(self.memory).resolve_character(name)
+        if existing_id:
+            return existing_id
+
         # Split name into first and family name
         name_parts = name.split()
         if len(name_parts) >= 2:

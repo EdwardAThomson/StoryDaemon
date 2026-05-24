@@ -193,6 +193,16 @@ The following context includes FULL TEXT from the most recent scenes to help you
 
 {location_details}
 
+## Cast & Naming
+
+Existing characters — refer to them by these exact names; never rename them:
+{existing_characters}
+
+NAMING RULE — you must never invent a character name:
+- Incidental walk-ons (a guard, a clerk, a passerby) should stay unnamed — refer to them by role.
+- If a NEW character genuinely needs a name for dialogue or continuity, use one of these pre-approved names (top of list first), not one you make up:
+{approved_new_names}
+
 ## Your Task
 
 Write a scene passage from {pov_character_name}'s deep POV that ACCOMPLISHES THE KEY CHANGE or CLEARLY ACHIEVES THE PROGRESS MILESTONE described above.{scene_length_guidance}
@@ -234,6 +244,7 @@ Write a scene passage from {pov_character_name}'s deep POV that ACCOMPLISHES THE
    - Use "{pov_character_name}" when introducing the character or for clarity
    - After introduction, you can vary between the name and pronouns naturally
    - NEVER invent nicknames or alternate names not provided
+   - NEVER invent a NEW character's name — use the cast or an approved name from "Cast & Naming" above (unnamed walk-ons may stay unnamed)
 2. **Third-person POV** - Write in third person using "{pov_character_name}" or pronouns (he/she)
    - NEVER use first person ("I", "my", "me") unless in dialogue
    - Example: "{pov_character_name} pressed a palm against..." NOT "I pressed my palm against..."
