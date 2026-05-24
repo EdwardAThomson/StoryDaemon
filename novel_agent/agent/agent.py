@@ -27,6 +27,8 @@ from ..memory.manager import MemoryManager
 from ..memory.vector_store import VectorStore
 from ..memory.summarizer import SceneSummarizer
 from ..plot.manager import PlotOutlineManager
+from ..contracts.manager import ContractManager
+from ..contracts.conditions import CheckContext
 
 
 class StoryAgent:
@@ -124,7 +126,10 @@ class StoryAgent:
         
         # Plot-first components
         self.plot_manager = PlotOutlineManager(self.project_path, llm_interface)
-        
+
+        # Contract validation layer (opt-in via generation.use_contracts)
+        self.contract_manager = ContractManager(self.project_path)
+
         # Load state
         self.state = self._load_state()
     
@@ -338,6 +343,13 @@ class StoryAgent:
                     scene.tension_category = tension_result['tension_category']
                     self.memory.save_scene(scene)
                     print(f"        Tension: {tension_result['tension_level']}/10 ({tension_result['tension_category']})")
+
+            # Step 8.7: Validate beat contract postconditions (opt-in, record-only)
+            contract_result = self._check_beat_contract(
+                current_beat,
+                scene_data["text"],
+                tension_result.get("tension_level"),
+            )
             
             # Step 8.6: Detect new characters (Phase 6)
             if self.config.get('generation.auto_detect_characters', True):
@@ -411,7 +423,10 @@ class StoryAgent:
             
             if promotion_result:
                 result["goal_promoted"] = promotion_result
-            
+
+            if contract_result:
+                result["contract"] = contract_result
+
             if tension_result.get('enabled'):
                 result["tension"] = {
                     "level": tension_result['tension_level'],
@@ -1157,9 +1172,59 @@ Answer:"""
             # Default to True on error (graceful degradation)
             return True
     
+    def _check_beat_contract(self, beat, scene_text: str, tension_level) -> dict:
+        """Validate a beat's contract postconditions against the written scene.
+
+        Opt-in via ``generation.use_contracts``. Record-only: a failing contract
+        is logged and returned in the tick result but never raises, matching the
+        graceful-degradation convention of the other extractors. Returns None
+        when contracts are disabled or no contract is defined for this beat.
+        """
+        if beat is None:
+            return None
+        if not self.config.get('generation.use_contracts', False):
+            return None
+
+        import logging
+        logger = logging.getLogger(__name__)
+
+        try:
+            contract = self.contract_manager.get(beat.id)
+        except Exception as e:
+            logger.warning(f"Failed to load contract for beat {beat.id}: {e}")
+            return None
+
+        if contract is None:
+            return None
+
+        ctx = CheckContext(
+            memory=self.memory,
+            state=self.state,
+            prose=scene_text,
+            scene_tension=tension_level,
+        )
+
+        try:
+            result = contract.validate_postconditions(ctx)
+        except Exception as e:
+            logger.error(f"Contract validation crashed for beat {beat.id}: {e}")
+            return None
+
+        if result.is_valid:
+            print(f"        ✓ Contract satisfied for beat {beat.id} "
+                  f"({len(result.passed)} postconditions)")
+        else:
+            print(f"        ⚠️  Contract violations for beat {beat.id}:")
+            for failure in result.failures:
+                print(f"           - {failure}")
+
+        payload = result.to_dict()
+        payload["beat_id"] = beat.id
+        return payload
+
     def _mark_beat_complete(
-        self, 
-        beat_id: str, 
+        self,
+        beat_id: str,
         scene_id: str,
         verification_score: float = None,
         verification_method: str = None

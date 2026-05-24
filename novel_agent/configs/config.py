@@ -45,6 +45,9 @@ DEFAULT_CONFIG = {
         'verify_beat_execution': True,  # Verify beat was accomplished via LLM
         'allow_beat_skip': False,  # Allow skipping beats that aren't accomplished
         'fallback_to_reactive': True,  # Fall back to reactive mode if beat generation fails
+
+        # Contract validation layer (docs/CONTRACTS_AND_BLOCKS_ARCHITECTURE.md)
+        'use_contracts': False,  # Check beat postconditions after writing (record-only for now)
     },
     'lore': {
         'contradiction_threshold': 0.5,  # Similarity threshold for flagging contradictions (0.0-2.0)
