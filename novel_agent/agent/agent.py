@@ -215,11 +215,14 @@ class StoryAgent:
                         char_id = action.get("result", {}).get("character_id")
                         if char_id:
                             self.state["active_character"] = char_id
-                            # Also update the plan's POV character to use the real ID
-                            if plan.get("pov_character") and not plan["pov_character"].startswith("C"):
+                            # Point POV at the real ID unless it already names a real character
+                            if plan.get("pov_character") and plan["pov_character"] not in self.memory.list_characters():
                                 plan["pov_character"] = char_id
                             break
-            
+
+            # Resolve planner POV/location refs (name/nickname/ID) to canonical IDs
+            self._resolve_plan_entities(plan)
+
             # Step 5: Store plan and results
             print("   5. Storing plan...")
             plan_file = self.plan_manager.save_plan(
@@ -668,27 +671,50 @@ class StoryAgent:
         
         return self.executor.execute_plan(remaining_plan, tick)
     
+    def _resolve_plan_entities(self, plan: Dict) -> None:
+        """Map planner-supplied pov_character / target_location refs to canonical IDs.
+
+        The planner may emit a canonical ID (``C000``), a name, or a nickname; it
+        may also emit a name that happens to start with ``C``/``L``. Resolve against
+        current memory rather than guessing from the prefix, so a real reference
+        lands on its ID and a name like "Caleb" is not mistaken for an ID. Refs
+        that resolve to nothing are left untouched for the caller's fallback.
+        """
+        from ..memory.entity_resolver import EntityResolver
+        resolver = EntityResolver(self.memory)
+        pov = plan.get("pov_character")
+        if pov:
+            cid = resolver.resolve_character(pov)
+            if cid:
+                plan["pov_character"] = cid
+        loc = plan.get("target_location")
+        if loc:
+            lid = resolver.resolve_location(loc)
+            if lid:
+                plan["target_location"] = lid
+
     def _update_plan_with_entity_ids(self, plan: Dict, entity_results: Dict):
         """Update plan with real entity IDs after generation.
-        
+
         Args:
             plan: The plan to update (modified in place)
             entity_results: Results from entity generation
         """
+        # Resolve any planner refs that point at entities now in memory.
+        self._resolve_plan_entities(plan)
+        existing_chars = set(self.memory.list_characters())
+        existing_locs = set(self.memory.list_locations())
         for action in entity_results.get("actions_executed", []):
             if action.get("tool") == "character.generate" and action.get("success"):
                 char_id = action.get("result", {}).get("character_id")
-                if char_id and plan.get("pov_character"):
-                    # Replace placeholder with real ID
-                    if not plan["pov_character"].startswith("C"):
-                        plan["pov_character"] = char_id
-            
+                # Fallback: still-unresolved POV placeholder -> freshly generated char.
+                if char_id and plan.get("pov_character") and plan["pov_character"] not in existing_chars:
+                    plan["pov_character"] = char_id
+
             elif action.get("tool") == "location.generate" and action.get("success"):
                 loc_id = action.get("result", {}).get("location_id")
-                if loc_id and plan.get("target_location"):
-                    # Replace placeholder with real ID
-                    if not plan["target_location"].startswith("L"):
-                        plan["target_location"] = loc_id
+                if loc_id and plan.get("target_location") and plan["target_location"] not in existing_locs:
+                    plan["target_location"] = loc_id
     
     def _merge_execution_results(self, entity_results: Dict, remaining_results: Dict) -> Dict:
         """Merge entity and remaining execution results.
