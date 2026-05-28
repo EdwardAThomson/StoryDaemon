@@ -45,6 +45,7 @@ DEFAULT_CONFIG = {
         'verify_beat_execution': True,  # Verify beat was accomplished via LLM
         'allow_beat_skip': False,  # Allow skipping beats that aren't accomplished
         'fallback_to_reactive': True,  # Fall back to reactive mode if beat generation fails
+        'rolling_horizon': False,  # Phase 2: when a beat diverges from the written scene, abandon the pending horizon and regenerate it from current canon
 
         # Contract validation layer (docs/CONTRACTS_AND_BLOCKS_ARCHITECTURE.md)
         'use_contracts': False,  # Check beat postconditions after writing (record-only for now)

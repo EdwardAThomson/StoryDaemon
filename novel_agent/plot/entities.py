@@ -15,13 +15,18 @@ class PlotBeat:
     plot_threads: List[str] = field(default_factory=list)
     tension_target: Optional[int] = None
     prerequisites: List[str] = field(default_factory=list)
-    status: str = "pending"  # pending, in_progress, completed, skipped
+    status: str = "pending"  # pending, in_progress, completed, skipped, abandoned
     created_at: str = ""
     executed_in_scene: Optional[str] = None
     execution_notes: str = ""
     advances_character_arcs: List[str] = field(default_factory=list)
     resolves_loops: List[str] = field(default_factory=list)
     creates_loops: List[str] = field(default_factory=list)
+    # Verification + rolling-horizon (Phase 2) bookkeeping
+    verification_score: Optional[float] = None
+    verification_method: str = ""
+    abandoned_reason: str = ""
+    revised_at_tick: Optional[int] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)

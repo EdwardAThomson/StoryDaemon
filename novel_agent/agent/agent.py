@@ -4,7 +4,7 @@ import json
 import re
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 from .context import ContextBuilder
 from .prompts import format_planner_prompt
@@ -327,7 +327,14 @@ class StoryAgent:
                         )
                     else:
                         print(f"        ⚠️  Beat may not have been fully executed (score={semantic_score:.2f} < {score_threshold})")
-                        if not self.config.get('generation.allow_beat_skip', False):
+                        if self.config.get('generation.rolling_horizon', False):
+                            # The story diverged from the planned beat: re-derive the
+                            # pending horizon from what was actually written.
+                            self._revise_horizon(
+                                reason=f"beat {current_beat.id} diverged (score={semantic_score:.2f} < {score_threshold})",
+                                tick=tick,
+                            )
+                        elif not self.config.get('generation.allow_beat_skip', False):
                             print(f"        Keeping beat {current_beat.id} as pending")
                 else:
                     # Auto-mark complete without verification
@@ -1142,6 +1149,25 @@ class StoryAgent:
         outline = self.plot_manager.load_outline()
         pending_count = sum(1 for beat in outline.beats if beat.status == "pending")
         return pending_count < threshold
+
+    def _revise_horizon(self, reason: str, tick: int) -> Optional[Dict[str, Any]]:
+        """Rolling horizon (Phase 2): regenerate the pending beats from current canon.
+
+        Graceful degradation per repo convention: a revision failure must never
+        kill the tick (which would stop a multi-tick ``run``).
+        """
+        try:
+            beats_ahead = self.config.get('generation.plot_beats_ahead', 5)
+            result = self.plot_manager.revise_horizon(
+                reason=reason, count=beats_ahead, current_tick=tick
+            )
+            if result.get("abandoned") or result.get("generated"):
+                print(f"        ↻ Rolling horizon: abandoned {len(result['abandoned'])}, "
+                      f"generated {len(result['generated'])} beat(s)")
+            return result
+        except Exception as e:
+            print(f"        ⚠️  Horizon revision failed: {e}")
+            return None
     
     def _verify_beat_execution(self, scene_text: str, beat) -> bool:
         """Verify that the scene accomplished the plot beat (Phase 5).

@@ -109,6 +109,42 @@ class PlotOutlineManager:
                 return b
         return None
 
+    # ---------- Rolling horizon (Phase 2) ----------
+    def revise_horizon(
+        self,
+        reason: str = "",
+        count: int = 5,
+        current_tick: Optional[int] = None,
+    ) -> Dict[str, List[str]]:
+        """Discard the stale pending lookahead and regenerate it from current canon.
+
+        This is the rolling-horizon mechanism: the next few beats are re-derived
+        from what actually happened (recent scenes, open loops, live rosters)
+        rather than executed from a plan laid down before the prose existed.
+
+        Generation runs *first*; only if it yields beats do we abandon the
+        existing pending horizon, so a generation failure never strands the story
+        with no beats to execute. Completed / in-progress beats are never touched.
+
+        Returns ``{"abandoned": [ids], "generated": [ids]}``.
+        """
+        new_beats = self.generate_next_beats(count=count)
+        if not new_beats:
+            return {"abandoned": [], "generated": []}
+
+        outline = self.load_outline()
+        abandoned: List[str] = []
+        for b in outline.beats:
+            if b.status == "pending":
+                b.status = "abandoned"
+                b.abandoned_reason = reason
+                b.revised_at_tick = current_tick
+                abandoned.append(b.id)
+        self.save_outline(outline)
+
+        added = self.add_beats(new_beats)
+        return {"abandoned": abandoned, "generated": [b.id for b in added]}
+
     # ---------- Utilities ----------
     def _build_generation_context(self, count: int) -> Dict[str, Any]:
         state = self._load_state()
