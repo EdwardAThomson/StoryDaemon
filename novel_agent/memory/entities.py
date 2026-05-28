@@ -532,7 +532,10 @@ class Lore:
     importance: str = "normal"  # "critical", "important", "normal", "minor"
     tags: List[str] = field(default_factory=list)  # For categorization
     related_lore: List[str] = field(default_factory=list)  # IDs of related lore
-    potential_contradictions: List[str] = field(default_factory=list)  # IDs of potentially conflicting lore
+    potential_contradictions: List[str] = field(default_factory=list)  # IDs of lore confirmed to contradict this item
+    # Per-contradiction verdict records (Phase 1 detection; Phase 3 will enforce on these).
+    # Each entry: {"with": other_id, "canon": older_id, "reason": str, "detected_tick": int, "method": str}
+    contradiction_details: List[Dict[str, Any]] = field(default_factory=list)
     created_at: str = ""
     
     def __post_init__(self):
