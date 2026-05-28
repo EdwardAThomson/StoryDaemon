@@ -75,6 +75,8 @@ API env vars: `OPENAI_API_KEY`, `CLAUDE_API_KEY`, `GEMINI_API_KEY`.
 
 Subclasses of `tools/base.py:Tool` register into a `ToolRegistry` in `cli/main.py` (`tick`/`run`). Tool names use dotted form (`character.generate`, `memory.search`, …). The planner sees these tools via `ToolRegistry.get_tools_description()`. `CharacterGenerateTool` takes a `beat_mode` argument that tightens name-generation behavior when plot-first runs in `guided` mode. New tools must be registered in **both** `tick()` and `run()` in `cli/main.py` — these blocks are duplicated; updating only one will silently break the multi-tick flow.
 
+`NameGeneratorTool` (`name.generate`, `tools/name_generator.py`) is the Phase 1 "grounded identity" tool: names are minted in Python (`NameGenerator` — syllable/name banks by culture/era, dedup against existing entities), and the LLM *selects and justifies* rather than inventing. Its shared `NameGenerator` instance (`name_gen_tool.generator`) is threaded into `CharacterGenerateTool`/`LocationGenerateTool`/`FactionGenerateTool` so all entity creation grounds names the same way. See `docs/EMERGENT_COHERENCE_PLAN.md` Phase 1.
+
 ### Multi-stage planner (`agent/multi_stage_planner.py`)
 
 Default planner. Three stages: (1) strategic intention from foundation+goals, (2) semantic context gathering via `VectorStore`, (3) tactical plan with tools. `stage_stats` is surfaced in the CLI output. `plan_for_beat(state, beat)` is the beat-aware entry point used by plot-first mode and by the legacy `plot.beat_mode == "guided"` path. Falls back to `plan()` on exception.
@@ -100,7 +102,9 @@ Defaults live in `novel_agent/configs/config.py:DEFAULT_CONFIG`. `Config.get('ll
 
 ### CLI (`novel_agent/cli/`)
 
-`main.py` is the Typer app exposing `new`, `tick`, `run`, `resume`, `recent`, `status`, `goals`, `lore`, `list`, `inspect`, `plan`, `compile`, `checkpoint`, `titles`, plus the `plot` sub-app (`plot status|next|generate|clear`). `find_project_dir()` walks up to 3 parents looking for `state.json`, so most commands work from any subdirectory of a project.
+`main.py` is the Typer app exposing `new`, `tick`, `run`, `resume`, `recent`, `status`, `goals`, `lore`, `list`, `inspect`, `plan`, `compile`, `checkpoint`, `titles`, plus the `plot` sub-app (`plot status|next|generate|revise|clear`). `find_project_dir()` walks up to 3 parents looking for `state.json`, so most commands work from any subdirectory of a project.
+
+`main.py` remains the Typer app (it owns the command decorators and wires everything up), but the per-command implementation logic now lives in the `cli/commands/` package (`status.py`, `goals.py`, `lore.py`, `list.py`, `inspect.py`, `plan.py`, `compile.py`, `checkpoint.py`, `titles.py`, `plot.py`). `plot revise` (Phase 2) is the manual rolling-horizon trigger — it abandons the pending beats and regenerates them from current canon (`revise_and_regenerate_beats_cli` in `commands/plot.py`). Both the CLI path (`commands/plot.py`) and the agent path (`plot/manager.py`) render the single shared `PLOT_GENERATION_PROMPT_TEMPLATE` in `agent/prompts.py` via `format_plot_generation_prompt`; they differ only in how they assemble the context dict.
 
 Typer quirk worked around in `tick()`: when `tick()` is called programmatically from `resume()`, Typer passes `OptionInfo` objects for unset options. The function defensively coerces them to `None`. Apply the same pattern if you add new programmatically-called commands.
 
@@ -115,4 +119,13 @@ Typer quirk worked around in `tick()`: when `tick()` is called programmatically 
 - IDs are short prefixed strings: `C0`, `L0`, `S001`, `F0`, etc. Counters are persisted in `memory/counters.json`; allocate via `MemoryManager.generate_*_id()` rather than computing them manually.
 - Graceful degradation is the rule for LLM-dependent extractors (`_extract_facts_with_retry`, `_extract_lore_with_retry`, `_verify_beat_execution`): retry once, log, return empty/`True`/`None` on second failure. Don't change these into hard failures without considering the multi-tick `run` loop, which stops on uncaught exceptions.
 - `work/` is the gitignored scratch area where test novels are created (`work/novels/`); never commit anything inside `work/` (the `.gitignore` whitelists only `work/README.md` and `work/.gitkeep`).
-- Phase numbers in comments (`# Phase 5`, `# Phase 7A.4`) refer to the roadmap in `docs/plan.md` and `docs/archive/`. They tag features, not gated code paths.
+- Phase numbers in comments (`# Phase 5`, `# Phase 7A.4`) refer to the *legacy* roadmap in `docs/plan.md` and `docs/archive/`. They tag features, not gated code paths. The newer `Phase 1`–`Phase 4` numbering (e.g. recent `feat: … (Phase 1/2)` commits) refers instead to the **active** roadmap in `docs/EMERGENT_COHERENCE_PLAN.md` — don't conflate the two numbering schemes.
+
+## Roadmap (active: `docs/EMERGENT_COHERENCE_PLAN.md`)
+
+The current direction is **emergent content + high structural constraint**: the LLM decides *what happens*; Python holds it to canon, arc shape, and a short revisable "rolling horizon" of beats regenerated from the prose just written. Status as of 2026-05-28:
+
+- **Phase 1 — Grounded identity** (the LLM selects names/IDs, never authors them): largely shipped — Python-grounded `name.generate`, entity references resolved by selection, writer-introduced names grounded, planner POV/location refs resolved to canonical IDs, and the two beat-generation prompts unified onto `PLOT_GENERATION_PROMPT_TEMPLATE` (both `plot/manager.py` and `cli/commands/plot.py` render it). **One item still open:** make contradiction detection a real *gate* — `LoreContradictionDetector.update_contradictions()` (tick step 13) currently only records contradictions, it does not block.
+- **Phase 2 — Rolling horizon** (lookahead emerges *from* the prose, beats are revisable): core shipped — rolling-horizon beat revision plus the `novel plot revise` CLI trigger.
+- **Phase 3 — Constraint-as-pressure** (throughline gate, arc-pressure, loop-aging, where the block/sub-block DSL lands): not started. Open prerequisite: agree a coherence rubric (loops closed/opened, contradiction count, tension-curve adherence) so the pressures can be measured.
+- **Phase 4 — Setup/payoff foresight** (planted-element ledger for clues/reveals): explicitly deferred until 1–3 prove out.

@@ -150,6 +150,7 @@ class PlotOutlineManager:
         state = self._load_state()
         novel_name = state.get("novel_name", "Untitled Novel")
         current_tick = state.get("current_tick", 0)
+        foundation = state.get("story_foundation") or {}
 
         # Open loops
         loops = self.memory.load_open_loops()
@@ -160,18 +161,31 @@ class PlotOutlineManager:
                 open_loops_desc.append(line)
         open_loops_text = "\n".join(open_loops_desc) if open_loops_desc else "None"
 
-        # Recent scenes (last 3)
+        # Recent scenes (last 3, oldest first so "most recent last" holds)
         scene_ids = self.memory.list_scenes()
         scene_ids_sorted = sorted(scene_ids)
         recent_ids = scene_ids_sorted[-3:]
         recent_lines = []
+        tension_lines = []
         for sid in recent_ids:
             s = self.memory.load_scene(sid)
             if not s:
                 continue
             summ = "; ".join(s.summary) if getattr(s, "summary", None) else ""
             recent_lines.append(f"{sid}: {s.title or ''} — {summ}")
+            tension_level = getattr(s, "tension_level", None)
+            if tension_level is not None:
+                tension_lines.append(f"{sid}: tension {tension_level}/10")
         recent_text = "\n".join(recent_lines) if recent_lines else "None"
+        tension_text = "\n".join(tension_lines) if tension_lines else "None"
+
+        # Existing outline beats (last few) for continuity
+        outline = self.load_outline()
+        recent_beats_lines = [
+            f"{b.id}: {b.description} [status={b.status}]"
+            for b in outline.beats[-5:]
+        ]
+        recent_beats_text = "\n".join(recent_beats_lines) if recent_beats_lines else "None"
 
         # Character roster (real IDs the beat generator must reference)
         char_lines = []
@@ -194,8 +208,14 @@ class PlotOutlineManager:
         return {
             "novel_name": novel_name,
             "current_tick": current_tick,
+            "genre": foundation.get("genre", "unknown"),
+            "premise": foundation.get("premise", "unknown"),
+            "setting": foundation.get("setting", "unknown"),
+            "tone": foundation.get("tone", "unknown"),
             "open_loops": open_loops_text,
             "recent_scenes": recent_text,
+            "tension_history": tension_text,
+            "recent_beats": recent_beats_text,
             "characters": characters_text,
             "locations": locations_text,
             "count": count,
@@ -246,6 +266,7 @@ class PlotOutlineManager:
                     plot_threads=b.get("plot_threads", []) or [],
                     tension_target=b.get("tension_target"),
                     prerequisites=b.get("prerequisites", []) or [],
+                    advances_character_arcs=b.get("advances_character_arcs", []) or [],
                     resolves_loops=b.get("resolves_loops", []) or [],
                     creates_loops=b.get("creates_loops", []) or [],
                 )
