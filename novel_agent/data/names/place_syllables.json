@@ -1,0 +1,25 @@
+{
+  "_comment": "Syllable banks for coining place-name proper nouns. A root is start+end; patterns optionally add a prefix or connector. The LLM supplies the common-noun descriptor (e.g. 'Town Hall'); Python owns the proper noun.",
+  "start": [
+    "Vern", "Kess", "Dol", "Mor", "Bren", "Tals", "Or", "Vyn", "Hal", "Cor",
+    "Ash", "Grey", "Far", "Eld", "Wren", "Bal", "Dun", "Gar", "Hel", "Kar",
+    "Lor", "Mer", "Nor", "Pel", "Quor", "Ral", "Sel", "Tor", "Ul", "Var",
+    "Wel", "Yor", "Zar", "Bryn", "Cald", "Dran", "Fen", "Goth", "Holt", "Iron"
+  ],
+  "end": [
+    "holt", "moor", "dale", "wick", "ford", "haven", "reach", "fall", "gate", "mere",
+    "stead", "crest", "hollow", "marsh", "spire", "ridge", "vale", "burgh", "thorn", "watch",
+    "barrow", "grove", "shade", "cliff", "hearth", "march", "keep", "rest", "cross", "hold"
+  ],
+  "prefixes": [
+    "New", "Old", "Port", "Fort", "North", "South", "East", "West", "Upper", "Lower"
+  ],
+  "patterns": [
+    "{root}",
+    "{root}",
+    "{root}",
+    "{root}",
+    "{prefix} {root}",
+    "The {root}"
+  ]
+}

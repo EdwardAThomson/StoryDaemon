@@ -5,7 +5,7 @@ import json
 from datetime import datetime
 
 from ..memory.manager import MemoryManager
-from ..agent.prompts import format_plot_generation_prompt
+from ..memory.entity_resolver import EntityResolver
 from .entities import PlotBeat, PlotOutline
 
 
@@ -66,6 +66,10 @@ class PlotOutlineManager:
         """Generate candidate beats from current story state via LLM.
         Returns beats without assigning IDs; call add_beats() to persist.
         """
+        # Imported lazily to avoid a module-load circular import
+        # (agent package __init__ imports StoryAgent, which imports this module).
+        from ..agent.prompts import format_plot_generation_prompt
+
         ctx = self._build_generation_context(count)
         prompt = format_plot_generation_prompt(ctx)
         # Use planner token budget as a safe default
@@ -77,9 +81,26 @@ class PlotOutlineManager:
     def add_beats(self, beats: List[PlotBeat]) -> List[PlotBeat]:
         outline = self.load_outline()
         beats_assigned = self._assign_ids(outline, beats)
+        self._resolve_beat_references(beats_assigned)
         outline.beats.extend(beats_assigned)
         self.save_outline(outline)
         return beats_assigned
+
+    def _resolve_beat_references(self, beats: List[PlotBeat]) -> None:
+        """Force every beat's entity references to real IDs; drop phantoms.
+
+        The roster in the generation prompt tells the LLM the real IDs, but it
+        can still emit one that matches nothing (or a short form like "C0").
+        Resolution here is the deterministic guardrail: references become
+        canonical IDs by selection, never free-typed.
+        """
+        resolver = EntityResolver(self.memory)
+        for beat in beats:
+            dropped_chars, dropped_loc = resolver.resolve_beat(beat)
+            if dropped_chars:
+                print(f"        ⚠️  Beat {beat.id}: dropped unresolved character refs {dropped_chars}")
+            if dropped_loc:
+                print(f"        ⚠️  Beat {beat.id}: dropped unresolved location ref '{dropped_loc}'")
 
     def get_next_beat(self) -> Optional[PlotBeat]:
         outline = self.load_outline()
@@ -87,6 +108,42 @@ class PlotOutlineManager:
             if b.status == "pending":
                 return b
         return None
+
+    # ---------- Rolling horizon (Phase 2) ----------
+    def revise_horizon(
+        self,
+        reason: str = "",
+        count: int = 5,
+        current_tick: Optional[int] = None,
+    ) -> Dict[str, List[str]]:
+        """Discard the stale pending lookahead and regenerate it from current canon.
+
+        This is the rolling-horizon mechanism: the next few beats are re-derived
+        from what actually happened (recent scenes, open loops, live rosters)
+        rather than executed from a plan laid down before the prose existed.
+
+        Generation runs *first*; only if it yields beats do we abandon the
+        existing pending horizon, so a generation failure never strands the story
+        with no beats to execute. Completed / in-progress beats are never touched.
+
+        Returns ``{"abandoned": [ids], "generated": [ids]}``.
+        """
+        new_beats = self.generate_next_beats(count=count)
+        if not new_beats:
+            return {"abandoned": [], "generated": []}
+
+        outline = self.load_outline()
+        abandoned: List[str] = []
+        for b in outline.beats:
+            if b.status == "pending":
+                b.status = "abandoned"
+                b.abandoned_reason = reason
+                b.revised_at_tick = current_tick
+                abandoned.append(b.id)
+        self.save_outline(outline)
+
+        added = self.add_beats(new_beats)
+        return {"abandoned": abandoned, "generated": [b.id for b in added]}
 
     # ---------- Utilities ----------
     def _build_generation_context(self, count: int) -> Dict[str, Any]:
@@ -116,11 +173,31 @@ class PlotOutlineManager:
             recent_lines.append(f"{sid}: {s.title or ''} — {summ}")
         recent_text = "\n".join(recent_lines) if recent_lines else "None"
 
+        # Character roster (real IDs the beat generator must reference)
+        char_lines = []
+        for cid in sorted(self.memory.list_characters()):
+            c = self.memory.load_character(cid)
+            if not c:
+                continue
+            char_lines.append(f"{c.id}: {c.name} ({c.role})")
+        characters_text = "\n".join(char_lines) if char_lines else "None"
+
+        # Location roster (real IDs the beat generator must reference)
+        loc_lines = []
+        for lid in sorted(self.memory.list_locations()):
+            loc = self.memory.load_location(lid)
+            if not loc:
+                continue
+            loc_lines.append(f"{loc.id}: {loc.name}")
+        locations_text = "\n".join(loc_lines) if loc_lines else "None"
+
         return {
             "novel_name": novel_name,
             "current_tick": current_tick,
             "open_loops": open_loops_text,
             "recent_scenes": recent_text,
+            "characters": characters_text,
+            "locations": locations_text,
             "count": count,
             "planner_max_tokens": 1000,
         }

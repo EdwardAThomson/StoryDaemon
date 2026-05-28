@@ -560,7 +560,7 @@ class PlotBeat:
     plot_threads: List[str] = field(default_factory=list)
     tension_target: Optional[int] = None  # 0-10 target tension level
     prerequisites: List[str] = field(default_factory=list)
-    status: str = "pending"  # pending, in_progress, completed, skipped
+    status: str = "pending"  # pending, in_progress, completed, skipped, abandoned
     created_at: str = ""
     executed_in_scene: Optional[str] = None
     execution_notes: str = ""
@@ -568,6 +568,11 @@ class PlotBeat:
     # Verification metadata
     verification_score: Optional[float] = None  # 0.0-1.0 confidence score
     verification_method: Optional[str] = None   # trusted_planner, semantic, llm, manual
+
+    # Rolling-horizon (Phase 2) bookkeeping; mirrors novel_agent/plot/entities.py
+    # since both managers read/write the same plot_outline.json via cls(**data).
+    abandoned_reason: str = ""
+    revised_at_tick: Optional[int] = None
 
     # Metadata for validation / analysis
     advances_character_arcs: List[str] = field(default_factory=list)

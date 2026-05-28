@@ -193,6 +193,16 @@ The following context includes FULL TEXT from the most recent scenes to help you
 
 {location_details}
 
+## Cast & Naming
+
+Existing characters — refer to them by these exact names; never rename them:
+{existing_characters}
+
+NAMING RULE — you must never invent a character name:
+- Incidental walk-ons (a guard, a clerk, a passerby) should stay unnamed — refer to them by role.
+- If a NEW character genuinely needs a name for dialogue or continuity, use one of these pre-approved names (top of list first), not one you make up:
+{approved_new_names}
+
 ## Your Task
 
 Write a scene passage from {pov_character_name}'s deep POV that ACCOMPLISHES THE KEY CHANGE or CLEARLY ACHIEVES THE PROGRESS MILESTONE described above.{scene_length_guidance}
@@ -234,6 +244,7 @@ Write a scene passage from {pov_character_name}'s deep POV that ACCOMPLISHES THE
    - Use "{pov_character_name}" when introducing the character or for clarity
    - After introduction, you can vary between the name and pronouns naturally
    - NEVER invent nicknames or alternate names not provided
+   - NEVER invent a NEW character's name — use the cast or an approved name from "Cast & Naming" above (unnamed walk-ons may stay unnamed)
 2. **Third-person POV** - Write in third person using "{pov_character_name}" or pronouns (he/she)
    - NEVER use first person ("I", "my", "me") unless in dialogue
    - Example: "{pov_character_name} pressed a palm against..." NOT "I pressed my palm against..."
@@ -386,8 +397,8 @@ Return your answer as JSON only, with no explanations, no markdown fences, and n
   "beats": [
     {{
       "description": "...",
-      "characters_involved": ["C0", "C1"],
-      "location": "L2",
+      "characters_involved": ["C000", "C001"],
+      "location": "L000",
       "plot_threads": ["thread_a"],
       "tension_target": 7,
       "prerequisites": [],
@@ -404,6 +415,12 @@ Do not include the fields id, status, created_at, executed_in_scene, or executio
 Novel: {novel_name}
 Current tick: {current_tick}
 
+## Characters (use these exact IDs)
+{characters}
+
+## Locations (use these exact IDs)
+{locations}
+
 ## Open loops
 {open_loops}
 
@@ -419,6 +436,7 @@ Each beat must follow these constraints:
 - Avoid more than 2–3 proper nouns or technical terms in a single description.
 - Favor concrete external actions and observable changes over vague summaries or internal monologue.
 - The "plot_threads" field should list at most 3 concise thread names per beat; pick only the most relevant threads.
+- For "characters_involved" and "location", use ONLY the exact IDs listed in the Characters and Locations sections above (for example C000, L000). Never invent new IDs or abbreviate them; omit the field or use an empty list if no existing entity fits.
 
 # Your task
 

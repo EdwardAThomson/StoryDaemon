@@ -41,6 +41,8 @@ from .commands.plot import (
     display_next_beat,
     generate_and_append_beats_cli,
     display_generated_beats,
+    revise_and_regenerate_beats_cli,
+    display_revised_beats,
 )
 
 
@@ -434,11 +436,13 @@ def tick(
         
         # Get beat_mode for strict name generation enforcement
         beat_mode = config.get('plot.beat_mode', 'soft_hint')
-        
+        # Genre drives grounded name generation (falls back to scifi banks)
+        genre = (state.get('story_foundation') or {}).get('genre') or 'scifi'
+
         tool_registry.register(name_gen_tool)
         tool_registry.register(MemorySearchTool(memory_manager, vector_store))
-        tool_registry.register(CharacterGenerateTool(memory_manager, vector_store, name_gen_tool.generator, beat_mode=beat_mode))
-        tool_registry.register(LocationGenerateTool(memory_manager, vector_store))
+        tool_registry.register(CharacterGenerateTool(memory_manager, vector_store, name_gen_tool.generator, beat_mode=beat_mode, genre=genre))
+        tool_registry.register(LocationGenerateTool(memory_manager, vector_store, name_gen_tool.generator, genre=genre))
         tool_registry.register(RelationshipCreateTool(memory_manager))
         tool_registry.register(RelationshipUpdateTool(memory_manager))
         tool_registry.register(RelationshipQueryTool(memory_manager))
@@ -642,11 +646,13 @@ def run(
                 
                 # Get beat_mode for strict name generation enforcement
                 beat_mode = config.get('plot.beat_mode', 'soft_hint')
-                
+                # Genre drives grounded name generation (falls back to scifi banks)
+                genre = (state.get('story_foundation') or {}).get('genre') or 'scifi'
+
                 tool_registry.register(name_gen_tool)
                 tool_registry.register(MemorySearchTool(memory_manager, vector_store))
-                tool_registry.register(CharacterGenerateTool(memory_manager, vector_store, name_gen_tool.generator, beat_mode=beat_mode))
-                tool_registry.register(LocationGenerateTool(memory_manager, vector_store))
+                tool_registry.register(CharacterGenerateTool(memory_manager, vector_store, name_gen_tool.generator, beat_mode=beat_mode, genre=genre))
+                tool_registry.register(LocationGenerateTool(memory_manager, vector_store, name_gen_tool.generator, genre=genre))
                 tool_registry.register(RelationshipCreateTool(memory_manager))
                 tool_registry.register(RelationshipUpdateTool(memory_manager))
                 tool_registry.register(RelationshipQueryTool(memory_manager))
@@ -1178,6 +1184,63 @@ def plot_generate(
 
         result = generate_and_append_beats_cli(project_dir, count)
         display_generated_beats(result)
+
+    except ValueError as e:
+        typer.echo(f"❌ Error: {e}", err=True)
+        raise typer.Exit(1)
+
+
+@plot_app.command("revise")
+def plot_revise(
+    count: int = typer.Option(
+        5,
+        "--count",
+        "-n",
+        help="Number of fresh beats to regenerate for the new horizon",
+    ),
+    reason: str = typer.Option(
+        "manual revise",
+        "--reason",
+        "-r",
+        help="Why the horizon is being revised (recorded on abandoned beats)",
+    ),
+    project: Optional[str] = typer.Option(
+        None,
+        "--project",
+        "-p",
+        help="Path to novel project (default: current directory)",
+    ),
+):
+    """Rolling horizon: abandon the pending beats and regenerate them from canon.
+
+    Manually triggers the Phase 2 rolling-horizon mechanism: the existing pending
+    beats are abandoned and a fresh horizon is re-derived from what the story has
+    actually become (recent scenes, open loops, live rosters). New beats are
+    generated first, so an LLM failure leaves the current outline untouched.
+    Completed / in-progress beats are never disturbed.
+    """
+    try:
+        project_dir = Path(find_project_dir(project))
+        config = get_project_config(str(project_dir))
+
+        backend = config.get("llm.backend", "codex")
+        codex_bin_effective = config.get("llm.codex_bin_path", "codex")
+        model = (
+            config.get("llm.model")
+            or config.get("llm.openai_model", "gpt-5.1")
+        )
+
+        typer.echo(f"📍 Project: {project_dir}")
+        typer.echo(f"🔧 Using LLM backend: {backend} (model={model})")
+
+        try:
+            initialize_llm(backend=backend, codex_bin=codex_bin_effective, model=model)
+        except RuntimeError as e:
+            typer.echo(f"❌ Failed to initialize LLM backend: {e}", err=True)
+            raise typer.Exit(1)
+
+        result = revise_and_regenerate_beats_cli(project_dir, count, reason=reason)
+        display_revised_beats(result)
 
     except ValueError as e:
         typer.echo(f"❌ Error: {e}", err=True)

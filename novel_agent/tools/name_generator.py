@@ -19,9 +19,37 @@ class NameGenerator:
         self.data_dir = Path(data_dir)
         self.scifi_data = self._load_json("scifi_syllables.json")
         self.titles_data = self._load_json("titles.json")
-        self.used_names = set()  # Track used names for uniqueness
+        self.place_data = self._load_json("place_syllables.json")
+        # Only scifi person-name banks exist today; fantasy/modern fall back to it.
+        self.banks = {"scifi": self.scifi_data}
+        self.used_names = set()   # Person names used this process
+        self.used_places = set()  # Place names used this process
         self.vowels = set('aeiou')
         self.consonants = set('bcdfghjklmnpqrstvwxyz')
+
+    def _normalize_genre(self, genre: Optional[str]) -> str:
+        """Map a free-text story genre to an available name bank key."""
+        if not genre:
+            return "scifi"
+        g = genre.lower()
+        if any(k in g for k in ["fantasy", "myth", "medieval", "sword"]):
+            return "fantasy"
+        if any(k in g for k in ["modern", "contemp", "thriller", "noir", "realis", "crime"]):
+            return "modern"
+        return "scifi"
+
+    def _bank_for_genre(self, genre: Optional[str]) -> dict:
+        return self.banks.get(self._normalize_genre(genre), self.scifi_data)
+
+    def register_used_name(self, full_name: Optional[str]) -> None:
+        """Mark a person name as taken so it won't be regenerated."""
+        if full_name and full_name.strip():
+            self.used_names.add(full_name.strip())
+
+    def register_used_place(self, name: Optional[str]) -> None:
+        """Mark a place name as taken so it won't be regenerated."""
+        if name and name.strip():
+            self.used_places.add(name.strip())
     
     def _load_json(self, filename: str) -> dict:
         """Load name data from JSON file.
@@ -61,10 +89,8 @@ class NameGenerator:
         if title:
             title = self._validate_title_gender(title, gender)
         
+        data = self._bank_for_genre(genre)
         for attempt in range(max_attempts):
-            # Currently only scifi is implemented
-            data = self.scifi_data
-            
             first_name = self._generate_syllable_name(
                 data["first_name"],
                 gender
@@ -206,9 +232,46 @@ class NameGenerator:
         # Title is gender-neutral or already correct
         return title
     
+    def generate_place_name(
+        self,
+        descriptor: Optional[str] = None,
+        genre: str = "scifi",
+        max_attempts: int = 50,
+    ) -> Dict[str, str]:
+        """Coin a unique place name.
+
+        Python owns the proper-noun root (e.g. "Vernholt"); the optional
+        ``descriptor`` is an LLM-supplied common noun (e.g. "Town Hall") that is
+        appended, giving "Vernholt Town Hall". With no descriptor a standalone
+        toponym is returned.
+
+        Returns a dict with ``full_name`` and ``root``.
+        """
+        descriptor = (descriptor or "").strip()
+        for _ in range(max_attempts):
+            root = self._generate_syllable_name(self.place_data, "neutral")
+            root = root[:1].upper() + root[1:]
+
+            pattern = random.choice(self.place_data.get("patterns", ["{root}"]))
+            base = pattern.format(
+                root=root,
+                prefix=random.choice(self.place_data.get("prefixes", ["New"])),
+            )
+
+            full_name = f"{base} {descriptor}".strip() if descriptor else base
+            if full_name not in self.used_places:
+                self.used_places.add(full_name)
+                return {"full_name": full_name, "root": root}
+
+        raise ValueError(
+            f"Could not generate unique place name after {max_attempts} attempts. "
+            f"Used places: {len(self.used_places)}"
+        )
+
     def reset_used_names(self):
         """Reset the set of used names. Useful for testing or new projects."""
         self.used_names.clear()
+        self.used_places.clear()
 
 
 class NameGeneratorTool(Tool):

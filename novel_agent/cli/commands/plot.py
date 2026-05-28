@@ -262,8 +262,8 @@ def _build_plot_generation_prompt(
   "beats": [
     {
       "description": "...",
-      "characters_involved": ["C0", "C1"],
-      "location": "L2",
+      "characters_involved": ["C000", "C001"],
+      "location": "L000",
       "plot_threads": ["thread_a"],
       "tension_target": 7,
       "prerequisites": [],
@@ -274,10 +274,26 @@ def _build_plot_generation_prompt(
   ]
 }"""
 
+    # Entity rosters (real IDs the beat generator must reference)
+    char_lines = []
+    for cid in sorted(memory.list_characters()):
+        c = memory.load_character(cid)
+        if not c:
+            continue
+        char_lines.append(f"{c.id}: {c.name} ({c.role})")
+    loc_lines = []
+    for lid in sorted(memory.list_locations()):
+        loc = memory.load_location(lid)
+        if not loc:
+            continue
+        loc_lines.append(f"{loc.id}: {loc.name}")
+
     open_loops_block = "\n".join(open_loop_lines) if open_loop_lines else "None"
     recent_summaries_block = "\n".join(reversed(recent_summaries)) if recent_summaries else "None"
     tension_block = "\n".join(tension_lines) if tension_lines else "None"
     recent_beats_block = "\n".join(recent_beats_lines) if recent_beats_lines else "None"
+    characters_block = "\n".join(char_lines) if char_lines else "None"
+    locations_block = "\n".join(loc_lines) if loc_lines else "None"
 
     prompt = f"""You are a plot architect for a long-form story. Your job is to generate the next {count} factual plot beats.
 
@@ -296,6 +312,12 @@ Genre: {foundation.get("genre", "unknown")}
 Premise: {foundation.get("premise", "unknown")}
 Setting: {foundation.get("setting", "unknown")}
 Tone: {foundation.get("tone", "unknown")}
+
+## Characters (use these exact IDs)
+{characters_block}
+
+## Locations (use these exact IDs)
+{locations_block}
 
 ## Open loops
 {open_loops_block}
@@ -318,6 +340,7 @@ Each beat must follow these constraints:
 - Avoid more than 2–3 proper nouns or technical terms in a single description.
 - Favor concrete external actions and observable changes over vague summaries or internal monologue.
 - The "plot_threads" field should list at most 3 concise thread names per beat; pick only the most relevant threads.
+- For "characters_involved" and "location", use ONLY the exact IDs listed in the Characters and Locations sections above (for example C000, L000). Never invent new IDs or abbreviate them; omit the field or use an empty list if no existing entity fits.
 
 # Your task
 
@@ -388,6 +411,70 @@ def display_generated_beats(result: Dict[str, Any]) -> None:
         if missing:
             for item in missing:
                 print(f"  Beat {item['beat_id']} has missing prerequisite {item['prerequisite']}")
+
+
+def revise_and_regenerate_beats_cli(
+    project_dir: Path,
+    count: int,
+    reason: str = "manual revise",
+    max_tokens: int = 2000,
+) -> Dict[str, Any]:
+    """Rolling horizon (manual trigger): regenerate the pending beats from canon.
+
+    Mirrors generate_and_append_beats_cli but first abandons the existing pending
+    horizon, so the next few beats are re-derived from what the story has actually
+    become (recent scenes, open loops, live rosters) rather than executed from a
+    plan laid down before the prose existed.
+
+    Generation runs first; only on success are pending beats abandoned, so an LLM
+    failure never strands the story with no beats. Completed / in-progress beats
+    are left untouched.
+
+    Assumes the LLM backend has already been initialized via initialize_llm.
+    """
+    manager = PlotOutlineManager(project_dir)
+
+    # 1. Generate first — a failure here raises before we touch the outline.
+    prompt = _build_plot_generation_prompt(project_dir, count)
+    raw = send_prompt_with_retry(prompt, max_tokens=max_tokens)
+    beat_dicts = _parse_beats_json(raw)
+    if len(beat_dicts) > count:
+        beat_dicts = beat_dicts[:count]
+    if not beat_dicts:
+        return {"abandoned": [], "beats": [], "issues": {}}
+
+    # 2. Abandon the stale pending horizon.
+    current_tick = load_project_state(str(project_dir)).get("current_tick")
+    outline = manager.load_outline()
+    abandoned: List[str] = []
+    for beat in outline.beats:
+        if beat.status == "pending":
+            beat.status = "abandoned"
+            beat.abandoned_reason = reason
+            beat.revised_at_tick = current_tick
+            abandoned.append(beat.id)
+    manager.save_outline(outline)
+
+    # 3. Mint + append the fresh horizon. IDs are computed against the saved
+    #    outline so abandoned beats are counted and never reused.
+    outline = manager.load_outline()
+    new_beats = _assign_new_beat_ids(outline, beat_dicts)
+    updated_outline = manager.add_beats(new_beats)
+    issues = manager.validate_outline(updated_outline)
+
+    return {"abandoned": abandoned, "beats": new_beats, "issues": issues}
+
+
+def display_revised_beats(result: Dict[str, Any]) -> None:
+    """Pretty-print the outcome of a manual horizon revision."""
+    abandoned: List[str] = result.get("abandoned", []) or []
+    if abandoned:
+        print()
+        print(f"Abandoned {len(abandoned)} pending beat(s): {', '.join(abandoned)}")
+    else:
+        print()
+        print("No pending beats to abandon.")
+    display_generated_beats(result)
 
 
 def clear_plot_outline(project_dir: Path, confirm: bool = True) -> bool:

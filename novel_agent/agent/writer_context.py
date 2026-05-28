@@ -3,13 +3,15 @@
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 
+from ..tools.name_generator import NameGenerator
+
 
 class WriterContextBuilder:
     """Builds context for the scene writer LLM."""
-    
+
     def __init__(self, memory_manager, vector_store, config):
         """Initialize writer context builder.
-        
+
         Args:
             memory_manager: MemoryManager instance
             vector_store: VectorStore instance
@@ -18,6 +20,7 @@ class WriterContextBuilder:
         self.memory = memory_manager
         self.vector = vector_store
         self.config = config
+        self.name_generator = NameGenerator(Path(__file__).parent.parent / "data" / "names")
     
     def build_writer_context(
         self,
@@ -73,7 +76,12 @@ class WriterContextBuilder:
         
         # Format plot beat section (Phase 5)
         plot_beat_section = self._format_plot_beat_section(plan)
-        
+
+        # Cast roster + a pool of pre-minted names for any new character (Phase 1 grounding)
+        existing_characters, approved_new_names = self._build_cast_and_name_pool(
+            project_state, pov_character_id
+        )
+
         return {
             "novel_name": novel_name,
             "current_tick": current_tick,
@@ -94,8 +102,38 @@ class WriterContextBuilder:
             "location_details": location_details,
             "recent_context": recent_context,
             "tool_results_summary": tool_results_summary,
-            "scene_length_guidance": scene_length_guidance
+            "scene_length_guidance": scene_length_guidance,
+            "existing_characters": existing_characters,
+            "approved_new_names": approved_new_names
         }
+
+    def _build_cast_and_name_pool(self, project_state: Dict[str, Any],
+                                  pov_character_id: str) -> tuple[str, str]:
+        """List the existing cast and mint a small pool of unused, grounded names.
+
+        The writer is told to use cast names or, only when a new character truly
+        needs a name, one of the pooled names — so it never invents one.
+        """
+        cast_lines = []
+        for cid in sorted(self.memory.list_characters()):
+            c = self.memory.load_character(cid)
+            if not c:
+                continue
+            self.name_generator.register_used_name(c.full_name)
+            marker = " (POV)" if cid == pov_character_id else ""
+            cast_lines.append(f"- {c.display_name} ({c.role}){marker}")
+        existing_characters = "\n".join(cast_lines) if cast_lines else "(none yet)"
+
+        genre = (project_state.get("story_foundation") or {}).get("genre") or "scifi"
+        pool = []
+        for _ in range(4):
+            try:
+                gender = "male" if len(pool) % 2 == 0 else "female"
+                pool.append(self.name_generator.generate_name(gender=gender, genre=genre)["full_name"])
+            except ValueError:
+                break
+        approved_new_names = "\n".join(f"- {n}" for n in pool) if pool else "(use a role descriptor instead)"
+        return existing_characters, approved_new_names
     
     def _get_character_details(self, character_id: str) -> tuple[str, str]:
         """Get character name and formatted details.

@@ -4,7 +4,7 @@ import json
 import re
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 from .context import ContextBuilder
 from .prompts import format_planner_prompt
@@ -27,6 +27,8 @@ from ..memory.manager import MemoryManager
 from ..memory.vector_store import VectorStore
 from ..memory.summarizer import SceneSummarizer
 from ..plot.manager import PlotOutlineManager
+from ..contracts.manager import ContractManager
+from ..contracts.conditions import CheckContext
 
 
 class StoryAgent:
@@ -124,7 +126,10 @@ class StoryAgent:
         
         # Plot-first components
         self.plot_manager = PlotOutlineManager(self.project_path, llm_interface)
-        
+
+        # Contract validation layer (opt-in via generation.use_contracts)
+        self.contract_manager = ContractManager(self.project_path)
+
         # Load state
         self.state = self._load_state()
     
@@ -210,11 +215,14 @@ class StoryAgent:
                         char_id = action.get("result", {}).get("character_id")
                         if char_id:
                             self.state["active_character"] = char_id
-                            # Also update the plan's POV character to use the real ID
-                            if plan.get("pov_character") and not plan["pov_character"].startswith("C"):
+                            # Point POV at the real ID unless it already names a real character
+                            if plan.get("pov_character") and plan["pov_character"] not in self.memory.list_characters():
                                 plan["pov_character"] = char_id
                             break
-            
+
+            # Resolve planner POV/location refs (name/nickname/ID) to canonical IDs
+            self._resolve_plan_entities(plan)
+
             # Step 5: Store plan and results
             print("   5. Storing plan...")
             plan_file = self.plan_manager.save_plan(
@@ -319,7 +327,14 @@ class StoryAgent:
                         )
                     else:
                         print(f"        ⚠️  Beat may not have been fully executed (score={semantic_score:.2f} < {score_threshold})")
-                        if not self.config.get('generation.allow_beat_skip', False):
+                        if self.config.get('generation.rolling_horizon', False):
+                            # The story diverged from the planned beat: re-derive the
+                            # pending horizon from what was actually written.
+                            self._revise_horizon(
+                                reason=f"beat {current_beat.id} diverged (score={semantic_score:.2f} < {score_threshold})",
+                                tick=tick,
+                            )
+                        elif not self.config.get('generation.allow_beat_skip', False):
                             print(f"        Keeping beat {current_beat.id} as pending")
                 else:
                     # Auto-mark complete without verification
@@ -338,6 +353,13 @@ class StoryAgent:
                     scene.tension_category = tension_result['tension_category']
                     self.memory.save_scene(scene)
                     print(f"        Tension: {tension_result['tension_level']}/10 ({tension_result['tension_category']})")
+
+            # Step 8.7: Validate beat contract postconditions (opt-in, record-only)
+            contract_result = self._check_beat_contract(
+                current_beat,
+                scene_data["text"],
+                tension_result.get("tension_level"),
+            )
             
             # Step 8.6: Detect new characters (Phase 6)
             if self.config.get('generation.auto_detect_characters', True):
@@ -411,7 +433,10 @@ class StoryAgent:
             
             if promotion_result:
                 result["goal_promoted"] = promotion_result
-            
+
+            if contract_result:
+                result["contract"] = contract_result
+
             if tension_result.get('enabled'):
                 result["tension"] = {
                     "level": tension_result['tension_level'],
@@ -653,27 +678,50 @@ class StoryAgent:
         
         return self.executor.execute_plan(remaining_plan, tick)
     
+    def _resolve_plan_entities(self, plan: Dict) -> None:
+        """Map planner-supplied pov_character / target_location refs to canonical IDs.
+
+        The planner may emit a canonical ID (``C000``), a name, or a nickname; it
+        may also emit a name that happens to start with ``C``/``L``. Resolve against
+        current memory rather than guessing from the prefix, so a real reference
+        lands on its ID and a name like "Caleb" is not mistaken for an ID. Refs
+        that resolve to nothing are left untouched for the caller's fallback.
+        """
+        from ..memory.entity_resolver import EntityResolver
+        resolver = EntityResolver(self.memory)
+        pov = plan.get("pov_character")
+        if pov:
+            cid = resolver.resolve_character(pov)
+            if cid:
+                plan["pov_character"] = cid
+        loc = plan.get("target_location")
+        if loc:
+            lid = resolver.resolve_location(loc)
+            if lid:
+                plan["target_location"] = lid
+
     def _update_plan_with_entity_ids(self, plan: Dict, entity_results: Dict):
         """Update plan with real entity IDs after generation.
-        
+
         Args:
             plan: The plan to update (modified in place)
             entity_results: Results from entity generation
         """
+        # Resolve any planner refs that point at entities now in memory.
+        self._resolve_plan_entities(plan)
+        existing_chars = set(self.memory.list_characters())
+        existing_locs = set(self.memory.list_locations())
         for action in entity_results.get("actions_executed", []):
             if action.get("tool") == "character.generate" and action.get("success"):
                 char_id = action.get("result", {}).get("character_id")
-                if char_id and plan.get("pov_character"):
-                    # Replace placeholder with real ID
-                    if not plan["pov_character"].startswith("C"):
-                        plan["pov_character"] = char_id
-            
+                # Fallback: still-unresolved POV placeholder -> freshly generated char.
+                if char_id and plan.get("pov_character") and plan["pov_character"] not in existing_chars:
+                    plan["pov_character"] = char_id
+
             elif action.get("tool") == "location.generate" and action.get("success"):
                 loc_id = action.get("result", {}).get("location_id")
-                if loc_id and plan.get("target_location"):
-                    # Replace placeholder with real ID
-                    if not plan["target_location"].startswith("L"):
-                        plan["target_location"] = loc_id
+                if loc_id and plan.get("target_location") and plan["target_location"] not in existing_locs:
+                    plan["target_location"] = loc_id
     
     def _merge_execution_results(self, entity_results: Dict, remaining_results: Dict) -> Dict:
         """Merge entity and remaining execution results.
@@ -1101,6 +1149,25 @@ class StoryAgent:
         outline = self.plot_manager.load_outline()
         pending_count = sum(1 for beat in outline.beats if beat.status == "pending")
         return pending_count < threshold
+
+    def _revise_horizon(self, reason: str, tick: int) -> Optional[Dict[str, Any]]:
+        """Rolling horizon (Phase 2): regenerate the pending beats from current canon.
+
+        Graceful degradation per repo convention: a revision failure must never
+        kill the tick (which would stop a multi-tick ``run``).
+        """
+        try:
+            beats_ahead = self.config.get('generation.plot_beats_ahead', 5)
+            result = self.plot_manager.revise_horizon(
+                reason=reason, count=beats_ahead, current_tick=tick
+            )
+            if result.get("abandoned") or result.get("generated"):
+                print(f"        ↻ Rolling horizon: abandoned {len(result['abandoned'])}, "
+                      f"generated {len(result['generated'])} beat(s)")
+            return result
+        except Exception as e:
+            print(f"        ⚠️  Horizon revision failed: {e}")
+            return None
     
     def _verify_beat_execution(self, scene_text: str, beat) -> bool:
         """Verify that the scene accomplished the plot beat (Phase 5).
@@ -1157,9 +1224,59 @@ Answer:"""
             # Default to True on error (graceful degradation)
             return True
     
+    def _check_beat_contract(self, beat, scene_text: str, tension_level) -> dict:
+        """Validate a beat's contract postconditions against the written scene.
+
+        Opt-in via ``generation.use_contracts``. Record-only: a failing contract
+        is logged and returned in the tick result but never raises, matching the
+        graceful-degradation convention of the other extractors. Returns None
+        when contracts are disabled or no contract is defined for this beat.
+        """
+        if beat is None:
+            return None
+        if not self.config.get('generation.use_contracts', False):
+            return None
+
+        import logging
+        logger = logging.getLogger(__name__)
+
+        try:
+            contract = self.contract_manager.get(beat.id)
+        except Exception as e:
+            logger.warning(f"Failed to load contract for beat {beat.id}: {e}")
+            return None
+
+        if contract is None:
+            return None
+
+        ctx = CheckContext(
+            memory=self.memory,
+            state=self.state,
+            prose=scene_text,
+            scene_tension=tension_level,
+        )
+
+        try:
+            result = contract.validate_postconditions(ctx)
+        except Exception as e:
+            logger.error(f"Contract validation crashed for beat {beat.id}: {e}")
+            return None
+
+        if result.is_valid:
+            print(f"        ✓ Contract satisfied for beat {beat.id} "
+                  f"({len(result.passed)} postconditions)")
+        else:
+            print(f"        ⚠️  Contract violations for beat {beat.id}:")
+            for failure in result.failures:
+                print(f"           - {failure}")
+
+        payload = result.to_dict()
+        payload["beat_id"] = beat.id
+        return payload
+
     def _mark_beat_complete(
-        self, 
-        beat_id: str, 
+        self,
+        beat_id: str,
         scene_id: str,
         verification_score: float = None,
         verification_method: str = None
