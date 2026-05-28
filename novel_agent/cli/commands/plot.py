@@ -413,6 +413,70 @@ def display_generated_beats(result: Dict[str, Any]) -> None:
                 print(f"  Beat {item['beat_id']} has missing prerequisite {item['prerequisite']}")
 
 
+def revise_and_regenerate_beats_cli(
+    project_dir: Path,
+    count: int,
+    reason: str = "manual revise",
+    max_tokens: int = 2000,
+) -> Dict[str, Any]:
+    """Rolling horizon (manual trigger): regenerate the pending beats from canon.
+
+    Mirrors generate_and_append_beats_cli but first abandons the existing pending
+    horizon, so the next few beats are re-derived from what the story has actually
+    become (recent scenes, open loops, live rosters) rather than executed from a
+    plan laid down before the prose existed.
+
+    Generation runs first; only on success are pending beats abandoned, so an LLM
+    failure never strands the story with no beats. Completed / in-progress beats
+    are left untouched.
+
+    Assumes the LLM backend has already been initialized via initialize_llm.
+    """
+    manager = PlotOutlineManager(project_dir)
+
+    # 1. Generate first — a failure here raises before we touch the outline.
+    prompt = _build_plot_generation_prompt(project_dir, count)
+    raw = send_prompt_with_retry(prompt, max_tokens=max_tokens)
+    beat_dicts = _parse_beats_json(raw)
+    if len(beat_dicts) > count:
+        beat_dicts = beat_dicts[:count]
+    if not beat_dicts:
+        return {"abandoned": [], "beats": [], "issues": {}}
+
+    # 2. Abandon the stale pending horizon.
+    current_tick = load_project_state(str(project_dir)).get("current_tick")
+    outline = manager.load_outline()
+    abandoned: List[str] = []
+    for beat in outline.beats:
+        if beat.status == "pending":
+            beat.status = "abandoned"
+            beat.abandoned_reason = reason
+            beat.revised_at_tick = current_tick
+            abandoned.append(beat.id)
+    manager.save_outline(outline)
+
+    # 3. Mint + append the fresh horizon. IDs are computed against the saved
+    #    outline so abandoned beats are counted and never reused.
+    outline = manager.load_outline()
+    new_beats = _assign_new_beat_ids(outline, beat_dicts)
+    updated_outline = manager.add_beats(new_beats)
+    issues = manager.validate_outline(updated_outline)
+
+    return {"abandoned": abandoned, "beats": new_beats, "issues": issues}
+
+
+def display_revised_beats(result: Dict[str, Any]) -> None:
+    """Pretty-print the outcome of a manual horizon revision."""
+    abandoned: List[str] = result.get("abandoned", []) or []
+    if abandoned:
+        print()
+        print(f"Abandoned {len(abandoned)} pending beat(s): {', '.join(abandoned)}")
+    else:
+        print()
+        print("No pending beats to abandon.")
+    display_generated_beats(result)
+
+
 def clear_plot_outline(project_dir: Path, confirm: bool = True) -> bool:
     """Clear all plot beats from the project.
     
