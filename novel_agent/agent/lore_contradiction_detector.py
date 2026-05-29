@@ -177,7 +177,12 @@ class LoreContradictionDetector:
 
         Records, on both items: the partner ID (``potential_contradictions``)
         and a verdict (``contradiction_details``) naming the canon (older) item
-        and the reason. Does not quarantine anything — Phase 3 acts on these.
+        and the reason.
+
+        Phase 3 enforcement (``lore.enforce_contradictions``): the non-canon
+        (newer) item is marked ``status = "disputed"`` so it is filtered out of
+        the context the planner sees. Disputed lore is kept on disk for audit;
+        the canon (older) item stays ``active``.
         """
         verdicts = self.check_for_contradictions(lore_id)
         if not verdicts:
@@ -186,6 +191,8 @@ class LoreContradictionDetector:
         lore = self.memory.load_lore(lore_id)
         if not lore:
             return
+
+        enforce = self.config.get('lore.enforce_contradictions', True)
 
         for verdict in verdicts:
             other = self.memory.load_lore(verdict["id"])
@@ -198,6 +205,12 @@ class LoreContradictionDetector:
 
             self._record(lore, other.id, canon.id, reason, method)
             self._record(other, lore.id, canon.id, reason, method)
+
+            if enforce:
+                # The loser is whichever item is not canon (the newer one).
+                loser = other if canon.id == lore.id else lore
+                loser.status = "disputed"
+
             self.memory.save_lore(other)
 
         self.memory.save_lore(lore)

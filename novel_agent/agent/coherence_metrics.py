@@ -80,6 +80,9 @@ class CoherenceMetrics:
         loops_closed = sum(1 for l in loops if scene_id and l.resolved_in_scene == scene_id)
         open_loops_total = sum(1 for l in loops if l.status == "open")
 
+        all_lore = self.memory.load_all_lore()
+        disputed_lore_total = sum(1 for l in all_lore if getattr(l, "status", "active") == "disputed")
+
         tension_level = None
         tension_category = None
         if tension_result and tension_result.get("enabled"):
@@ -104,7 +107,8 @@ class CoherenceMetrics:
             "loops_opened": loops_opened,
             "loops_closed": loops_closed,
             "open_loops_total": open_loops_total,
-            "contradictions_detected": self._count_contradictions(tick),
+            "contradictions_detected": self._count_contradictions(tick, all_lore),
+            "disputed_lore_total": disputed_lore_total,
             "tension_level": tension_level,
             "tension_category": tension_category,
             "goal_relevance": goal_relevance,
@@ -117,7 +121,7 @@ class CoherenceMetrics:
         """Return the recorded series (last-wins per tick, sorted by tick)."""
         return read_metrics(self.metrics_file)
 
-    def _count_contradictions(self, tick: int) -> int:
+    def _count_contradictions(self, tick: int, all_lore) -> int:
         """Count distinct contradiction pairs first detected on ``tick``.
 
         The detector records a verdict on *both* lore items, each stamped with its own
@@ -126,7 +130,7 @@ class CoherenceMetrics:
         exactly once.
         """
         pairs = set()
-        for lore in self.memory.load_all_lore():
+        for lore in all_lore:
             for detail in getattr(lore, "contradiction_details", None) or []:
                 if detail.get("detected_tick") == tick:
                     pairs.add(frozenset((lore.id, detail.get("with"))))

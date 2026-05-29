@@ -142,6 +142,30 @@ def test_update_is_idempotent():
     assert len(new.contradiction_details) == 1
 
 
+def test_enforcement_marks_newer_disputed_canon_stays_active():
+    a, b = _pair()  # a=L001 tick1 (older), b=L002 tick3 (newer)
+    det = _detector([a, b], [("L001", 0.35)], FakeLLM(contradicts=True))
+
+    det.update_contradictions("L002")  # newer item just saved
+
+    assert det.memory.load_lore("L002").status == "disputed"  # newer loses
+    assert det.memory.load_lore("L001").status == "active"     # older is canon
+
+
+def test_enforcement_off_leaves_status_active():
+    a, b = _pair()
+    cfg = Config()
+    cfg.set('lore.enforce_contradictions', False)
+    det = _detector([a, b], [("L001", 0.35)], FakeLLM(contradicts=True), cfg)
+
+    det.update_contradictions("L002")
+
+    # Still recorded (detection), but nothing disputed (no enforcement).
+    assert "L001" in det.memory.load_lore("L002").potential_contradictions
+    assert det.memory.load_lore("L002").status == "active"
+    assert det.memory.load_lore("L001").status == "active"
+
+
 def test_disabled_lore_tracking_short_circuits():
     a, b = _pair()
     cfg = Config()

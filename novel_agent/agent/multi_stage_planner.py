@@ -278,7 +278,7 @@ class MultiStagePlanner:
         
         # Semantic search for relevant lore
         try:
-            all_lore = self.memory.load_all_lore()
+            all_lore = self._active_lore()
             if all_lore:
                 relevant_lore = self._filter_relevant_lore(
                     scene_intention,
@@ -576,6 +576,16 @@ Generate your plan now:"""
         scored_loops.sort(reverse=True, key=lambda x: x[0])
         return [loop for score, loop in scored_loops[:top_k]]
     
+    def _active_lore(self) -> List[Any]:
+        """Lore visible to the planner.
+
+        Phase 3 enforcement: lore marked ``disputed`` (it lost a confirmed
+        contradiction — the newer item of the pair) is kept on disk for audit
+        but never shown to the planner, so it can no longer shape scenes.
+        """
+        return [l for l in self.memory.load_all_lore()
+                if getattr(l, "status", "active") != "disputed"]
+
     def _filter_relevant_lore(
         self,
         query: str,

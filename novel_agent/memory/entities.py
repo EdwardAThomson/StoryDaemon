@@ -533,9 +533,12 @@ class Lore:
     tags: List[str] = field(default_factory=list)  # For categorization
     related_lore: List[str] = field(default_factory=list)  # IDs of related lore
     potential_contradictions: List[str] = field(default_factory=list)  # IDs of lore confirmed to contradict this item
-    # Per-contradiction verdict records (Phase 1 detection; Phase 3 will enforce on these).
+    # Per-contradiction verdict records (Phase 1 detection; Phase 3 enforces on these).
     # Each entry: {"with": other_id, "canon": older_id, "reason": str, "detected_tick": int, "method": str}
     contradiction_details: List[Dict[str, Any]] = field(default_factory=list)
+    # Phase 3 enforcement: "active" lore is canon; "disputed" lost a confirmed contradiction
+    # (it is the newer item) and is filtered out of the context the planner sees.
+    status: str = "active"  # "active" | "disputed"
     created_at: str = ""
     
     def __post_init__(self):
