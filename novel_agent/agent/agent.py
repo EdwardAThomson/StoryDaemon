@@ -106,7 +106,7 @@ class StoryAgent:
         self.character_detector = CharacterDetector(self.memory, config)
         
         # Phase 7A.3 components
-        self.tension_evaluator = TensionEvaluator(config)
+        self.tension_evaluator = TensionEvaluator(config, llm_interface)
         
         # Phase 7A.4 components
         self.lore_extractor = LoreExtractor(llm_interface, self.memory, config)

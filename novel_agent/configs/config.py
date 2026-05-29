@@ -58,6 +58,13 @@ DEFAULT_CONFIG = {
         'enforce_contradictions': True,   # Phase 3: mark the non-canon (newer) item "disputed" and
                                           # filter it from planner context; False = detection-only
     },
+    'tension': {
+        # Scene tension scoring (0-10). The LLM scorer rates dramatic tension across the
+        # full range; the keyword heuristic is the no-LLM fallback (collapses to ~6 on real
+        # prose). generation.enable_tension_tracking is the master on/off switch.
+        'use_llm_scorer': True,
+        'max_tokens': 200,
+    },
     'coherence': {
         # Phase 3 coherence rubric — per-tick instrumentation, no behavior change.
         'enabled': True,                  # Master switch for recording memory/metrics.jsonl
