@@ -415,6 +415,7 @@ def tick(
                 backend=backend,
                 codex_bin=codex_bin_effective,
                 model=model,
+                timeout=config.get('llm.timeout', 300),
             )
             typer.echo(f"✅ LLM backend initialized: {backend}")
         except RuntimeError as e:
@@ -633,8 +634,9 @@ def run(
                     backend=backend,
                     codex_bin=codex_bin_effective,
                     model=model,
+                    timeout=config.get('llm.timeout', 300),
                 )
-                
+
                 # Initialize tool registry
                 tool_registry = ToolRegistry()
                 memory_manager = MemoryManager(project_dir)

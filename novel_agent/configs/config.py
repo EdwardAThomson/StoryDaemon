@@ -13,7 +13,9 @@ DEFAULT_CONFIG = {
         'planner_max_tokens': 1000,
         'writer_max_tokens': 3000,
         'extractor_max_tokens': 2000,
-        'timeout': 120,
+        'timeout': 300,  # Per-call timeout (seconds) for the claude-cli backend's `claude -p`
+                         # (a full agent — slower than a completion API). Any positive int; no
+                         # hard max, but huge values just delay failure when a call derails.
         'model': 'gpt-5.1',  # Generic model name for API backend (OpenAI/Gemini/Claude)
         'openai_model': 'gpt-5.1',
         'openai_api_key_env': 'OPENAI_API_KEY',
@@ -58,11 +60,24 @@ DEFAULT_CONFIG = {
         'enforce_contradictions': True,   # Phase 3: mark the non-canon (newer) item "disputed" and
                                           # filter it from planner context; False = detection-only
     },
+    'tension': {
+        # Scene tension scoring (0-10). The LLM scorer rates dramatic tension across the
+        # full range; the keyword heuristic is the no-LLM fallback (collapses to ~6 on real
+        # prose). generation.enable_tension_tracking is the master on/off switch.
+        'use_llm_scorer': True,
+        'max_tokens': 200,
+    },
     'coherence': {
         # Phase 3 coherence rubric — per-tick instrumentation, no behavior change.
         'enabled': True,                  # Master switch for recording memory/metrics.jsonl
         'goal_relevance_chars': 3000,     # Scene-prose truncation for the goal-relevance similarity check
-        'target_tension_curve': None,     # Deferred no-op placeholder for the later arc-pressure lever
+        # Arc-pressure (Phase 3): nudge the planner toward a target tension trajectory.
+        # target_story_length is the "story position" denominator — set it to the
+        # intended length (in ticks): short story vs. novella vs. novel. The curve is
+        # [progress_fraction, tension_level] control points (linearly interpolated);
+        # set it to None to disable arc-pressure.
+        'target_story_length': 40,
+        'target_tension_curve': [[0.0, 3], [0.25, 5], [0.5, 6], [0.75, 8], [0.9, 9], [1.0, 4]],
     },
     'plot': {
         # Beat integration mode: controls how strongly the agent treats plot beats.

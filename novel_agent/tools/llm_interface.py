@@ -31,6 +31,7 @@ def initialize_llm(
     backend: str = "codex",
     codex_bin: str = "codex",
     model: str = "gpt-5.1",
+    timeout: Optional[int] = None,
 ) -> LLMClient:
     """Initialize the LLM client for the given backend.
 
@@ -58,7 +59,7 @@ def initialize_llm(
     elif backend_normalized in {"gemini-cli", "gemini"}:
         _llm_client = GeminiCliInterface(model=model)
     elif backend_normalized in {"claude-cli", "claude"}:
-        _llm_client = ClaudeCliInterface()
+        _llm_client = ClaudeCliInterface(model=model, default_timeout=timeout or 300)
     else:
         raise RuntimeError(
             f"Unsupported LLM backend: {backend}. Supported backends are: 'codex', 'api', 'gemini-cli', 'claude-cli'."

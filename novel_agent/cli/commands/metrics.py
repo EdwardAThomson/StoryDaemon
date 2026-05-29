@@ -41,7 +41,7 @@ def display_metrics(info: Dict[str, Any], use_color: bool = True):
         return
 
     print()
-    header = f"   {'Tick':>4}  {'Words':>6}  {'Loops(+/-/open)':>16}  {'Contra':>6}  {'Disp':>4}  {'Tension':>9}  {'GoalRel':>7}"
+    header = f"   {'Tick':>4}  {'Words':>6}  {'Loops(+/-/open)':>16}  {'Contra':>6}  {'Disp':>4}  {'Tens(act/tgt)':>13}  {'GoalRel':>7}"
     print(bold(header))
     for r in series:
         tick = r.get("tick")
@@ -50,11 +50,14 @@ def display_metrics(info: Dict[str, Any], use_color: bool = True):
         contra = r.get("contradictions_detected", 0)
         disputed = r.get("disputed_lore_total", 0)
         level = r.get("tension_level")
+        target = r.get("target_tension")
         category = r.get("tension_category") or ""
-        tension = f"{level}/10" if level is not None else "—"
+        act = str(level) if level is not None else "—"
+        tgt = f"{target:g}" if isinstance(target, (int, float)) else "—"
+        tension = f"{act}/{tgt}"
         rel = r.get("goal_relevance")
         rel_str = f"{rel:.2f}" if isinstance(rel, (int, float)) else "—"
-        print(f"   {tick:>4}  {words:>6}  {loops:>16}  {contra:>6}  {disputed:>4}  {tension:>5} {category:<3}  {rel_str:>7}")
+        print(f"   {tick:>4}  {words:>6}  {loops:>16}  {contra:>6}  {disputed:>4}  {tension:>8} {category:<4}  {rel_str:>7}")
 
     # Tension sparkline over the run (reuses the status.py bar idiom)
     levels = [r.get("tension_level") for r in series if r.get("tension_level") is not None]
