@@ -56,6 +56,12 @@ DEFAULT_CONFIG = {
                                           # type heuristic when False or no LLM is wired in
         'contradiction_max_tokens': 200,  # Token budget for each contradiction-judging LLM call
     },
+    'coherence': {
+        # Phase 3 coherence rubric — per-tick instrumentation, no behavior change.
+        'enabled': True,                  # Master switch for recording memory/metrics.jsonl
+        'goal_relevance_chars': 3000,     # Scene-prose truncation for the goal-relevance similarity check
+        'target_tension_curve': None,     # Deferred no-op placeholder for the later arc-pressure lever
+    },
     'plot': {
         # Beat integration mode: controls how strongly the agent treats plot beats.
         #
