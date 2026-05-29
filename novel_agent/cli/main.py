@@ -932,18 +932,58 @@ def goals(
         novel goals --json
     """
     from .commands.goals import get_goals_info, display_goals, display_goals_json
-    
+
     try:
         project_dir = Path(find_project_dir(project))
         state = load_project_state(project_dir)
-        
+
         info = get_goals_info(project_dir, state)
-        
+
         if json_output:
             display_goals_json(info)
         else:
             display_goals(info)
-        
+
+    except ValueError as e:
+        typer.echo(f"❌ Error: {e}", err=True)
+        raise typer.Exit(1)
+
+
+@app.command()
+def metrics(
+    project: Optional[str] = typer.Option(
+        None,
+        "--project",
+        "-p",
+        help="Path to novel project"
+    ),
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help="Output as JSON"
+    )
+):
+    """Show the per-tick coherence rubric (Phase 3 instrumentation).
+
+    Displays open-loop churn, contradictions detected, tension, and goal relevance
+    recorded each tick in memory/metrics.jsonl.
+
+    Example:
+        novel metrics
+        novel metrics --json
+    """
+    from .commands.metrics import get_metrics_info, display_metrics, display_metrics_json
+
+    try:
+        project_dir = Path(find_project_dir(project))
+
+        info = get_metrics_info(project_dir)
+
+        if json_output:
+            display_metrics_json(info)
+        else:
+            display_metrics(info)
+
     except ValueError as e:
         typer.echo(f"❌ Error: {e}", err=True)
         raise typer.Exit(1)

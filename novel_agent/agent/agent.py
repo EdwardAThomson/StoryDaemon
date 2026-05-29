@@ -2,6 +2,7 @@
 
 import json
 import re
+import logging
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any, Optional
@@ -20,6 +21,7 @@ from .entity_updater import EntityUpdater
 from .tension_evaluator import TensionEvaluator
 from .lore_extractor import LoreExtractor
 from .lore_contradiction_detector import LoreContradictionDetector
+from .coherence_metrics import CoherenceMetrics
 from .multi_stage_planner import MultiStagePlanner
 from .character_detector import CharacterDetector
 from ..tools.registry import ToolRegistry
@@ -109,6 +111,9 @@ class StoryAgent:
         # Phase 7A.4 components
         self.lore_extractor = LoreExtractor(llm_interface, self.memory, config)
         self.lore_detector = LoreContradictionDetector(self.memory, self.vector, config, llm_interface)
+
+        # Phase 3 (Emergent Coherence) — per-tick coherence instrumentation
+        self.coherence_metrics = CoherenceMetrics(self.project_path, self.memory, self.vector, config)
         
         # Phase 7A.5 components (optional)
         self.use_multi_stage = config.get('generation.use_multi_stage_planner', True)
@@ -418,7 +423,10 @@ class StoryAgent:
             # Step 14: Update state
             self.state["current_tick"] += 1
             self._save_state()
-            
+
+            # Phase 3: record per-tick coherence metrics (instrumentation only)
+            coherence_record = self._record_coherence_metrics(tick, scene_id, scene_data, tension_result)
+
             result = {
                 "success": True,
                 "tick": tick,
@@ -430,6 +438,9 @@ class StoryAgent:
                 "eval_warnings": eval_result.get("warnings", []),
                 "entities_updated": update_stats
             }
+
+            if coherence_record:
+                result["coherence"] = coherence_record
             
             if promotion_result:
                 result["goal_promoted"] = promotion_result
@@ -597,8 +608,11 @@ class StoryAgent:
             # Increment tick
             self.state["current_tick"] += 1
             self._save_state()
-            
-            return {
+
+            # Phase 3: record per-tick coherence metrics (tick 0 has no tension evaluation)
+            coherence_record = self._record_coherence_metrics(tick, scene_id, scene_data, None)
+
+            result = {
                 "success": True,
                 "tick": tick,
                 "scene_id": scene_id,
@@ -608,6 +622,11 @@ class StoryAgent:
                 "update_stats": update_stats,
                 "actions_executed": len(execution_results.get("actions_executed", []))
             }
+
+            if coherence_record:
+                result["coherence"] = coherence_record
+
+            return result
         
         except RuntimeError as e:
             # Tool execution error
@@ -909,6 +928,29 @@ class StoryAgent:
         self.state["last_updated"] = datetime.utcnow().isoformat() + "Z"
         with open(state_file, 'w') as f:
             json.dump(self.state, f, indent=2)
+
+    def _record_coherence_metrics(self, tick, scene_id, scene_data, tension_result):
+        """Phase 3 coherence instrumentation. Never raises (graceful degradation).
+
+        Returns the per-tick metric record, or None if disabled/failed. A failure here
+        must never break a tick or the multi-tick run loop, so everything is swallowed.
+        """
+        try:
+            if not self.config.get('coherence.enabled', True):
+                return None
+            scene_data = scene_data if isinstance(scene_data, dict) else {}
+            primary = (self.state.get("story_goals") or {}).get("primary") or {}
+            return self.coherence_metrics.record_tick(
+                tick=tick,
+                scene_id=scene_id,
+                scene_text=scene_data.get("text"),
+                word_count=scene_data.get("word_count", 0),
+                tension_result=tension_result,
+                goal_description=primary.get("description"),
+            )
+        except Exception as e:
+            logging.getLogger(__name__).warning(f"Coherence metrics failed (tick {tick}): {e}")
+            return None
     
     def _extract_facts_with_retry(self, scene_text: str, scene_context: dict) -> dict:
         """Extract facts with retry logic for graceful degradation.

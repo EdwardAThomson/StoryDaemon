@@ -34,6 +34,7 @@ def get_lore_info(project_dir: Path) -> Dict[str, Any]:
             'tags': lore.tags,
             'contradictions': lore.potential_contradictions,
             'contradiction_details': lore.contradiction_details,
+            'status': getattr(lore, 'status', 'active'),
         })
 
     # Group by type
@@ -68,7 +69,9 @@ def get_lore_info(project_dir: Path) -> Dict[str, Any]:
                 'source_scene': lore.source_scene_id,
                 'tick': lore.tick,
                 'tags': lore.tags,
-                'contradictions': lore.potential_contradictions
+                'contradictions': lore.potential_contradictions,
+                'contradiction_details': lore.contradiction_details,
+                'status': getattr(lore, 'status', 'active'),
             }
             for lore in all_lore
         ]
@@ -222,7 +225,11 @@ def _display_lore_item(item: Dict[str, Any], use_color: bool, indent: int = 2):
         tags_str = ', '.join(item['tags'])
         print(f"{prefix}  {dim('Tags: ' + tags_str)}")
     
-    # Contradictions (LLM-confirmed; canon = older item, enforcement is Phase 3)
+    # Disputed flag (Phase 3 enforcement: lost a confirmed contradiction, filtered from planner)
+    if item.get('status') == 'disputed':
+        print(f"{prefix}  {dim('⊘ disputed — filtered from planner context')}")
+
+    # Contradictions (LLM-confirmed; canon = older item)
     if item.get('contradictions'):
         contradiction_count = len(item['contradictions'])
         print(f"{prefix}  {dim('⚠️  Contradictions: ' + str(contradiction_count))}")

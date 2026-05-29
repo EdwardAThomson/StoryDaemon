@@ -55,6 +55,14 @@ DEFAULT_CONFIG = {
         'llm_contradiction_check': True,  # Use the LLM to judge flagged candidate pairs; falls back to the
                                           # type heuristic when False or no LLM is wired in
         'contradiction_max_tokens': 200,  # Token budget for each contradiction-judging LLM call
+        'enforce_contradictions': True,   # Phase 3: mark the non-canon (newer) item "disputed" and
+                                          # filter it from planner context; False = detection-only
+    },
+    'coherence': {
+        # Phase 3 coherence rubric — per-tick instrumentation, no behavior change.
+        'enabled': True,                  # Master switch for recording memory/metrics.jsonl
+        'goal_relevance_chars': 3000,     # Scene-prose truncation for the goal-relevance similarity check
+        'target_tension_curve': None,     # Deferred no-op placeholder for the later arc-pressure lever
     },
     'plot': {
         # Beat integration mode: controls how strongly the agent treats plot beats.
