@@ -89,16 +89,40 @@ Make lookahead emerge *from* the prose instead of running parallel to it.
 *Why second:* needs grounded entities to reference; this is the actual
 "emergent + light lookahead" mechanism.
 
-### Phase 3 — Constraint-as-pressure *(guardrails)*
+### Phase 3 — Constraint-as-pressure *(guardrails)* — *in progress*
 Shape without scripting, mostly by re-purposing pieces that already exist
 (tension scoring, open-loop tracking, novelty tracking, goal promotion,
 semantic similarity) as *pressures*, not planning aids.
-- **Throughline gate** — scene relevance to the primary goal/theme.
-- **Arc-pressure** — a target tension trajectory by story position; the planner
-  is pushed toward it (Python owns *where we should be*, LLM owns *how*).
-- **Loop-aging pressure** — older open loops surface louder, biasing toward payoff.
-- This is also where **block/sub-block contracts** (the DSL) land: per-block
-  deterministic checks are the fine-grained instance of this layer.
+
+**Prerequisite shipped — the coherence rubric** (`agent/coherence_metrics.py`,
+`memory/metrics.jsonl`, `novel metrics`): per-tick loop churn, contradictions,
+disputed-lore count, tension + target + delta, goal relevance. Pure
+instrumentation so every pressure below is measurable (see §5).
+
+- **Contradiction enforcement** — *shipped.* Confirmed contradictions mark the
+  non-canon (newer) lore `disputed`; the planner filters disputed lore out of
+  the only place lore feeds generation (`MultiStagePlanner._active_lore`). Gated
+  by `lore.enforce_contradictions`.
+- **LLM tension scorer** — *shipped* (prerequisite for arc-pressure to mean
+  anything). The keyword heuristic measured pulp surface vocabulary and collapsed
+  real literary prose to a flat ~6 (proven on a 71-scene run: 4–8, never calm/
+  climactic). `TensionEvaluator` now LLM-rates *dramatic* tension on an anchored
+  0–10 rubric; validated on real `claude -p` at 0/4/8/9 for calm→climactic prose.
+- **Arc-pressure** — *shipped, but too gentle.* `agent/arc_pressure.py`
+  interpolates a target tension over story position and injects a soft nudge into
+  the planner's strategic prompt (Python owns *where*, LLM owns *how*). Empirical
+  finding from a 7-tick `claude -p` run: on a naturally-tense generator the
+  soft, planner-only nudge is **ignored** — early low targets (4–5) did not pull
+  the story down from ~7. Tuning leads: also inject the target into the *writer*
+  prompt, use firmer language, or have the planner explicitly plan a low-tension
+  beat when far below target.
+- **Throughline gate** — *not started.* Scene relevance to the primary goal/theme
+  (the rubric already records `goal_relevance`).
+- **Loop-aging pressure** — *not started.* Older open loops surface louder,
+  biasing toward payoff. (Motivation observed: a test run opened 23 loops and
+  closed 0 — threads pile up without payoff.)
+- **Block/sub-block contracts (the DSL)** — *not started.* Per-block deterministic
+  checks are the fine-grained instance of this layer.
 
 *Why third:* tunable pressures layered on a *working* emergent loop; easy to
 add/remove/dial in.
@@ -133,21 +157,42 @@ designing the DSL in the abstract first risks designing it twice.
 Phases 2–3 are empirical — build the mechanism, run a batch of ticks, read the
 story, tune. We need a way to *tell if coherence improved*, beyond reading
 output by hand. Candidate signals: loops closed vs. opened, contradiction count,
-tension-curve adherence, goal-relevance scores. **Open question: decide the
-coherence rubric before Phase 3.**
+tension-curve adherence, goal-relevance scores. ~~Open question: decide the
+coherence rubric before Phase 3.~~ **Resolved — shipped** as `CoherenceMetrics`
+(`agent/coherence_metrics.py`): one record per tick to `memory/metrics.jsonl`
+(loops opened/closed/open, contradictions, disputed lore, tension + target +
+delta, goal relevance), viewable via `novel metrics`. It already surfaced two
+findings — arc-pressure being too gentle, and loops accumulating without payoff.
 
 ## 6. Tooling caveat (separate from the roadmap)
 
 The `claude-cli` backend runs `claude -p` — a full repo-aware agent, not a
-completion API. It returns clean JSON only when the working tree is clean; a
-dirty tree derails it into commenting on the repo. Not a StoryDaemon bug, but it
-makes unattended `run` fragile. If we keep using it for generation, harden the
-wrapper (`--append-system-prompt`, `--disallowedTools`, neutral cwd) or prefer
-the `api` backend for multi-tick runs.
+completion API. **Confirmed empirically:** run from the StoryDaemon repo it loads
+`CLAUDE.md` + the codebase and starts *acting* on the repo, derailing/timing out
+on open-ended prompts (a planner call went from a 300s timeout to a clean ~5.5s
+answer once the cwd changed). **Hardened (`tools/claude_cli_interface.py`):** it
+now runs from a neutral temp scratch dir (no `.git`/`CLAUDE.md`), forwards a
+Claude `--model` (use `llm.model: haiku` for speed), and has a configurable
+`llm.timeout` (default 300s). With those, a multi-tick run completed cleanly.
+Remaining advice: still **prefer the `api` backend for unattended multi-tick
+runs** — even hardened, `claude -p` is slower and less predictable than a
+completion API. (`--append-system-prompt`/`--disallowedTools` remain optional
+further hardening; the neutral cwd was the decisive fix.)
 
-## 7. First step
+## 7. Status & current frontier
 
-Start Phase 1: design the grounded `name.generate` / entity-minting tool and the
-"reference by selection, not free-typing" contract that everything downstream
-depends on. Review the approach (against `name_generator_implementation_plan.md`)
-before cutting code.
+Phases 1 and 2 are shipped. Phase 3 is in progress: the coherence rubric,
+contradiction enforcement, the LLM tension scorer, and arc-pressure are all in;
+the throughline gate, loop-aging, and the block/sub-block DSL are not yet started.
+
+Next, in rough priority:
+1. **Strengthen arc-pressure** — the soft planner-only nudge is too gentle (§3,
+   measured). Push the target into the writer prompt and/or have the planner plan
+   an explicit low-tension beat when far below target.
+2. **Loop-aging** — the rubric shows loops accumulating without payoff; surface
+   older open loops louder to bias toward resolution.
+3. **Throughline gate** — score scene relevance to the primary goal (the rubric
+   already records `goal_relevance`).
+
+*(Original first step, now done: the grounded `name.generate` / entity-minting
+tool and "reference by selection, not free-typing" contract — Phase 1.)*
