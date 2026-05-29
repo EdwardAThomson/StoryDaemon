@@ -68,9 +68,11 @@ Each novel lives in its own directory (`<base>/<name>_<8charUUID>/`) with `state
 
 ### LLM backends (`novel_agent/tools/`)
 
-`initialize_llm(backend, codex_bin, model)` in `llm_interface.py` dispatches to one of four interfaces — `codex` (CodexInterface), `api` (`MultiProviderInterface` routes by model name across OpenAI/Anthropic/Gemini), `gemini-cli`, `claude-cli`. The aliases `openai` → `api`, `gemini` → `gemini-cli`, `claude` → `claude-cli` are supported for back-compat. There is a module-level singleton `_llm_client` used by `send_prompt*`, but the agent receives an explicit instance — don't rely on the singleton inside the agent path.
+`initialize_llm(backend, codex_bin, model, timeout)` in `llm_interface.py` dispatches to one of four interfaces — `codex` (CodexInterface), `api` (`MultiProviderInterface` routes by model name across OpenAI/Anthropic/Gemini), `gemini-cli`, `claude-cli`. The aliases `openai` → `api`, `gemini` → `gemini-cli`, `claude` → `claude-cli` are supported for back-compat. There is a module-level singleton `_llm_client` used by `send_prompt*`, but the agent receives an explicit instance — don't rely on the singleton inside the agent path.
 
 API env vars: `OPENAI_API_KEY`, `CLAUDE_API_KEY`, `GEMINI_API_KEY`.
+
+`claude-cli` (`ClaudeCliInterface`, `tools/claude_cli_interface.py`) shells out to `claude -p <prompt> --output-format json`. It forwards `llm.model` as `--model` when it looks like a Claude model (`haiku`/`sonnet`/`opus`/`claude…`; other names are ignored so the CLI's own default applies), and uses `llm.timeout` (default 300s) as the per-call timeout. Caveat (see `docs/EMERGENT_COHERENCE_PLAN.md` §6): `claude -p` is a full repo-aware *agent*, not a completion API — it's slow and can derail/time out on large prompts (e.g. the planner). Use a fast model (`llm.model: haiku`) for multi-call workloads, and **prefer the `api` backend for unattended multi-tick `run`s.**
 
 ### Tools (`novel_agent/tools/`)
 

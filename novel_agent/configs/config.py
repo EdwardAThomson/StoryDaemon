@@ -13,7 +13,9 @@ DEFAULT_CONFIG = {
         'planner_max_tokens': 1000,
         'writer_max_tokens': 3000,
         'extractor_max_tokens': 2000,
-        'timeout': 120,
+        'timeout': 300,  # Per-call timeout (seconds) for the claude-cli backend's `claude -p`
+                         # (a full agent — slower than a completion API). Any positive int; no
+                         # hard max, but huge values just delay failure when a call derails.
         'model': 'gpt-5.1',  # Generic model name for API backend (OpenAI/Gemini/Claude)
         'openai_model': 'gpt-5.1',
         'openai_api_key_env': 'OPENAI_API_KEY',

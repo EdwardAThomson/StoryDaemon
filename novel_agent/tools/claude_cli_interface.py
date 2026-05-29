@@ -8,22 +8,41 @@ similar to the Codex and Gemini CLI backends.
 import json
 import shutil
 import subprocess
+import tempfile
 from typing import Optional
 
 
 class ClaudeCliInterface:
     """Interface for calling Claude Code CLI in headless mode."""
 
-    def __init__(self, claude_bin: str = "claude"):
+    def __init__(self, claude_bin: str = "claude", model: Optional[str] = None,
+                 default_timeout: int = 300):
         """Initialize Claude CLI interface.
 
         Args:
             claude_bin: Path to `claude` binary (default: "claude" in PATH).
+            model: Model alias/ID to pass to `claude -p --model` (e.g. "haiku",
+                "sonnet", "opus"). When None, the CLI's configured default is used.
+                Non-Claude model names (e.g. an "gpt-*" default) are ignored.
+            default_timeout: Per-call timeout in seconds. `claude -p` is a full
+                agent, so it is slower than a completion API; the default is
+                generous. Use a fast model (haiku) for multi-call workloads.
 
         Raises:
             RuntimeError: If Claude Code CLI is not installed or not in PATH.
         """
         self.claude_bin = claude_bin
+        # Only forward Claude model identifiers; ignore cross-backend defaults.
+        self.model = model if (model and any(
+            tag in model.lower() for tag in ("haiku", "sonnet", "opus", "claude"))) else None
+        self.default_timeout = default_timeout
+        # Run `claude -p` from a neutral, empty directory (no .git / CLAUDE.md /
+        # source tree). `claude` is a repo-aware agent: from the StoryDaemon repo it
+        # would load CLAUDE.md and the codebase and start *acting* on the repo
+        # instead of answering the prompt — derailing and timing out, especially on
+        # open-ended prompts like the planner's. A scratch cwd keeps it a pure
+        # text generator. See docs/EMERGENT_COHERENCE_PLAN.md §6.
+        self._workdir = tempfile.mkdtemp(prefix="storydaemon-claude-")
         self._verify_claude_installed()
 
     def _verify_claude_installed(self) -> None:
@@ -39,32 +58,31 @@ class ClaudeCliInterface:
                 "ensure 'claude' is on your PATH."
             )
 
-    def _run_headless(self, prompt: str, timeout: int = 120) -> str:
+    def _run_headless(self, prompt: str, timeout: Optional[int] = None) -> str:
         """Run Claude Code in headless mode and return raw stdout.
 
         Uses `claude -p "<prompt>" --output-format json` to get a structured
         response and extract the `result` field as the generated text.
         """
+        eff_timeout = timeout or self.default_timeout
+        cmd = [self.claude_bin, "-p", prompt, "--output-format", "json"]
+        if self.model:
+            cmd += ["--model", self.model]
         try:
             result = subprocess.run(
-                [
-                    self.claude_bin,
-                    "-p",
-                    prompt,
-                    "--output-format",
-                    "json",
-                ],
+                cmd,
                 capture_output=True,
                 text=True,
-                timeout=timeout,
+                timeout=eff_timeout,
                 check=True,
+                cwd=self._workdir,
             )
         except subprocess.CalledProcessError as e:
             error_msg = e.stderr.strip() if e.stderr else "Unknown error"
             raise RuntimeError(f"Claude Code CLI error: {error_msg}") from e
         except subprocess.TimeoutExpired:
             raise RuntimeError(
-                f"Claude Code CLI timed out after {timeout}s. "
+                f"Claude Code CLI timed out after {eff_timeout}s. "
                 "Try increasing timeout or simplifying the prompt."
             )
 
@@ -88,7 +106,7 @@ class ClaudeCliInterface:
             "Raw output: " + stdout
         )
 
-    def generate(self, prompt: str, max_tokens: int = 2000, timeout: int = 120) -> str:  # noqa: ARG002
+    def generate(self, prompt: str, max_tokens: int = 2000, timeout: Optional[int] = None) -> str:  # noqa: ARG002
         """Generate text using Claude Code CLI in headless mode.
 
         Note: `max_tokens` is currently not forwarded; Claude Code will use its
@@ -112,7 +130,7 @@ class ClaudeCliInterface:
         self,
         prompt: str,
         max_tokens: int = 2000,
-        timeout: int = 120,
+        timeout: Optional[int] = None,
         max_retries: int = 3,
     ) -> str:
         """Generate text with automatic retry on failure.
