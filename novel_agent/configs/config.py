@@ -62,7 +62,13 @@ DEFAULT_CONFIG = {
         # Phase 3 coherence rubric — per-tick instrumentation, no behavior change.
         'enabled': True,                  # Master switch for recording memory/metrics.jsonl
         'goal_relevance_chars': 3000,     # Scene-prose truncation for the goal-relevance similarity check
-        'target_tension_curve': None,     # Deferred no-op placeholder for the later arc-pressure lever
+        # Arc-pressure (Phase 3): nudge the planner toward a target tension trajectory.
+        # target_story_length is the "story position" denominator — set it to the
+        # intended length (in ticks): short story vs. novella vs. novel. The curve is
+        # [progress_fraction, tension_level] control points (linearly interpolated);
+        # set it to None to disable arc-pressure.
+        'target_story_length': 40,
+        'target_tension_curve': [[0.0, 3], [0.25, 5], [0.5, 6], [0.75, 8], [0.9, 9], [1.0, 4]],
     },
     'plot': {
         # Beat integration mode: controls how strongly the agent treats plot beats.

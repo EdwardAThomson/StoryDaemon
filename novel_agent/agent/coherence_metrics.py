@@ -24,6 +24,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from .arc_pressure import compute_target_tension
+
 logger = logging.getLogger(__name__)
 
 
@@ -89,6 +91,12 @@ class CoherenceMetrics:
             tension_level = tension_result.get("tension_level")
             tension_category = tension_result.get("tension_category")
 
+        # Arc-pressure adherence: target tension for this position, and the gap to actual.
+        target_tension = compute_target_tension(tick, self.config)
+        tension_delta = None
+        if target_tension is not None and tension_level is not None:
+            tension_delta = round(tension_level - target_tension, 1)
+
         goal_relevance = None
         if goal_description and scene_text:
             limit = self.config.get("coherence.goal_relevance_chars", 3000)
@@ -111,6 +119,8 @@ class CoherenceMetrics:
             "disputed_lore_total": disputed_lore_total,
             "tension_level": tension_level,
             "tension_category": tension_category,
+            "target_tension": target_tension,
+            "tension_delta": tension_delta,
             "goal_relevance": goal_relevance,
             "recorded_at": datetime.utcnow().isoformat() + "Z",
         }

@@ -14,6 +14,7 @@ from pathlib import Path
 from ..memory.manager import MemoryManager
 from ..memory.vector_store import VectorStore
 from ..tools.registry import ToolRegistry
+from .arc_pressure import arc_pressure_guidance
 
 logger = logging.getLogger(__name__)
 
@@ -375,7 +376,10 @@ class MultiStagePlanner:
         # Get recent tension pattern
         tension_history = state.get('tension_history', [])
         recent_tension = tension_history[-5:] if tension_history else []
-        
+
+        # Arc-pressure (Phase 3): target tension for this story position
+        arc_line = arc_pressure_guidance(state.get('current_tick', 0), self.config)
+
         prompt = f"""You are planning the next scene in a story.
 
 ## Story Foundation (IMMUTABLE)
@@ -387,7 +391,7 @@ Tone: {foundation.get('tone', 'Unknown')}
 ## Current State
 Tick: {state.get('current_tick', 0)}
 Story Goal: {story_goal.get('description', 'Still emerging')}
-Recent Tension: {recent_tension}
+Recent Tension: {recent_tension}{arc_line}
 
 ## Protagonist
 """

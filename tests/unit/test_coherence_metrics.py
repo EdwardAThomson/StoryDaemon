@@ -142,5 +142,22 @@ def test_corrupt_line_skipped_on_read(project):
     assert series[0]["tick"] == 0
 
 
+def test_records_arc_target_and_delta(project):
+    # Real Config() has the default arc curve (length 40). Progress 10/40 = 0.25,
+    # which hits the [0.25, 5] control point exactly.
+    cm = _metrics(project)
+    rec = cm.record_tick(tick=10, scene_id="S010",
+                         tension_result={"enabled": True, "tension_level": 8, "tension_category": "high"})
+    assert rec["target_tension"] == 5
+    assert rec["tension_delta"] == 3.0  # actual 8 - target 5
+
+
+def test_arc_target_without_tension_has_no_delta(project):
+    cm = _metrics(project)
+    rec = cm.record_tick(tick=10, scene_id="S010", tension_result=None)
+    assert rec["target_tension"] == 5
+    assert rec["tension_delta"] is None
+
+
 def test_read_metrics_missing_file(project):
     assert read_metrics(project / "memory" / "nope.jsonl") == []
