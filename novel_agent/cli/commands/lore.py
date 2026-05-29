@@ -32,9 +32,10 @@ def get_lore_info(project_dir: Path) -> Dict[str, Any]:
             'source_scene': lore.source_scene_id,
             'tick': lore.tick,
             'tags': lore.tags,
-            'contradictions': lore.potential_contradictions
+            'contradictions': lore.potential_contradictions,
+            'contradiction_details': lore.contradiction_details,
         })
-    
+
     # Group by type
     by_type = defaultdict(list)
     for lore in all_lore:
@@ -221,10 +222,17 @@ def _display_lore_item(item: Dict[str, Any], use_color: bool, indent: int = 2):
         tags_str = ', '.join(item['tags'])
         print(f"{prefix}  {dim('Tags: ' + tags_str)}")
     
-    # Contradictions
+    # Contradictions (LLM-confirmed; canon = older item, enforcement is Phase 3)
     if item.get('contradictions'):
         contradiction_count = len(item['contradictions'])
-        print(f"{prefix}  {dim('⚠️  Potential contradictions: ' + str(contradiction_count))}")
+        print(f"{prefix}  {dim('⚠️  Contradictions: ' + str(contradiction_count))}")
+        for detail in item.get('contradiction_details', []):
+            canon = detail.get('canon', '?')
+            reason = detail.get('reason', '')
+            line = f"↳ vs {detail.get('with', '?')} (canon: {canon})"
+            if reason:
+                line += f" — {reason}"
+            print(f"{prefix}    {dim(line)}")
 
 
 def display_lore_json(info: Dict[str, Any]):

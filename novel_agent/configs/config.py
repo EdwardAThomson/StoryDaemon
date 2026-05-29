@@ -51,7 +51,10 @@ DEFAULT_CONFIG = {
         'use_contracts': False,  # Check beat postconditions after writing (record-only for now)
     },
     'lore': {
-        'contradiction_threshold': 0.5,  # Similarity threshold for flagging contradictions (0.0-2.0)
+        'contradiction_threshold': 0.5,  # Similarity threshold for the candidate pre-filter (0.0-2.0)
+        'llm_contradiction_check': True,  # Use the LLM to judge flagged candidate pairs; falls back to the
+                                          # type heuristic when False or no LLM is wired in
+        'contradiction_max_tokens': 200,  # Token budget for each contradiction-judging LLM call
     },
     'plot': {
         # Beat integration mode: controls how strongly the agent treats plot beats.

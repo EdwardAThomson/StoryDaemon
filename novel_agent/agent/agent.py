@@ -108,7 +108,7 @@ class StoryAgent:
         
         # Phase 7A.4 components
         self.lore_extractor = LoreExtractor(llm_interface, self.memory, config)
-        self.lore_detector = LoreContradictionDetector(self.memory, self.vector, config)
+        self.lore_detector = LoreContradictionDetector(self.memory, self.vector, config, llm_interface)
         
         # Phase 7A.5 components (optional)
         self.use_multi_stage = config.get('generation.use_multi_stage_planner', True)

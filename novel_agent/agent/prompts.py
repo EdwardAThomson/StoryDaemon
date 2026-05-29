@@ -402,6 +402,7 @@ Return your answer as JSON only, with no explanations, no markdown fences, and n
       "plot_threads": ["thread_a"],
       "tension_target": 7,
       "prerequisites": [],
+      "advances_character_arcs": [],
       "resolves_loops": [],
       "creates_loops": []
     }}
@@ -415,6 +416,11 @@ Do not include the fields id, status, created_at, executed_in_scene, or executio
 Novel: {novel_name}
 Current tick: {current_tick}
 
+Genre: {genre}
+Premise: {premise}
+Setting: {setting}
+Tone: {tone}
+
 ## Characters (use these exact IDs)
 {characters}
 
@@ -426,6 +432,12 @@ Current tick: {current_tick}
 
 ## Recent scenes (most recent last)
 {recent_scenes}
+
+## Recent tension history
+{tension_history}
+
+## Existing outline beats (last few)
+{recent_beats}
 
 # Beat style and granularity rules
 
