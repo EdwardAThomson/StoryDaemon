@@ -18,6 +18,8 @@ disables arc-pressure entirely (returns no target, injects nothing).
 
 from typing import Any, List, Optional, Sequence
 
+from .tension_scale import band_for, scale_overview
+
 
 def _progress(current_tick: int, target_story_length: int) -> float:
     """Fraction through the intended arc, clamped to [0, 1]."""
@@ -83,51 +85,23 @@ def arc_pressure_guidance(current_tick: int, config) -> str:
     )
 
 
-def _tension_band(target: float) -> str:
-    """Qualitative band name for a 0-10 tension target."""
-    if target <= 2:
-        return "calm"
-    if target <= 4:
-        return "low"
-    if target <= 6:
-        return "moderate"
-    if target <= 8:
-        return "high"
-    return "climactic"
-
-
-def _tension_directive(target: float) -> str:
-    """Concrete writing direction for landing prose at the target tension band."""
-    return {
-        "calm": ("keep stakes low and the pace easy — reflection, quiet character or world "
-                 "texture, breathing room; no danger or hard conflict"),
-        "low": ("keep tension mild — small frictions, lingering questions or unease; "
-                "no major threat yet"),
-        "moderate": ("build rising tension — a complication or growing stake, an uncertain "
-                     "outcome pressing on the POV"),
-        "high": ("write high tension — active conflict, real danger or hard pressure on the "
-                 "POV; tighten the pacing and sentences"),
-        "climactic": ("write near-climactic intensity — an imminent threat or an irreversible "
-                      "decision happening now, maximum pressure"),
-    }[_tension_band(target)]
-
-
 def arc_pressure_guidance_for_writer(current_tick: int, config) -> str:
     """Firm, band-specific tension instruction for the writer prompt, or "" when disabled.
 
-    Stronger than the planner nudge: the writer (which produces the prose) gets a concrete
-    target level, the story-position context, and an actionable directive for *how* to land
-    the scene at that tension.
+    Stronger than the planner nudge: the writer gets a concrete target level, the story-
+    position context, and an actionable directive. Crucially it uses the SAME 0-10 scale the
+    scene is graded against afterwards (`tension_scale`) and shows the writer that full scale,
+    so "target 4/10" is calibrated identically on both sides.
     """
     target = compute_target_tension(current_tick, config)
     if target is None:
         return ""
     length = config.get('coherence.target_story_length', 40)
     pct = int(round(_progress(current_tick, length) * 100))
-    band = _tension_band(target)
+    band = band_for(target)
     return (
-        f"**TENSION TARGET FOR THIS SCENE: {target:g}/10 ({band}).** You are ~{pct}% through "
-        f"the intended story arc. Write the scene's events, pacing, and prose to land near this "
-        f"tension level — {_tension_directive(target)}. Treat this as a strong guide; deviate "
-        f"only if the established story makes it impossible."
+        f"**TENSION TARGET FOR THIS SCENE: {target:g}/10 ({band.name}: {band.definition}).** "
+        f"You are ~{pct}% through the intended story arc. Write the scene's events, pacing, and "
+        f"prose to land near this tension level — {band.directive}. Treat this as a strong guide; "
+        f"deviate only if the established story makes it impossible.\n\n{scale_overview()}"
     )

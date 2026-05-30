@@ -11,6 +11,8 @@ import json
 import logging
 from typing import Dict, Any, Optional
 
+from .tension_scale import scorer_anchor_block
+
 logger = logging.getLogger(__name__)
 
 
@@ -18,13 +20,7 @@ TENSION_RUBRIC_PROMPT = """You are rating the DRAMATIC TENSION of a single scene
 
 Rate stakes, threat, uncertainty, and pressure on the point-of-view character's goals — NOT the presence of dramatic words. A quiet conversation can be highly tense; a loud action scene can be low-stakes. Use the FULL range; do not default to the middle.
 
-Anchors:
-- 0-1  none: calm, safe, no stakes or conflict
-- 2-3  minimal: routine, faint unease or anticipation
-- 4-5  rising: complications or open questions, outcome uncertain
-- 6-7  high: active conflict, real danger, or significant stakes pressing now
-- 8-9  very high: imminent threat, violence, or a critical irreversible decision happening now
-- 10   peak climax: a story-defining, life-or-death moment at its breaking point
+{anchors}
 
 Scene:
 \"\"\"
@@ -167,7 +163,10 @@ class TensionEvaluator:
         Retries once, mirroring the lore extractor / contradiction judge pattern,
         so a transient failure falls back to the heuristic rather than breaking a tick.
         """
-        prompt = TENSION_RUBRIC_PROMPT.format(scene_text=(scene_text or "")[:6000])
+        prompt = TENSION_RUBRIC_PROMPT.format(
+            anchors=scorer_anchor_block(),
+            scene_text=(scene_text or "")[:6000],
+        )
         max_tokens = self._cfg('tension.max_tokens', 200)
 
         for attempt in (1, 2):

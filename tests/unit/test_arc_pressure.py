@@ -5,8 +5,8 @@ from novel_agent.agent.arc_pressure import (
     compute_target_tension,
     arc_pressure_guidance,
     arc_pressure_guidance_for_writer,
-    _tension_band,
 )
+from novel_agent.agent.tension_scale import band_for
 
 
 class FakeConfig:
@@ -63,17 +63,31 @@ def test_guidance_text_contains_position_and_target():
     assert text.startswith("\nArc Target:")
 
 
-def test_tension_band_boundaries():
-    assert _tension_band(0) == "calm"
-    assert _tension_band(2) == "calm"
-    assert _tension_band(3) == "low"
-    assert _tension_band(4) == "low"
-    assert _tension_band(5) == "moderate"
-    assert _tension_band(6) == "moderate"
-    assert _tension_band(7) == "high"
-    assert _tension_band(8) == "high"
-    assert _tension_band(9) == "climactic"
-    assert _tension_band(10) == "climactic"
+def test_tension_band_boundaries_match_scorer_anchors():
+    # Writer bands now equal the scorer's anchors (the calibration fix).
+    assert band_for(0).name == "none"
+    assert band_for(1).name == "none"
+    assert band_for(2).name == "minimal"
+    assert band_for(3).name == "minimal"
+    assert band_for(4).name == "rising"
+    assert band_for(5).name == "rising"
+    assert band_for(6).name == "high"
+    assert band_for(7).name == "high"
+    assert band_for(8).name == "very high"
+    assert band_for(9).name == "very high"
+    assert band_for(10).name == "peak climax"
+
+
+def test_shared_scale_renders_all_anchors_and_scorer_rubric():
+    from novel_agent.agent.tension_scale import scorer_anchor_block, scale_overview
+    from novel_agent.agent.tension_evaluator import TENSION_RUBRIC_PROMPT
+    block = scorer_anchor_block()
+    for name in ("none", "minimal", "rising", "high", "very high", "peak climax"):
+        assert name in block
+        assert name in scale_overview()
+    # The scorer rubric still renders the six anchors (now from the shared scale).
+    rendered = TENSION_RUBRIC_PROMPT.format(anchors=block, scene_text="x")
+    assert "Anchors:" in rendered and "peak climax" in rendered
 
 
 def test_writer_guidance_disabled_when_curve_none():
@@ -81,16 +95,17 @@ def test_writer_guidance_disabled_when_curve_none():
     assert arc_pressure_guidance_for_writer(5, cfg) == ""
 
 
-def test_writer_guidance_is_firm_and_band_specific():
+def test_writer_guidance_is_firm_calibrated_and_shows_full_scale():
     cfg = FakeConfig({"coherence.target_tension_curve": CURVE, "coherence.target_story_length": 20})
-    # tick 0 -> 0% -> target 3 -> "low" band, with a directive
-    low = arc_pressure_guidance_for_writer(0, cfg)
-    assert "TENSION TARGET FOR THIS SCENE: 3/10 (low)" in low
-    assert "0%" in low
-    assert "mild" in low  # the low-band directive
-    # tick 10 -> 50% -> target 6 -> "moderate"
-    mod = arc_pressure_guidance_for_writer(10, cfg)
-    assert "6/10 (moderate)" in mod
+    # tick 0 -> 0% -> target 3 -> "minimal" band (matches scorer anchor 2-3)
+    g = arc_pressure_guidance_for_writer(0, cfg)
+    assert "TENSION TARGET FOR THIS SCENE: 3/10 (minimal" in g
+    assert "0%" in g
+    # The writer is shown the full graded scale used to score the scene afterwards.
+    assert "graded 0-10" in g
+    assert "very high" in g and "peak climax" in g
+    # tick 10 -> 50% -> target 6 -> "high" (scorer anchor 6-7)
+    assert "6/10 (high" in arc_pressure_guidance_for_writer(10, cfg)
 
 
 def test_writer_section_suppressed_when_beat_has_tension_target():
