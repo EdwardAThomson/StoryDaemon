@@ -15,9 +15,12 @@ def test_create_novel_project():
     with tempfile.TemporaryDirectory() as tmpdir:
         project_dir = create_novel_project("test-novel", tmpdir)
         
-        # Check directory exists
+        # Check directory exists. The dir name is "<name>_<8-char uuid>" so multiple
+        # projects can share a display name without colliding.
         assert os.path.exists(project_dir)
-        assert os.path.basename(project_dir) == "test-novel"
+        basename = os.path.basename(project_dir)
+        assert basename.startswith("test-novel_")
+        assert len(basename.split("_")[-1]) == 8
         
         # Check subdirectories
         assert os.path.exists(os.path.join(project_dir, "memory", "characters"))
@@ -34,15 +37,17 @@ def test_create_novel_project():
         assert os.path.exists(os.path.join(project_dir, "memory", "open_loops.json"))
 
 
-def test_create_duplicate_project():
-    """Test that creating a duplicate project raises error."""
+def test_same_name_projects_get_distinct_dirs():
+    """Two projects with the same display name coexist via the uuid suffix."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        # Create first project
-        create_novel_project("test-novel", tmpdir)
-        
-        # Try to create duplicate
-        with pytest.raises(ValueError, match="already exists"):
-            create_novel_project("test-novel", tmpdir)
+        first = create_novel_project("test-novel", tmpdir)
+        second = create_novel_project("test-novel", tmpdir)
+
+        # No collision: distinct directories, both present, same display name prefix.
+        assert first != second
+        assert os.path.exists(first) and os.path.exists(second)
+        assert os.path.basename(first).startswith("test-novel_")
+        assert os.path.basename(second).startswith("test-novel_")
 
 
 def test_load_and_save_project_state():

@@ -76,23 +76,20 @@ def get_status_info(project_dir: Path, state: dict) -> dict:
             last_scene_time = datetime.fromtimestamp(
                 scene_files[-1].stat().st_mtime
             ).strftime('%Y-%m-%d %H:%M:%S')
-        
-        # Get tension history from scene metadata (Phase 7A.3)
-        from ...memory.manager import MemoryManager
-        memory = MemoryManager(project_dir)
-        all_scenes = memory.list_scenes()
-        
-        # Get last 10 scenes with tension data
-        recent_scenes = all_scenes[-10:] if len(all_scenes) > 10 else all_scenes
-        tension_history = [
-            {
-                'tick': s.tick,
-                'level': s.tension_level,
-                'category': s.tension_category
-            }
-            for s in recent_scenes
-            if hasattr(s, 'tension_level') and s.tension_level is not None
-        ]
+
+    # Tension history from scene metadata (Phase 7A.3). list_scenes() returns scene
+    # *IDs*, so load each Scene to read its tension. Driven by the memory scenes, not
+    # the .md export count, so it reflects committed scene metadata directly.
+    from ...memory.manager import MemoryManager
+    memory = MemoryManager(project_dir)
+    for scene_id in memory.list_scenes()[-10:]:
+        scene = memory.load_scene(scene_id)
+        if scene is not None and getattr(scene, 'tension_level', None) is not None:
+            tension_history.append({
+                'tick': scene.tick,
+                'level': scene.tension_level,
+                'category': scene.tension_category,
+            })
     
     return {
         'novel_name': state.get('novel_name', 'Unknown'),

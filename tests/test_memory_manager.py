@@ -39,8 +39,8 @@ def test_generate_character_id(memory_manager):
     id1 = memory_manager.generate_id("character")
     id2 = memory_manager.generate_id("character")
     
-    assert id1 == "C0"
-    assert id2 == "C1"
+    assert id1 == "C000"
+    assert id2 == "C001"
 
 
 def test_generate_location_id(memory_manager):
@@ -48,8 +48,8 @@ def test_generate_location_id(memory_manager):
     id1 = memory_manager.generate_id("location")
     id2 = memory_manager.generate_id("location")
     
-    assert id1 == "L0"
-    assert id2 == "L1"
+    assert id1 == "L000"
+    assert id2 == "L001"
 
 
 def test_generate_scene_id(memory_manager):

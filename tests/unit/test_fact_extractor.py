@@ -10,7 +10,7 @@ from novel_agent.agent.fact_extractor import FactExtractor
 def mock_llm():
     """Mock LLM interface."""
     llm = Mock()
-    llm.send_prompt = Mock()
+    llm.generate = Mock()  # FactExtractor calls llm.generate(prompt, max_tokens=...)
     return llm
 
 
@@ -56,7 +56,7 @@ def test_extract_facts_valid_json(fact_extractor, mock_llm):
         "open_loops_resolved": [],
         "relationship_changes": []
     })
-    mock_llm.send_prompt.return_value = response
+    mock_llm.generate.return_value = response
     
     # Extract facts
     scene_text = "Sarah clutched the key nervously."
@@ -82,7 +82,7 @@ def test_extract_facts_with_markdown_wrapper(fact_extractor, mock_llm):
   "relationship_changes": []
 }
 ```"""
-    mock_llm.send_prompt.return_value = response
+    mock_llm.generate.return_value = response
     
     # Extract facts
     scene_text = "Test scene"
@@ -98,7 +98,7 @@ def test_extract_facts_with_markdown_wrapper(fact_extractor, mock_llm):
 def test_extract_facts_invalid_json(fact_extractor, mock_llm):
     """Test extracting facts with invalid JSON response."""
     # Mock LLM response with invalid JSON
-    mock_llm.send_prompt.return_value = "This is not JSON"
+    mock_llm.generate.return_value = "This is not JSON"
     
     # Extract facts
     scene_text = "Test scene"
@@ -114,7 +114,7 @@ def test_extract_facts_invalid_json(fact_extractor, mock_llm):
 def test_extract_facts_llm_error(fact_extractor, mock_llm):
     """Test extracting facts when LLM raises error."""
     # Mock LLM to raise error
-    mock_llm.send_prompt.side_effect = Exception("LLM error")
+    mock_llm.generate.side_effect = Exception("LLM error")
     
     # Extract facts
     scene_text = "Test scene"

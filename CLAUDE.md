@@ -124,7 +124,7 @@ Typer quirk worked around in `tick()`: when `tick()` is called programmatically 
 
 ## Conventions specific to this codebase
 
-- IDs are short prefixed strings: `C0`, `L0`, `S001`, `F0`, etc. Counters are persisted in `memory/counters.json`; allocate via `MemoryManager.generate_*_id()` rather than computing them manually.
+- IDs are short prefixed strings, zero-padded to 3 digits: `C000`, `L000`, `S000`, `F000`, etc. (`generate_id` uses `f"C{n:03d}"`). Counters are persisted in `memory/counters.json`; allocate via `MemoryManager.generate_*_id()` rather than computing them manually.
 - Graceful degradation is the rule for LLM-dependent extractors (`_extract_facts_with_retry`, `_extract_lore_with_retry`, `_verify_beat_execution`): retry once, log, return empty/`True`/`None` on second failure. Don't change these into hard failures without considering the multi-tick `run` loop, which stops on uncaught exceptions.
 - `work/` is the gitignored scratch area where test novels are created (`work/novels/`); never commit anything inside `work/` (the `.gitignore` whitelists only `work/README.md` and `work/.gitkeep`).
 - Phase numbers in comments (`# Phase 5`, `# Phase 7A.4`) refer to the *legacy* roadmap in `docs/plan.md` and `docs/archive/`. They tag features, not gated code paths. The newer `Phase 1`–`Phase 4` numbering (e.g. recent `feat: … (Phase 1/2)` commits) refers instead to the **active** roadmap in `docs/EMERGENT_COHERENCE_PLAN.md` — don't conflate the two numbering schemes.
