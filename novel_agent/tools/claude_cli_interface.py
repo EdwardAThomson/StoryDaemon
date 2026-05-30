@@ -8,8 +8,9 @@ similar to the Codex and Gemini CLI backends.
 import json
 import shutil
 import subprocess
-import tempfile
 from typing import Optional
+
+from .agent_cwd import neutral_cwd
 
 
 class ClaudeCliInterface:
@@ -36,13 +37,6 @@ class ClaudeCliInterface:
         self.model = model if (model and any(
             tag in model.lower() for tag in ("haiku", "sonnet", "opus", "claude"))) else None
         self.default_timeout = default_timeout
-        # Run `claude -p` from a neutral, empty directory (no .git / CLAUDE.md /
-        # source tree). `claude` is a repo-aware agent: from the StoryDaemon repo it
-        # would load CLAUDE.md and the codebase and start *acting* on the repo
-        # instead of answering the prompt — derailing and timing out, especially on
-        # open-ended prompts like the planner's. A scratch cwd keeps it a pure
-        # text generator. See docs/EMERGENT_COHERENCE_PLAN.md §6.
-        self._workdir = tempfile.mkdtemp(prefix="storydaemon-claude-")
         self._verify_claude_installed()
 
     def _verify_claude_installed(self) -> None:
@@ -75,7 +69,8 @@ class ClaudeCliInterface:
                 text=True,
                 timeout=eff_timeout,
                 check=True,
-                cwd=self._workdir,
+                # Neutral cwd so `claude -p` stays a text generator, not a repo agent.
+                cwd=neutral_cwd(),
             )
         except subprocess.CalledProcessError as e:
             error_msg = e.stderr.strip() if e.stderr else "Unknown error"

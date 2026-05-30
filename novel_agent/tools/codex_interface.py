@@ -2,9 +2,21 @@
 
 Provides subprocess-based interface to Codex CLI for zero-cost access to GPT-5.
 """
+import os
 import subprocess
 import shutil
+import tempfile
 from typing import Optional
+
+from .agent_cwd import neutral_cwd
+
+# Safety posture for `codex exec`. StoryDaemon only needs codex to *generate text*,
+# so it needs zero write/exec access — a read-only sandbox that never prompts is
+# both non-interactive and safe. This replaces the old
+# `--dangerously-bypass-approvals-and-sandbox` (an unsandboxed agent pointed at the
+# repo). Flag names target codex-cli ~0.118; adjust here if a future version renames them.
+CODEX_SANDBOX = "read-only"
+CODEX_APPROVAL = "never"
 
 
 class CodexInterface:
@@ -55,33 +67,52 @@ class CodexInterface:
             RuntimeError: If Codex CLI returns an error
             subprocess.TimeoutExpired: If generation times out
         """
+        msg_file = None
         try:
-            # Use 'codex exec' for non-interactive execution
-            # --dangerously-bypass-approvals-and-sandbox to avoid prompts
+            # codex writes ONLY the final assistant message to this file, so we don't
+            # have to dig the answer out of the agent's verbose exec log on stdout.
+            fd, msg_file = tempfile.mkstemp(prefix="codex-msg-", suffix=".txt")
+            os.close(fd)
+            # Non-interactive text generation: read-only sandbox + never-prompt. Run
+            # from a neutral cwd so codex stays a text generator, not a repo agent.
             result = subprocess.run(
                 [
                     self.codex_bin,
                     'exec',
-                    '--dangerously-bypass-approvals-and-sandbox',
+                    '--sandbox', CODEX_SANDBOX,
+                    '--ask-for-approval', CODEX_APPROVAL,
                     '--skip-git-repo-check',
-                    prompt
+                    '--output-last-message', msg_file,
+                    prompt,
                 ],
                 capture_output=True,
                 text=True,
                 timeout=timeout,
-                check=True
+                check=True,
+                cwd=neutral_cwd(),
             )
-            return result.stdout.strip()
-        
+            try:
+                with open(msg_file, 'r', encoding='utf-8') as f:
+                    last_message = f.read().strip()
+            except OSError:
+                last_message = ""
+            return last_message or result.stdout.strip()
+
         except subprocess.CalledProcessError as e:
             error_msg = e.stderr.strip() if e.stderr else "Unknown error"
             raise RuntimeError(f"Codex CLI error: {error_msg}")
-        
+
         except subprocess.TimeoutExpired:
             raise RuntimeError(
                 f"Codex CLI timed out after {timeout}s. "
                 "Try increasing timeout or simplifying the prompt."
             )
+        finally:
+            if msg_file:
+                try:
+                    os.unlink(msg_file)
+                except OSError:
+                    pass
     
     def generate_with_retry(
         self,
