@@ -74,4 +74,6 @@ def test_gemini_cli_uses_neutral_cwd(monkeypatch):
     out = GeminiCliInterface().generate("hi")
 
     assert cap.cwd == neutral_cwd()
+    # Required because we run from a neutral (untrusted) scratch dir.
+    assert "--skip-trust" in cap.cmd
     assert out == "some prose"

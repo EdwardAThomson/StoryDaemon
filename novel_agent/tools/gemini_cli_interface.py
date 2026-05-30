@@ -64,6 +64,10 @@ class GeminiCliInterface:
             result = subprocess.run(
                 [
                     self.gemini_bin,
+                    # We run from a neutral scratch dir (agent_cwd), which Gemini treats
+                    # as an untrusted folder and would refuse headless; --skip-trust
+                    # opts out of the trusted-folder gate for this non-interactive call.
+                    "--skip-trust",
                     "-p",
                     prompt,
                     "-m",
