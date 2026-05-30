@@ -108,14 +108,17 @@ instrumentation so every pressure below is measurable (see §5).
   real literary prose to a flat ~6 (proven on a 71-scene run: 4–8, never calm/
   climactic). `TensionEvaluator` now LLM-rates *dramatic* tension on an anchored
   0–10 rubric; validated on real `claude -p` at 0/4/8/9 for calm→climactic prose.
-- **Arc-pressure** — *shipped, but too gentle.* `agent/arc_pressure.py`
-  interpolates a target tension over story position and injects a soft nudge into
-  the planner's strategic prompt (Python owns *where*, LLM owns *how*). Empirical
-  finding from a 7-tick `claude -p` run: on a naturally-tense generator the
-  soft, planner-only nudge is **ignored** — early low targets (4–5) did not pull
-  the story down from ~7. Tuning leads: also inject the target into the *writer*
-  prompt, use firmer language, or have the planner explicitly plan a low-tension
-  beat when far below target.
+- **Arc-pressure** — *shipped; strengthened.* `agent/arc_pressure.py`
+  interpolates a target tension over story position (Python owns *where*, LLM owns
+  *how*). A 7-tick `claude -p` run showed the original soft, **planner-only** nudge
+  was ignored — early low targets (4–5) did not pull a naturally-tense story down
+  from ~7. Fix: the target is now also injected into the **writer** prompt with
+  firm, band-specific language and an actionable directive
+  (`arc_pressure_guidance_for_writer` → `WriterContextBuilder._build_arc_pressure_section`
+  → `{arc_pressure_section}`), suppressed when a plot beat already sets a
+  `tension_target`. Whether this is *enough* to dominate a tense generator is the
+  next empirical question (re-run + read `novel metrics`); further leads if not:
+  firmer planner wording, or planning an explicit low-tension beat when far below target.
 - **Throughline gate** — *not started.* Scene relevance to the primary goal/theme
   (the rubric already records `goal_relevance`).
 - **Loop-aging pressure** — *not started.* Older open loops surface louder,
@@ -186,9 +189,10 @@ contradiction enforcement, the LLM tension scorer, and arc-pressure are all in;
 the throughline gate, loop-aging, and the block/sub-block DSL are not yet started.
 
 Next, in rough priority:
-1. **Strengthen arc-pressure** — the soft planner-only nudge is too gentle (§3,
-   measured). Push the target into the writer prompt and/or have the planner plan
-   an explicit low-tension beat when far below target.
+1. **Strengthen arc-pressure** — *writer-prompt injection landed* (firm,
+   band-specific target). Open: re-run and read `novel metrics` to see whether it
+   now dominates a tense generator; if not, firm the planner wording or plan an
+   explicit low-tension beat when far below target.
 2. **Loop-aging** — the rubric shows loops accumulating without payoff; surface
    older open loops louder to bias toward resolution.
 3. **Throughline gate** — score scene relevance to the primary goal (the rubric
