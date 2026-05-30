@@ -5,9 +5,9 @@ entry point that can route prompts to different providers (OpenAI, Gemini,
 Claude) based on the model name.
 
 It is inspired by the NovelWriter ai_helper.py design and is intended to be
-flexible: you choose a model string (e.g. "gpt-5", "gpt-5.1-mini",
-"gemini-2.5-pro", "claude-4.5"), and the correct client will be used
-under the hood.
+flexible: you choose a model string (e.g. "gpt-5.5", "claude-sonnet-4.5",
+"claude-haiku-4.5", "gemini-3-flash-preview"), and the correct client will be
+used under the hood. See `_model_config` for the full supported set.
 
 Environment variables expected (if using those providers):
 
@@ -118,7 +118,7 @@ def _ensure_gemini_configured():
 
 def send_prompt_openai(
     prompt: str,
-    model: str = "gpt-5.1",
+    model: str = "gpt-5.5",
     max_tokens: int = 2000,
     temperature: float = 0.7,
     role_description: str = (
@@ -161,7 +161,7 @@ def send_prompt_gemini(
 
 def send_prompt_claude(
     prompt: str,
-    model: str = "claude-4.5-20250929",
+    model: str = "claude-sonnet-4-5-20250929",
     max_tokens: int = 4096,
     temperature: float = 0.7,
     role_description: str = (
@@ -190,38 +190,42 @@ ModelFn = Callable[[str, int], str]
 
 
 _model_config: Dict[str, ModelFn] = {
-    # OpenAI GPT-5 family
-    "gpt-5": lambda prompt, max_tokens: send_prompt_openai(
-        prompt=prompt,
-        model="gpt-5",
-        max_tokens=max_tokens,
+    # OpenAI GPT-5 family (kept in sync with LLM-Remote-Runner)
+    "gpt-5.5": lambda prompt, max_tokens: send_prompt_openai(
+        prompt=prompt, model="gpt-5.5", max_tokens=max_tokens,
     ),
-    "gpt-5-mini": lambda prompt, max_tokens: send_prompt_openai(
-        prompt=prompt,
-        model="gpt-5-mini",
-        max_tokens=max_tokens,
+    "gpt-5.4": lambda prompt, max_tokens: send_prompt_openai(
+        prompt=prompt, model="gpt-5.4", max_tokens=max_tokens,
     ),
-    "gpt-5.1": lambda prompt, max_tokens: send_prompt_openai(
-        prompt=prompt,
-        model="gpt-5.1",
-        max_tokens=max_tokens,
+    "gpt-5.2": lambda prompt, max_tokens: send_prompt_openai(
+        prompt=prompt, model="gpt-5.2", max_tokens=max_tokens,
     ),
-    "gpt-5.1-mini": lambda prompt, max_tokens: send_prompt_openai(
-        prompt=prompt,
-        model="gpt-5.1-mini",
-        max_tokens=max_tokens,
+    # Anthropic Claude 4.5 family
+    "claude-sonnet-4.5": lambda prompt, max_tokens: send_prompt_claude(
+        prompt=prompt, model="claude-sonnet-4-5-20250929", max_tokens=max_tokens,
     ),
-    # Gemini 2.5 Pro
-    "gemini-2.5-pro": lambda prompt, max_tokens: send_prompt_gemini(
-        prompt=prompt,
-        model_name="gemini-2.5-pro-exp-03-25",
-        max_output_tokens=max_tokens,
+    "claude-haiku-4.5": lambda prompt, max_tokens: send_prompt_claude(
+        prompt=prompt, model="claude-haiku-4-5-20251001", max_tokens=max_tokens,
     ),
-    # Claude 4.5
+    # Back-compat alias -> Sonnet (referenced by existing configs/docs)
     "claude-4.5": lambda prompt, max_tokens: send_prompt_claude(
-        prompt=prompt,
-        model="claude-sonnet-4-5-20250929",
-        max_tokens=max_tokens,
+        prompt=prompt, model="claude-sonnet-4-5-20250929", max_tokens=max_tokens,
+    ),
+    # Google Gemini
+    "gemini-3-flash-preview": lambda prompt, max_tokens: send_prompt_gemini(
+        prompt=prompt, model_name="gemini-3-flash-preview", max_output_tokens=max_tokens,
+    ),
+    "gemini-3-pro-preview": lambda prompt, max_tokens: send_prompt_gemini(
+        prompt=prompt, model_name="gemini-3-pro-preview", max_output_tokens=max_tokens,
+    ),
+    "gemini-3.1-pro-preview": lambda prompt, max_tokens: send_prompt_gemini(
+        prompt=prompt, model_name="gemini-3.1-pro-preview", max_output_tokens=max_tokens,
+    ),
+    "gemini-2.5-pro": lambda prompt, max_tokens: send_prompt_gemini(
+        prompt=prompt, model_name="gemini-2.5-pro", max_output_tokens=max_tokens,
+    ),
+    "gemini-2.5-flash": lambda prompt, max_tokens: send_prompt_gemini(
+        prompt=prompt, model_name="gemini-2.5-flash", max_output_tokens=max_tokens,
     ),
 }
 
@@ -231,7 +235,7 @@ def get_supported_models() -> List[str]:
     return list(_model_config.keys())
 
 
-def send_prompt(prompt: str, model: str = "gpt-5.1", max_tokens: int = 2000) -> str:
+def send_prompt(prompt: str, model: str = "gpt-5.5", max_tokens: int = 2000) -> str:
     """Send a prompt using the configured model registry.
 
     If the model key is not found, tries a "-latest" suffix before failing.
@@ -255,7 +259,7 @@ def send_prompt(prompt: str, model: str = "gpt-5.1", max_tokens: int = 2000) -> 
 
 def send_prompt_with_retry(
     prompt: str,
-    model: str = "gpt-5.1",
+    model: str = "gpt-5.5",
     max_tokens: int = 2000,
     max_retries: int = 3,
 ) -> str:
@@ -283,7 +287,7 @@ class MultiProviderInterface:
     generate_with_retry(...), similar to CodexInterface.
     """
 
-    def __init__(self, model: str = "gpt-5.1"):
+    def __init__(self, model: str = "gpt-5.5"):
         self.model = model
 
     def generate(self, prompt: str, max_tokens: int = 2000, timeout: int = 120) -> str:  # noqa: ARG002
