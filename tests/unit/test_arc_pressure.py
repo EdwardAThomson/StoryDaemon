@@ -4,6 +4,8 @@ from novel_agent.agent.arc_pressure import (
     interpolate_curve,
     compute_target_tension,
     arc_pressure_guidance,
+    arc_pressure_guidance_for_writer,
+    _tension_band,
 )
 
 
@@ -59,3 +61,54 @@ def test_guidance_text_contains_position_and_target():
     assert "50%" in text
     assert "6/10" in text
     assert text.startswith("\nArc Target:")
+
+
+def test_tension_band_boundaries():
+    assert _tension_band(0) == "calm"
+    assert _tension_band(2) == "calm"
+    assert _tension_band(3) == "low"
+    assert _tension_band(4) == "low"
+    assert _tension_band(5) == "moderate"
+    assert _tension_band(6) == "moderate"
+    assert _tension_band(7) == "high"
+    assert _tension_band(8) == "high"
+    assert _tension_band(9) == "climactic"
+    assert _tension_band(10) == "climactic"
+
+
+def test_writer_guidance_disabled_when_curve_none():
+    cfg = FakeConfig({"coherence.target_tension_curve": None, "coherence.target_story_length": 20})
+    assert arc_pressure_guidance_for_writer(5, cfg) == ""
+
+
+def test_writer_guidance_is_firm_and_band_specific():
+    cfg = FakeConfig({"coherence.target_tension_curve": CURVE, "coherence.target_story_length": 20})
+    # tick 0 -> 0% -> target 3 -> "low" band, with a directive
+    low = arc_pressure_guidance_for_writer(0, cfg)
+    assert "TENSION TARGET FOR THIS SCENE: 3/10 (low)" in low
+    assert "0%" in low
+    assert "mild" in low  # the low-band directive
+    # tick 10 -> 50% -> target 6 -> "moderate"
+    mod = arc_pressure_guidance_for_writer(10, cfg)
+    assert "6/10 (moderate)" in mod
+
+
+def test_writer_section_suppressed_when_beat_has_tension_target():
+    from novel_agent.agent.writer_context import WriterContextBuilder
+    cfg = FakeConfig({"coherence.target_tension_curve": CURVE, "coherence.target_story_length": 20})
+    wcb = WriterContextBuilder.__new__(WriterContextBuilder)  # bypass __init__ (no deps needed)
+    wcb.config = cfg
+    # Beat with a tension_target -> arc section suppressed (beat governs)
+    assert wcb._build_arc_pressure_section({"plot_beat": {"tension_target": 7}}, current_tick=0) == ""
+    # No beat -> arc section emitted
+    assert wcb._build_arc_pressure_section({}, current_tick=0).startswith("**TENSION TARGET")
+
+
+def test_writer_template_renders_with_arc_section():
+    # Guard against a missing-key KeyError when the new placeholder is added.
+    import string
+    from novel_agent.agent.prompts import WRITER_PROMPT_TEMPLATE
+    keys = {fn for _, fn, _, _ in string.Formatter().parse(WRITER_PROMPT_TEMPLATE) if fn}
+    assert "arc_pressure_section" in keys
+    rendered = WRITER_PROMPT_TEMPLATE.format(**{k: "x" for k in keys})
+    assert "x" in rendered

@@ -178,6 +178,8 @@ The following context includes FULL TEXT from the most recent scenes to help you
 
 {plot_beat_section}
 
+{arc_pressure_section}
+
 **Scene Mode:** {scene_mode}
 **Palette Shift:** {palette_shift}
 **Transition Path (if provided):** {transition_path}

@@ -4,6 +4,7 @@ from typing import Dict, Any, List, Optional
 from pathlib import Path
 
 from ..tools.name_generator import NameGenerator
+from .arc_pressure import arc_pressure_guidance_for_writer
 
 
 class WriterContextBuilder:
@@ -77,6 +78,10 @@ class WriterContextBuilder:
         # Format plot beat section (Phase 5)
         plot_beat_section = self._format_plot_beat_section(plan)
 
+        # Arc-pressure: firm tension target for the writer (Phase 3). Suppressed when a
+        # plot beat already specifies a tension_target — the beat section governs then.
+        arc_pressure_section = self._build_arc_pressure_section(plan, current_tick)
+
         # Cast roster + a pool of pre-minted names for any new character (Phase 1 grounding)
         existing_characters, approved_new_names = self._build_cast_and_name_pool(
             project_state, pov_character_id
@@ -90,6 +95,7 @@ class WriterContextBuilder:
             "progress_milestone": progress_milestone,
             "progress_step": progress_step,
             "plot_beat_section": plot_beat_section,
+            "arc_pressure_section": arc_pressure_section,
             "scene_mode": scene_mode,
             "palette_shift": palette_shift,
             "transition_path": transition_path,
@@ -106,6 +112,17 @@ class WriterContextBuilder:
             "existing_characters": existing_characters,
             "approved_new_names": approved_new_names
         }
+
+    def _build_arc_pressure_section(self, plan: Dict[str, Any], current_tick: int) -> str:
+        """Firm arc-pressure tension instruction for the writer, or "" when not applicable.
+
+        Suppressed when the plan's plot beat already carries a ``tension_target`` — that
+        target is injected by ``_format_plot_beat_section`` and must not be doubled.
+        """
+        beat = plan.get("plot_beat") or {}
+        if beat.get("tension_target") is not None:
+            return ""
+        return arc_pressure_guidance_for_writer(current_tick, self.config)
 
     def _build_cast_and_name_pool(self, project_state: Dict[str, Any],
                                   pov_character_id: str) -> tuple[str, str]:
