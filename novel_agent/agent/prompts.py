@@ -475,3 +475,48 @@ def format_plot_generation_prompt(context: dict) -> str:
         Formatted prompt string
     """
     return PLOT_GENERATION_PROMPT_TEMPLATE.format(**context)
+
+
+# Phase 3 #2: revise a scene's tension toward the arc-pressure target without changing
+# what happens. Uses the shared 0-10 tension scale so the instruction matches the grader.
+TENSION_REVISION_PROMPT = """You are revising ONE scene of a story to adjust its DRAMATIC TENSION to a target level, while keeping the plot outcome.
+
+## Story context (for continuity)
+{recent_context}
+
+POV character:
+{pov_character_details}
+
+Location:
+{location_details}
+
+## This scene's plot job (preserve it)
+Intention: {scene_intention}
+Key change this scene must still accomplish: {key_change}
+
+## Tension adjustment
+The scene below was graded {current_level}/10 ({current_band}). The target for this point in the story is {target_level}/10 ({target_band}: {target_definition}).
+{continuity_line}{direction_line}
+
+How to change tension legitimately (without changing the plot outcome):
+- Lower it: shift to aftermath/reflection, slow the pacing, reduce the immediate physical threat, increase interiority, defer the urgent question.
+- Raise it: bring a concrete danger or decision to a head now, tighten the pacing, put the POV's goals directly on the line.
+
+{scale_overview}
+
+HARD CONSTRAINTS:
+- Keep the same plot outcome and the key change above.
+- Keep the same POV character and named characters; do not rename, add, or remove characters. Keep the location unless the adjustment above explicitly stages a transition to a new one.
+- Change the tension via stakes, pacing, focus and framing — so the scene would now grade near {target_level}/10.
+
+Scene to revise:
+\"\"\"
+{scene_text}
+\"\"\"
+
+Output ONLY the revised scene prose — no preamble, no commentary, no title."""
+
+
+def format_tension_revision_prompt(context: dict) -> str:
+    """Format the tension-revision prompt with context variables."""
+    return TENSION_REVISION_PROMPT.format(**context)

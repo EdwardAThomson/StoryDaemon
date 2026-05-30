@@ -85,6 +85,66 @@ def arc_pressure_guidance(current_tick: int, config) -> str:
     )
 
 
+def last_scene_tension(memory) -> Optional[int]:
+    """Tension level of the most recent scored scene, or None. The continuity signal for
+    deciding whether a target change is a step (gradual) or a jump (needs a transition)."""
+    try:
+        scene_ids = sorted(memory.list_scenes())
+    except Exception:
+        return None
+    for sid in reversed(scene_ids):
+        scene = memory.load_scene(sid)
+        level = getattr(scene, "tension_level", None) if scene else None
+        if level is not None:
+            return level
+    return None
+
+
+def arc_pressure_guidance_for_planner(current_tick: int, config, prev_tension: Optional[float] = None) -> str:
+    """Continuity-aware planner guidance: set the scene's EVENTS toward the target, and stage a
+    transition when the target is a big jump from the previous scene. "" when disabled."""
+    target = compute_target_tension(current_tick, config)
+    if target is None:
+        return ""
+    length = config.get('coherence.target_story_length', 40)
+    pct = int(round(_progress(current_tick, length) * 100))
+    band = band_for(target)
+    lines = [
+        f"\n## Arc Pressure (~{pct}% through the intended arc)",
+        f"Plan the scene's EVENTS to land near tension {target:g}/10 ({band.name}): {band.directive}.",
+    ]
+    step = config.get('coherence.tension_step_for_transition', 3)
+    if prev_tension is not None:
+        if prev_tension - target >= step:
+            lines.append(
+                f"This is a deliberate drop from the previous scene's {prev_tension:g}/10. Stage a "
+                f"transition that justifies the calm — a scene break to a new location, the aftermath "
+                f"of the prior scene, a time skip, or a beat after an open loop resolves — and plan "
+                f"low-stakes events. Do not continue the prior scene's high-stakes action.")
+        elif target - prev_tension >= step:
+            lines.append(
+                f"Escalate from the previous scene's {prev_tension:g}/10 — raise the stakes or bring a "
+                f"concrete threat or decision to a head now.")
+        else:
+            lines.append(
+                f"Move gradually from the previous scene's {prev_tension:g}/10 toward the target.")
+    return "\n".join(lines)
+
+
+def needs_tension_rewrite(current: Optional[float], target: Optional[float], threshold: float) -> bool:
+    """True when a scored scene is far enough off the target to warrant a revision."""
+    if current is None or target is None:
+        return False
+    return abs(current - target) > threshold
+
+
+def rewrite_improved(new: Optional[float], current: float, target: float) -> bool:
+    """True when the revised scene's tension is strictly closer to the target."""
+    if new is None:
+        return False
+    return abs(new - target) < abs(current - target)
+
+
 def arc_pressure_guidance_for_writer(current_tick: int, config) -> str:
     """Firm, band-specific tension instruction for the writer prompt, or "" when disabled.
 

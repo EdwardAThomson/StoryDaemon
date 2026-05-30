@@ -40,6 +40,56 @@ class SceneWriter:
         # Parse and return scene data
         return self._parse_scene_response(response, writer_context)
     
+    def revise_for_tension(self, scene_text: str, target_level: float, current_level: float,
+                           writer_context: Dict[str, Any] = None, prev_tension: float = None) -> str:
+        """Revise a scene's tension toward `target_level`, keeping the plot outcome.
+
+        Uses the shared 0-10 tension scale (so the instruction matches the grader), the real
+        story context, and continuity with the previous scene's tension — a big drop is framed
+        as a deliberate transition, not an unmotivated whiplash. Returns cleaned prose, or "".
+        """
+        from .prompts import format_tension_revision_prompt
+        from .tension_scale import band_for, scale_overview
+
+        writer_context = writer_context or {}
+        target_band = band_for(target_level)
+        current_band = band_for(current_level)
+        direction = (f"LOWER the tension toward the target — {target_band.directive}."
+                     if target_level < current_level else
+                     f"RAISE the tension toward the target — {target_band.directive}.")
+
+        # Continuity: frame a large drop from the previous scene as a deliberate transition.
+        continuity_line = ""
+        if prev_tension is not None:
+            step = self.config.get('coherence.tension_step_for_transition', 3)
+            if prev_tension - target_level >= step:
+                continuity_line = (
+                    f"The previous scene was {prev_tension:g}/10; this is a deliberate transition to "
+                    f"a calmer beat — lean into the new location or aftermath this scene establishes, "
+                    f"do not sustain the prior intensity.\n")
+            else:
+                continuity_line = f"The previous scene was {prev_tension:g}/10.\n"
+
+        prompt = format_tension_revision_prompt({
+            "recent_context": writer_context.get("recent_context", "(none)"),
+            "pov_character_details": writer_context.get("pov_character_details", "(unknown)"),
+            "location_details": writer_context.get("location_details", "(unknown)"),
+            "scene_intention": writer_context.get("scene_intention", ""),
+            "key_change": writer_context.get("key_change", ""),
+            "current_level": f"{current_level:g}",
+            "current_band": current_band.name,
+            "target_level": f"{target_level:g}",
+            "target_band": target_band.name,
+            "target_definition": target_band.definition,
+            "continuity_line": continuity_line,
+            "direction_line": direction,
+            "scale_overview": scale_overview(),
+            "scene_text": scene_text,
+        })
+        max_tokens = self.config.get('llm.writer_max_tokens', 3000)
+        response = self.llm.generate(prompt, max_tokens=max_tokens)
+        return self._strip_llm_header(response.strip())
+
     def _format_writer_prompt(self, context: Dict[str, Any]) -> str:
         """Format writer prompt with context.
         

@@ -87,9 +87,13 @@ class CoherenceMetrics:
 
         tension_level = None
         tension_category = None
+        rewritten = False
+        tension_pre_rewrite = None
         if tension_result and tension_result.get("enabled"):
             tension_level = tension_result.get("tension_level")
             tension_category = tension_result.get("tension_category")
+            rewritten = bool(tension_result.get("rewritten", False))
+            tension_pre_rewrite = tension_result.get("tension_pre_rewrite")
 
         # Arc-pressure adherence: target tension for this position, and the gap to actual.
         target_tension = compute_target_tension(tick, self.config)
@@ -119,6 +123,8 @@ class CoherenceMetrics:
             "disputed_lore_total": disputed_lore_total,
             "tension_level": tension_level,
             "tension_category": tension_category,
+            "tension_rewritten": rewritten,
+            "tension_pre_rewrite": tension_pre_rewrite,
             "target_tension": target_tension,
             "tension_delta": tension_delta,
             "goal_relevance": goal_relevance,

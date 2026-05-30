@@ -279,7 +279,12 @@ class StoryAgent:
                 scene_data["text"],
                 writer_context
             )
-            
+
+            # Step 7.6: Phase 3 #2 — one bounded revision pass toward the arc-pressure target.
+            scene_data, tension_result = self._maybe_rewrite_for_tension(
+                scene_data, tension_result, tick, writer_context
+            )
+
             print("   8. Committing scene...")
             scene_id = self.committer.commit_scene(scene_data, tick, plan)
 
@@ -928,6 +933,52 @@ class StoryAgent:
         self.state["last_updated"] = datetime.utcnow().isoformat() + "Z"
         with open(state_file, 'w') as f:
             json.dump(self.state, f, indent=2)
+
+    def _maybe_rewrite_for_tension(self, scene_data, tension_result, tick, writer_context):
+        """Phase 3 #2: one bounded revision pass to pull tension toward the arc target.
+
+        When the scored scene is more than `coherence.tension_rewrite_threshold` off the
+        target, revise once and re-score; keep the revision only if it lands closer.
+        Never raises — a failure leaves the original scene untouched.
+        """
+        try:
+            from .arc_pressure import (compute_target_tension, needs_tension_rewrite,
+                                       rewrite_improved, last_scene_tension)
+
+            if not self.config.get('coherence.tension_rewrite', True):
+                return scene_data, tension_result
+            if not (tension_result and tension_result.get('enabled')):
+                return scene_data, tension_result
+            target = compute_target_tension(tick, self.config)
+            current = tension_result.get('tension_level')
+            threshold = self.config.get('coherence.tension_rewrite_threshold', 2)
+            if not needs_tension_rewrite(current, target, threshold):
+                return scene_data, tension_result
+
+            print(f"   7.6. Tension {current}/10 off target {target:g} — revising once...")
+            prev_tension = last_scene_tension(self.memory)
+            revised_text = self.writer.revise_for_tension(
+                scene_data["text"], target, current, writer_context, prev_tension
+            )
+            if not revised_text:
+                return scene_data, tension_result
+
+            new_result = self.tension_evaluator.evaluate_tension(revised_text, writer_context)
+            new_level = new_result.get('tension_level') if new_result.get('enabled') else None
+            if rewrite_improved(new_level, current, target):
+                print(f"        revised tension {current} -> {new_level} (target {target:g})")
+                new_result['rewritten'] = True
+                new_result['tension_pre_rewrite'] = current
+                scene_data = {**scene_data, "text": revised_text,
+                              "word_count": len(revised_text.split())}
+                return scene_data, new_result
+
+            print(f"        revision not closer ({new_level}); keeping original")
+            tension_result['rewritten'] = False
+            return scene_data, tension_result
+        except Exception as e:
+            logging.getLogger(__name__).warning(f"Tension rewrite failed (tick {tick}): {e}")
+            return scene_data, tension_result
 
     def _record_coherence_metrics(self, tick, scene_id, scene_data, tension_result):
         """Phase 3 coherence instrumentation. Never raises (graceful degradation).

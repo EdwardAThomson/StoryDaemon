@@ -1,10 +1,14 @@
 """Unit tests for arc-pressure (Phase 3 target tension trajectory)."""
 
+from types import SimpleNamespace
+
 from novel_agent.agent.arc_pressure import (
     interpolate_curve,
     compute_target_tension,
     arc_pressure_guidance,
     arc_pressure_guidance_for_writer,
+    arc_pressure_guidance_for_planner,
+    last_scene_tension,
 )
 from novel_agent.agent.tension_scale import band_for
 
@@ -127,3 +131,57 @@ def test_writer_template_renders_with_arc_section():
     assert "arc_pressure_section" in keys
     rendered = WRITER_PROMPT_TEMPLATE.format(**{k: "x" for k in keys})
     assert "x" in rendered
+
+
+# ---- option (c): continuity-aware planner guidance + previous-tension lookup ----
+
+def test_planner_guidance_disabled_when_curve_none():
+    cfg = FakeConfig({"coherence.target_tension_curve": None, "coherence.target_story_length": 20})
+    assert arc_pressure_guidance_for_planner(5, cfg, prev_tension=9) == ""
+
+
+def test_planner_guidance_big_drop_stages_transition():
+    cfg = FakeConfig({"coherence.target_tension_curve": CURVE, "coherence.target_story_length": 20})
+    # tick 0 -> target 3; prev 9 -> drop 6 >= step(3) -> transition + low-stakes
+    g = arc_pressure_guidance_for_planner(0, cfg, prev_tension=9)
+    assert "EVENTS" in g and "3/10" in g
+    assert "transition" in g.lower() and "low-stakes" in g.lower()
+    assert "9/10" in g
+
+
+def test_planner_guidance_big_rise_escalates():
+    cfg = FakeConfig({"coherence.target_tension_curve": CURVE, "coherence.target_story_length": 20})
+    # tick 10 -> target 6; prev 3 -> rise 3 >= step -> escalate
+    g = arc_pressure_guidance_for_planner(10, cfg, prev_tension=3)
+    assert "Escalate" in g
+
+
+def test_planner_guidance_small_step_is_gradual():
+    cfg = FakeConfig({"coherence.target_tension_curve": CURVE, "coherence.target_story_length": 20})
+    g = arc_pressure_guidance_for_planner(10, cfg, prev_tension=5)  # target 6, diff 1 < 3
+    assert "gradually" in g.lower()
+    assert "transition" not in g.lower()
+
+
+def test_planner_guidance_no_prev_just_targets():
+    cfg = FakeConfig({"coherence.target_tension_curve": CURVE, "coherence.target_story_length": 20})
+    g = arc_pressure_guidance_for_planner(0, cfg, prev_tension=None)
+    assert "EVENTS" in g
+    assert "previous scene" not in g.lower()
+
+
+class _FakeMem:
+    def __init__(self, scenes):  # scenes: {id: tension_level}
+        self._scenes = scenes
+
+    def list_scenes(self):
+        return list(self._scenes.keys())
+
+    def load_scene(self, sid):
+        return SimpleNamespace(tension_level=self._scenes[sid])
+
+
+def test_last_scene_tension():
+    assert last_scene_tension(_FakeMem({})) is None
+    # latest by sorted id (S002 > S001)
+    assert last_scene_tension(_FakeMem({"S001": 5, "S002": 8})) == 8

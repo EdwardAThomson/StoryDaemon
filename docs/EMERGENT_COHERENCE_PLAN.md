@@ -116,9 +116,19 @@ instrumentation so every pressure below is measurable (see §5).
   firm, band-specific language and an actionable directive
   (`arc_pressure_guidance_for_writer` → `WriterContextBuilder._build_arc_pressure_section`
   → `{arc_pressure_section}`), suppressed when a plot beat already sets a
-  `tension_target`. Whether this is *enough* to dominate a tense generator is the
-  next empirical question (re-run + read `novel metrics`); further leads if not:
-  firmer planner wording, or planning an explicit low-tension beat when far below target.
+  `tension_target`. **Iterated after live runs** (claude-cli + gemini-cli) showed the
+  planner/writer nudge alone didn't control tension (it stayed pinned at 8-9 while
+  targets sat at 4-6): (1) **calibration** — the writer's scale was unified with the
+  scorer's (`agent/tension_scale.py`) so "4/10" means one thing on both sides;
+  (2) the key finding — **tension lives in the *events*, not the prose**, so a
+  prose-only rewrite that keeps the events can't lower a hot scene; (3) **option (c)** —
+  the **planner** now sets event-level tension and stages a *transition* (new location /
+  aftermath / time skip) for a big drop (continuity-aware via the previous scene's
+  tension), the writer gets concrete situational *ingredients* per band up front, and a
+  bounded **rewrite** (`SceneWriter.revise_for_tension`, kept only if closer) polishes
+  prose toward the target within that transition. Full live validation is still pending
+  a backend that survives a multi-tick run here (gemini-cli reliably completes only ~2
+  ticks before timing out).
 - **Throughline gate** — *not started.* Scene relevance to the primary goal/theme
   (the rubric already records `goal_relevance`).
 - **Loop-aging pressure** — *not started.* Older open loops surface louder,

@@ -19,26 +19,30 @@ class TensionBand(NamedTuple):
 
 
 # Anchors adopted from the (good) scorer rubric; directives carried alongside.
+# Each `directive` lists *situational* ingredients (kinds of plot-points, stakes, pacing) that
+# produce the band — NOT a vocabulary list. The scorer rates stakes/threat, not scary words, so
+# tension comes from what HAPPENS and how it's paced, not from dramatic word choice.
 TENSION_ANCHORS: List[TensionBand] = [
     TensionBand(0, 1, "none", "calm, safe, no stakes or conflict",
-                "keep stakes low and the pace easy — reflection, quiet character or world "
-                "texture, breathing room; no danger or hard conflict"),
+                "quiet routine and world/sensory texture, comfortable interaction, no open "
+                "threat; slow pacing and longer sentences. Avoid danger, deadlines, or hard choices"),
     TensionBand(2, 3, "minimal", "routine, faint unease or anticipation",
-                "keep tension mild — small frictions, lingering questions or unease; "
-                "no major threat yet"),
+                "ordinary activity with a faint undercurrent — a small unanswered question or "
+                "mild unease; unhurried pacing. Avoid physical threat or urgent stakes"),
     TensionBand(4, 5, "rising", "complications or open questions, outcome uncertain",
-                "build rising tension — a complication or growing stake, an uncertain "
-                "outcome pressing on the POV"),
+                "introduce a complication or open question with an uncertain outcome and moderate "
+                "stakes pressing on the POV; steady pacing — no resolution yet"),
     TensionBand(6, 7, "high", "active conflict, real danger, or significant stakes pressing now",
-                "write high tension — active conflict, real danger or hard pressure on the "
-                "POV; tighten the pacing and sentences"),
+                "an active confrontation, a concrete danger or deadline, or a hard decision pressed "
+                "on the POV now; tighter pacing and shorter beats. Avoid drifting/reflective digression"),
     TensionBand(8, 9, "very high",
                 "imminent threat, violence, or a critical irreversible decision happening now",
-                "write very high tension — an imminent threat or an irreversible decision "
-                "happening now; maximum pressure"),
+                "an imminent threat, violence, or an irreversible decision happening now with the "
+                "POV's core goals on the line; urgent, clipped pacing"),
     TensionBand(10, 10, "peak climax",
                 "a story-defining, life-or-death moment at its breaking point",
-                "write peak-climax intensity — a story-defining, life-or-death breaking point"),
+                "the story's defining life-or-death moment at its breaking point — the central "
+                "conflict resolves now"),
 ]
 
 

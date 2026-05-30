@@ -14,7 +14,7 @@ from pathlib import Path
 from ..memory.manager import MemoryManager
 from ..memory.vector_store import VectorStore
 from ..tools.registry import ToolRegistry
-from .arc_pressure import arc_pressure_guidance
+from .arc_pressure import arc_pressure_guidance_for_planner, last_scene_tension
 
 logger = logging.getLogger(__name__)
 
@@ -378,7 +378,9 @@ class MultiStagePlanner:
         recent_tension = tension_history[-5:] if tension_history else []
 
         # Arc-pressure (Phase 3): target tension for this story position
-        arc_line = arc_pressure_guidance(state.get('current_tick', 0), self.config)
+        arc_line = arc_pressure_guidance_for_planner(
+            state.get('current_tick', 0), self.config, last_scene_tension(self.memory)
+        )
 
         prompt = f"""You are planning the next scene in a story.
 

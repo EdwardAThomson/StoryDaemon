@@ -78,6 +78,16 @@ DEFAULT_CONFIG = {
         # set it to None to disable arc-pressure.
         'target_story_length': 40,
         'target_tension_curve': [[0.0, 3], [0.25, 5], [0.5, 6], [0.75, 8], [0.9, 9], [1.0, 4]],
+        # Phase 3 #2: closed-loop tension control. When a scored scene is more than
+        # tension_rewrite_threshold off the arc-pressure target, do ONE revision pass
+        # toward the target (kept only if it lands closer). Adds ~2 LLM calls per
+        # off-target scene; set False to disable (back to open-loop nudging only).
+        'tension_rewrite': True,
+        'tension_rewrite_threshold': 2,
+        # A target that is this far below the previous scene's tension is treated as a
+        # deliberate drop that needs a transition (new location / aftermath / time skip)
+        # rather than a continuation — used by the planner and the rewrite to avoid whiplash.
+        'tension_step_for_transition': 3,
     },
     'plot': {
         # Beat integration mode: controls how strongly the agent treats plot beats.
