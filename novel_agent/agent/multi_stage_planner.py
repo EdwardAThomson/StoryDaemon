@@ -15,6 +15,7 @@ from ..memory.manager import MemoryManager
 from ..memory.vector_store import VectorStore
 from ..tools.registry import ToolRegistry
 from .arc_pressure import arc_pressure_guidance_for_planner, last_scene_tension
+from .throughline import primary_goal, throughline_guidance
 
 logger = logging.getLogger(__name__)
 
@@ -370,9 +371,11 @@ class MultiStagePlanner:
         protagonist_id = state.get('active_character')
         protagonist = self.memory.load_character(protagonist_id) if protagonist_id else None
         
-        # Get story goal if it exists
-        story_goal = state.get('story_goal', {})
-        
+        # Get the primary goal (the throughline). NB: it lives at story_goals.primary,
+        # not the never-set story_goal — see throughline.primary_goal.
+        goal = primary_goal(state) or {}
+        throughline_line = throughline_guidance(state, self.config)
+
         # Get recent tension pattern
         tension_history = state.get('tension_history', [])
         recent_tension = tension_history[-5:] if tension_history else []
@@ -392,8 +395,8 @@ Tone: {foundation.get('tone', 'Unknown')}
 
 ## Current State
 Tick: {state.get('current_tick', 0)}
-Story Goal: {story_goal.get('description', 'Still emerging')}
-Recent Tension: {recent_tension}{arc_line}
+Story Goal: {goal.get('description', 'Still emerging')}
+Recent Tension: {recent_tension}{arc_line}{throughline_line}
 
 ## Protagonist
 """

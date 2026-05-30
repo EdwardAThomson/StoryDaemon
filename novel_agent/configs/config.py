@@ -88,6 +88,9 @@ DEFAULT_CONFIG = {
         # deliberate drop that needs a transition (new location / aftermath / time skip)
         # rather than a continuation — used by the planner and the rewrite to avoid whiplash.
         'tension_step_for_transition': 3,
+        # Throughline gate: inject the primary goal into the planner so scenes serve it.
+        # Dormant until a primary goal exists; goal_relevance in the rubric measures adherence.
+        'throughline_pressure': True,
     },
     'plot': {
         # Beat integration mode: controls how strongly the agent treats plot beats.
