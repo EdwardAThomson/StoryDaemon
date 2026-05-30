@@ -22,16 +22,18 @@ CODEX_APPROVAL = "never"
 class CodexInterface:
     """Interface for calling Codex CLI to access GPT-5."""
     
-    def __init__(self, codex_bin: str = "codex"):
+    def __init__(self, codex_bin: str = "codex", default_timeout: int = 300):
         """Initialize Codex interface.
-        
+
         Args:
             codex_bin: Path to codex binary (default: 'codex' in PATH)
-            
+            default_timeout: Per-call timeout in seconds for `codex exec`.
+
         Raises:
             RuntimeError: If Codex CLI is not installed or not in PATH
         """
         self.codex_bin = codex_bin
+        self.default_timeout = default_timeout
         self._verify_codex_installed()
     
     def _verify_codex_installed(self):
@@ -51,7 +53,7 @@ class CodexInterface:
         self,
         prompt: str,
         max_tokens: int = 2000,
-        timeout: int = 120
+        timeout: Optional[int] = None
     ) -> str:
         """Generate text using Codex CLI.
         
@@ -67,6 +69,7 @@ class CodexInterface:
             RuntimeError: If Codex CLI returns an error
             subprocess.TimeoutExpired: If generation times out
         """
+        eff_timeout = timeout or self.default_timeout
         msg_file = None
         try:
             # codex writes ONLY the final assistant message to this file, so we don't
@@ -87,7 +90,7 @@ class CodexInterface:
                 ],
                 capture_output=True,
                 text=True,
-                timeout=timeout,
+                timeout=eff_timeout,
                 check=True,
                 cwd=neutral_cwd(),
             )
@@ -104,7 +107,7 @@ class CodexInterface:
 
         except subprocess.TimeoutExpired:
             raise RuntimeError(
-                f"Codex CLI timed out after {timeout}s. "
+                f"Codex CLI timed out after {eff_timeout}s. "
                 "Try increasing timeout or simplifying the prompt."
             )
         finally:
@@ -118,7 +121,7 @@ class CodexInterface:
         self,
         prompt: str,
         max_tokens: int = 2000,
-        timeout: int = 120,
+        timeout: Optional[int] = None,
         max_retries: int = 3
     ) -> str:
         """Generate text with automatic retry on failure.

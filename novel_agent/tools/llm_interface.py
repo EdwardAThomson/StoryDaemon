@@ -51,13 +51,13 @@ def initialize_llm(
     backend_normalized = backend.lower().strip()
 
     if backend_normalized == "codex":
-        _llm_client = CodexInterface(codex_bin)
+        _llm_client = CodexInterface(codex_bin, default_timeout=timeout or 300)
     elif backend_normalized in {"api", "openai"}:
         # "openai" kept for backward compatibility; it now means
         # "use the API backend" with the configured model.
         _llm_client = MultiProviderInterface(model=model)
     elif backend_normalized in {"gemini-cli", "gemini"}:
-        _llm_client = GeminiCliInterface(model=model)
+        _llm_client = GeminiCliInterface(model=model, default_timeout=timeout or 300)
     elif backend_normalized in {"claude-cli", "claude"}:
         _llm_client = ClaudeCliInterface(model=model, default_timeout=timeout or 300)
     else:

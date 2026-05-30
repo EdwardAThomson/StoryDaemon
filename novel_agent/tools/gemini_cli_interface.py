@@ -14,11 +14,14 @@ from .agent_cwd import neutral_cwd
 class GeminiCliInterface:
     """Interface for calling Gemini CLI to access Gemini models."""
 
-    def __init__(self, model: str = "gemini-2.5-pro", gemini_bin: str = "gemini"):
+    def __init__(self, model: str = "gemini-3-flash-preview", gemini_bin: str = "gemini",
+                 default_timeout: int = 300):
         """Initialize Gemini CLI interface.
 
         Args:
-            model: Gemini model identifier (e.g. "gemini-2.5-pro").
+            model: Gemini model identifier. Use a current Gemini 3 name —
+                "gemini-3-flash-preview" (fast) or "gemini-3-pro-preview".
+                Note: the bare "gemini-3-flash"/"gemini-3-pro" names are NOT valid.
             gemini_bin: Path to `gemini` binary (default: "gemini" in PATH).
 
         Raises:
@@ -26,6 +29,7 @@ class GeminiCliInterface:
         """
         self.model = model
         self.gemini_bin = gemini_bin
+        self.default_timeout = default_timeout
         self._verify_gemini_installed()
 
     def _verify_gemini_installed(self) -> None:
@@ -41,7 +45,7 @@ class GeminiCliInterface:
                 "ensure 'gemini' is on your PATH."
             )
 
-    def generate(self, prompt: str, max_tokens: int = 2000, timeout: int = 120) -> str:  # noqa: ARG002
+    def generate(self, prompt: str, max_tokens: int = 2000, timeout: Optional[int] = None) -> str:  # noqa: ARG002
         """Generate text using Gemini CLI.
 
         Note: `max_tokens` is currently not forwarded; Gemini CLI will use its
@@ -50,7 +54,7 @@ class GeminiCliInterface:
         Args:
             prompt: The prompt to send to Gemini.
             max_tokens: Maximum tokens to generate (not currently forwarded).
-            timeout: Timeout in seconds (default: 120).
+            timeout: Per-call timeout in seconds (default: self.default_timeout).
 
         Returns:
             Generated text from the Gemini CLI.
@@ -59,6 +63,7 @@ class GeminiCliInterface:
             RuntimeError: If Gemini CLI returns an error.
             subprocess.TimeoutExpired: If generation times out.
         """
+        eff_timeout = timeout or self.default_timeout
         try:
             # Non-interactive call, similar to `gemini -p "..." -m <model>`
             result = subprocess.run(
@@ -75,7 +80,7 @@ class GeminiCliInterface:
                 ],
                 capture_output=True,
                 text=True,
-                timeout=timeout,
+                timeout=eff_timeout,
                 check=True,
                 # Neutral cwd: `gemini` is also a repo-aware agent; keep it isolated.
                 cwd=neutral_cwd(),
@@ -88,7 +93,7 @@ class GeminiCliInterface:
 
         except subprocess.TimeoutExpired:
             raise RuntimeError(
-                f"Gemini CLI timed out after {timeout}s. "
+                f"Gemini CLI timed out after {eff_timeout}s. "
                 "Try increasing timeout or simplifying the prompt."
             )
 
@@ -96,7 +101,7 @@ class GeminiCliInterface:
         self,
         prompt: str,
         max_tokens: int = 2000,
-        timeout: int = 120,
+        timeout: Optional[int] = None,
         max_retries: int = 3,
     ) -> str:
         """Generate text with automatic retry on failure.
