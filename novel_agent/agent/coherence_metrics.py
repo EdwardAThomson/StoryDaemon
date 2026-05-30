@@ -29,6 +29,27 @@ from .arc_pressure import compute_target_tension
 logger = logging.getLogger(__name__)
 
 
+GOAL_RELEVANCE_PROMPT = """You are rating how much a single scene SERVES the story's primary goal (its throughline), 0 to 10.
+
+Rate whether the scene advances, complicates, deepens, or meaningfully bears on the goal — NOT mere topical or vocabulary overlap. A scene set in the same world with the same characters but doing nothing for the goal is LOW. A scene that moves the goal forward (even subtly, even by raising the cost of pursuing it) is HIGH.
+
+0-1   none: no bearing on the goal
+2-3   tangential: same world/characters, but does not touch the goal
+4-6   connected: relates to or sets up the goal without advancing it much
+7-8   advances: meaningfully moves the goal forward, or complicates/raises the stakes of it
+9-10  pivotal: a decisive beat for the goal
+
+Primary goal: {goal}
+
+Scene:
+\"\"\"
+{scene_text}
+\"\"\"
+
+Respond with JSON only, no other text:
+{{"relevance": <integer 0-10>, "rationale": "<one short sentence>"}}"""
+
+
 def read_metrics(metrics_file: Path) -> List[Dict[str, Any]]:
     """Read a metrics JSONL file, last-wins per ``tick``, sorted by tick.
 
@@ -59,11 +80,12 @@ def read_metrics(metrics_file: Path) -> List[Dict[str, Any]]:
 class CoherenceMetrics:
     """Computes and persists per-tick coherence signals. Read-only against story state."""
 
-    def __init__(self, project_path, memory_manager, vector_store, config):
+    def __init__(self, project_path, memory_manager, vector_store, config, llm_interface=None):
         self.project_path = Path(project_path)
         self.memory = memory_manager
         self.vector = vector_store
         self.config = config
+        self.llm = llm_interface  # optional; enables the LLM goal-relevance judge
         self.metrics_file = self.project_path / "memory" / "metrics.jsonl"
 
     def record_tick(
@@ -101,16 +123,9 @@ class CoherenceMetrics:
         if target_tension is not None and tension_level is not None:
             tension_delta = round(tension_level - target_tension, 1)
 
-        goal_relevance = None
-        if goal_description and scene_text:
-            limit = self.config.get("coherence.goal_relevance_chars", 3000)
-            try:
-                goal_relevance = round(
-                    float(self.vector.compute_semantic_similarity(goal_description, scene_text[:limit])),
-                    4,
-                )
-            except Exception as e:  # similarity is best-effort; never block the record
-                logger.warning(f"goal_relevance computation failed (tick {tick}): {e}")
+        goal_relevance, goal_relevance_method, goal_relevance_rationale = self._goal_relevance(
+            tick, goal_description, scene_text
+        )
 
         record = {
             "tick": tick,
@@ -128,10 +143,70 @@ class CoherenceMetrics:
             "target_tension": target_tension,
             "tension_delta": tension_delta,
             "goal_relevance": goal_relevance,
+            "goal_relevance_method": goal_relevance_method,
+            "goal_relevance_rationale": goal_relevance_rationale,
             "recorded_at": datetime.utcnow().isoformat() + "Z",
         }
         self._append(record)
         return record
+
+    def _goal_relevance(self, tick, goal_description, scene_text):
+        """How much the scene serves the primary goal, on a 0-10 scale.
+
+        Preferred path is an LLM judge (rates *advancing the goal*, not topical overlap);
+        the embedding-similarity gauge (scaled to 0-10) is the no-LLM fallback. Returns
+        ``(score, method, rationale)`` — all ``None``/``""`` when there is no goal/scene.
+        """
+        if not (goal_description and scene_text):
+            return None, None, ""
+
+        limit = self.config.get("coherence.goal_relevance_chars", 3000)
+        text = scene_text[:limit]
+
+        if self.llm is not None and self.config.get("coherence.use_llm_goal_relevance", True):
+            judged = self._llm_goal_relevance(goal_description, text)
+            if judged is not None:
+                return judged["score"], "llm", judged.get("rationale", "")
+            # LLM unavailable/failed for this scene — fall through to the embedding gauge.
+
+        try:
+            sim = float(self.vector.compute_semantic_similarity(goal_description, text))
+            return round(max(0.0, min(1.0, sim)) * 10, 1), "embedding", ""
+        except Exception as e:  # similarity is best-effort; never block the record
+            logger.warning(f"goal_relevance computation failed (tick {tick}): {e}")
+            return None, None, ""
+
+    def _llm_goal_relevance(self, goal_description, scene_text) -> Optional[Dict[str, Any]]:
+        """Rate goal-relevance with the LLM. Returns None on failure (graceful).
+
+        Retries once, mirroring the tension scorer / contradiction judge, so a transient
+        failure falls back to the embedding gauge rather than dropping the signal.
+        """
+        prompt = GOAL_RELEVANCE_PROMPT.format(goal=goal_description, scene_text=scene_text)
+        max_tokens = self.config.get("coherence.goal_relevance_max_tokens", 200)
+
+        for attempt in (1, 2):
+            try:
+                response = self.llm.generate(prompt, max_tokens=max_tokens)
+                return self._parse_goal_relevance(response)
+            except Exception as e:
+                if attempt == 1:
+                    logger.warning(f"LLM goal-relevance judge failed, retrying: {e}")
+                else:
+                    logger.error(f"LLM goal-relevance judge failed after retry: {e}")
+        return None
+
+    @staticmethod
+    def _parse_goal_relevance(response: str) -> Dict[str, Any]:
+        """Parse the judge's JSON into ``{score, rationale}`` (score clamped 0-10)."""
+        start = response.find("{")
+        end = response.rfind("}") + 1
+        if start == -1 or end == 0:
+            raise ValueError("no JSON object in goal-relevance rating")
+        data = json.loads(response[start:end])
+        score = int(round(float(data["relevance"])))
+        score = max(0, min(10, score))
+        return {"score": score, "rationale": str(data.get("rationale", "")).strip()}
 
     def load_metrics(self) -> List[Dict[str, Any]]:
         """Return the recorded series (last-wins per tick, sorted by tick)."""

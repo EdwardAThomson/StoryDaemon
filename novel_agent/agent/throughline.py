@@ -1,10 +1,10 @@
 """Throughline pressure — keep scenes serving the story's primary goal.
 
-The coherence rubric already *measures* throughline adherence as `goal_relevance` (semantic
-similarity of the scene to the primary goal). This module supplies the matching *pressure*:
-a firm planner instruction to keep the next scene tied to the primary goal. Like arc-pressure,
-relevance is decided by *what the scene is about*, so the lever lives at the planner, not in a
-post-hoc prose pass.
+The coherence rubric already *measures* throughline adherence as `goal_relevance` (an LLM
+judge rating how much the scene advances the primary goal, 0-10; embedding similarity is the
+no-LLM fallback). This module supplies the matching *pressure*: a firm planner instruction to
+keep the next scene tied to the primary goal. Like arc-pressure, relevance is decided by *what
+the scene is about*, so the lever lives at the planner, not in a post-hoc prose pass.
 
 Dormant until a primary goal exists (auto-promoted around tick 10-15, or user-specified).
 """

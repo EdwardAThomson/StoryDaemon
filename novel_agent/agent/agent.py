@@ -113,7 +113,7 @@ class StoryAgent:
         self.lore_detector = LoreContradictionDetector(self.memory, self.vector, config, llm_interface)
 
         # Phase 3 (Emergent Coherence) — per-tick coherence instrumentation
-        self.coherence_metrics = CoherenceMetrics(self.project_path, self.memory, self.vector, config)
+        self.coherence_metrics = CoherenceMetrics(self.project_path, self.memory, self.vector, config, self.llm)
         
         # Phase 7A.5 components (optional)
         self.use_multi_stage = config.get('generation.use_multi_stage_planner', True)

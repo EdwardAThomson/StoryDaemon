@@ -24,6 +24,28 @@ class FakeVector:
         return self.value
 
 
+class FakeLLM:
+    """Stand-in LLM: returns a canned response, or raises, and records the prompt."""
+
+    def __init__(self, out=None, raises=False):
+        self.out = out
+        self.raises = raises
+        self.prompt = None
+        self.calls = 0
+
+    def generate(self, prompt, max_tokens=200):
+        self.calls += 1
+        self.prompt = prompt
+        if self.raises:
+            raise RuntimeError("llm backend down")
+        return self.out
+
+
+def _metrics_llm(project_dir, llm, vector=None, config=None):
+    return CoherenceMetrics(project_dir, MemoryManager(project_dir), vector or FakeVector(),
+                            config or Config(), llm)
+
+
 @pytest.fixture
 def project():
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -86,14 +108,17 @@ def test_contradictions_deduped_by_pair(project):
     assert cm.record_tick(tick=3, scene_id="S003", tension_result=None)["contradictions_detected"] == 0
 
 
-def test_goal_relevance_present_and_absent(project):
+def test_goal_relevance_embedding_fallback_when_no_llm(project):
+    # No LLM wired in -> embedding gauge, scaled from 0-1 to the 0-10 scale.
     cm = _metrics(project, FakeVector(value=0.5))
     with_goal = cm.record_tick(tick=1, scene_id="S001", scene_text="prose",
                                tension_result=None, goal_description="defeat the empire")
-    assert with_goal["goal_relevance"] == 0.5
+    assert with_goal["goal_relevance"] == 5.0
+    assert with_goal["goal_relevance_method"] == "embedding"
 
     without_goal = cm.record_tick(tick=2, scene_id="S002", scene_text="prose", tension_result=None)
     assert without_goal["goal_relevance"] is None
+    assert without_goal["goal_relevance_method"] is None
 
 
 def test_tension_passthrough(project):
@@ -161,3 +186,59 @@ def test_arc_target_without_tension_has_no_delta(project):
 
 def test_read_metrics_missing_file(project):
     assert read_metrics(project / "memory" / "nope.jsonl") == []
+
+
+# ---- LLM goal-relevance judge ---------------------------------------------
+
+def test_llm_goal_relevance_judge_used_when_llm_present(project):
+    llm = FakeLLM('{"relevance": 8, "rationale": "the heist advances"}')
+    cm = _metrics_llm(project, llm, FakeVector(value=0.1))  # embedding would give 1.0
+    rec = cm.record_tick(tick=1, scene_id="S001", scene_text="the team cracks the vault",
+                         tension_result=None, goal_description="pull off the heist")
+    assert rec["goal_relevance"] == 8  # LLM judge, not the embedding 1.0
+    assert rec["goal_relevance_method"] == "llm"
+    assert rec["goal_relevance_rationale"] == "the heist advances"
+    # The goal and the scene both reach the judge.
+    assert "pull off the heist" in llm.prompt and "cracks the vault" in llm.prompt
+    assert llm.calls == 1
+
+
+def test_llm_goal_relevance_clamped(project):
+    llm = FakeLLM('{"relevance": 99}')
+    cm = _metrics_llm(project, llm)
+    rec = cm.record_tick(tick=1, scene_id="S001", scene_text="x",
+                         tension_result=None, goal_description="g")
+    assert rec["goal_relevance"] == 10
+    assert rec["goal_relevance_method"] == "llm"
+
+
+def test_llm_goal_relevance_disabled_falls_back_to_embedding(project):
+    cfg = Config()
+    cfg.set("coherence.use_llm_goal_relevance", False)
+    llm = FakeLLM('{"relevance": 8}')
+    cm = _metrics_llm(project, llm, FakeVector(value=0.3), cfg)
+    rec = cm.record_tick(tick=1, scene_id="S001", scene_text="x",
+                         tension_result=None, goal_description="g")
+    assert rec["goal_relevance"] == 3.0  # embedding 0.3 -> 3.0
+    assert rec["goal_relevance_method"] == "embedding"
+    assert llm.calls == 0  # judge never consulted
+
+
+def test_llm_goal_relevance_malformed_falls_back(project):
+    llm = FakeLLM("sorry, I cannot rate this")  # no JSON
+    cm = _metrics_llm(project, llm, FakeVector(value=0.4))
+    rec = cm.record_tick(tick=1, scene_id="S001", scene_text="x",
+                         tension_result=None, goal_description="g")
+    assert rec["goal_relevance"] == 4.0  # embedding fallback
+    assert rec["goal_relevance_method"] == "embedding"
+    assert llm.calls == 2  # retried once before giving up
+
+
+def test_llm_goal_relevance_raises_falls_back(project):
+    llm = FakeLLM(raises=True)
+    cm = _metrics_llm(project, llm, FakeVector(value=0.2))
+    rec = cm.record_tick(tick=1, scene_id="S001", scene_text="x",
+                         tension_result=None, goal_description="g")
+    assert rec["goal_relevance"] == 2.0
+    assert rec["goal_relevance_method"] == "embedding"
+    assert llm.calls == 2

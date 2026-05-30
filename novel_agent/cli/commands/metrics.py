@@ -41,7 +41,7 @@ def display_metrics(info: Dict[str, Any], use_color: bool = True):
         return
 
     print()
-    header = f"   {'Tick':>4}  {'Words':>6}  {'Loops(+/-/open)':>16}  {'Contra':>6}  {'Disp':>4}  {'Tens(act/tgt)':>13}  {'GoalRel':>7}"
+    header = f"   {'Tick':>4}  {'Words':>6}  {'Loops(+/-/open)':>16}  {'Contra':>6}  {'Disp':>4}  {'Tens(act/tgt)':>13}  {'Goal/10':>7}"
     print(bold(header))
     for r in series:
         tick = r.get("tick")
@@ -56,7 +56,12 @@ def display_metrics(info: Dict[str, Any], use_color: bool = True):
         tgt = f"{target:g}" if isinstance(target, (int, float)) else "—"
         tension = f"{act}/{tgt}"
         rel = r.get("goal_relevance")
-        rel_str = f"{rel:.2f}" if isinstance(rel, (int, float)) else "—"
+        # goal_relevance is a 0-10 score (LLM judge, or embedding gauge scaled to the same scale);
+        # mark the embedding fallback with a "~" so the weaker gauge is visible at a glance.
+        rel_str = "—"
+        if isinstance(rel, (int, float)):
+            mark = "~" if r.get("goal_relevance_method") == "embedding" else ""
+            rel_str = f"{mark}{rel:g}"
         print(f"   {tick:>4}  {words:>6}  {loops:>16}  {contra:>6}  {disputed:>4}  {tension:>8} {category:<4}  {rel_str:>7}")
 
     # Tension sparkline over the run (reuses the status.py bar idiom)

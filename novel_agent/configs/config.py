@@ -70,7 +70,12 @@ DEFAULT_CONFIG = {
     'coherence': {
         # Phase 3 coherence rubric — per-tick instrumentation, no behavior change.
         'enabled': True,                  # Master switch for recording memory/metrics.jsonl
-        'goal_relevance_chars': 3000,     # Scene-prose truncation for the goal-relevance similarity check
+        'goal_relevance_chars': 3000,     # Scene-prose truncation for the goal-relevance check
+        # Goal-relevance gauge (0-10): how much each scene serves the primary goal. The LLM
+        # judge rates *advancing the goal* (not topical overlap); the embedding-similarity
+        # gauge (scaled to 0-10) is the no-LLM fallback. Recorded as goal_relevance in the rubric.
+        'use_llm_goal_relevance': True,
+        'goal_relevance_max_tokens': 200,
         # Arc-pressure (Phase 3): nudge the planner toward a target tension trajectory.
         # target_story_length is the "story position" denominator — set it to the
         # intended length (in ticks): short story vs. novella vs. novel. The curve is
