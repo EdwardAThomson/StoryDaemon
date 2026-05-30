@@ -8,6 +8,8 @@ import shutil
 import subprocess
 from typing import Optional
 
+from .agent_cwd import neutral_cwd
+
 
 class GeminiCliInterface:
     """Interface for calling Gemini CLI to access Gemini models."""
@@ -71,6 +73,8 @@ class GeminiCliInterface:
                 text=True,
                 timeout=timeout,
                 check=True,
+                # Neutral cwd: `gemini` is also a repo-aware agent; keep it isolated.
+                cwd=neutral_cwd(),
             )
             return result.stdout.strip()
 

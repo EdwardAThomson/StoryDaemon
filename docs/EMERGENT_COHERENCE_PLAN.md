@@ -177,6 +177,11 @@ answer once the cwd changed). **Hardened (`tools/claude_cli_interface.py`):** it
 now runs from a neutral temp scratch dir (no `.git`/`CLAUDE.md`), forwards a
 Claude `--model` (use `llm.model: haiku` for speed), and has a configurable
 `llm.timeout` (default 300s). With those, a multi-tick run completed cleanly.
+The neutral-cwd isolation is now **shared across all three CLI backends**
+(`tools/agent_cwd.py:neutral_cwd()`), and the `codex` backend was de-fanged from
+`--dangerously-bypass-approvals-and-sandbox` to a read-only, non-interactive run
+(`--sandbox read-only --ask-for-approval never`) that reads only the final
+message — text generation needs no write/exec.
 Remaining advice: still **prefer the `api` backend for unattended multi-tick
 runs** — even hardened, `claude -p` is slower and less predictable than a
 completion API. (`--append-system-prompt`/`--disallowedTools` remain optional
