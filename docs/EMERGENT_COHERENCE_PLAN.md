@@ -129,8 +129,13 @@ instrumentation so every pressure below is measurable (see §5).
   prose toward the target within that transition. Full live validation is still pending
   a backend that survives a multi-tick run here (gemini-cli reliably completes only ~2
   ticks before timing out).
-- **Throughline gate** — *not started.* Scene relevance to the primary goal/theme
-  (the rubric already records `goal_relevance`).
+- **Throughline gate** — *shipped.* The planner's strategic prompt now carries the
+  primary goal (`agent/throughline.py`, `coherence.throughline_pressure`) so scenes
+  serve the throughline; dormant until a goal exists. Its gauge, the rubric's
+  `goal_relevance`, was upgraded from embedding similarity to an **LLM judge** (0-10,
+  "serves-the-goal" rubric, `coherence.use_llm_goal_relevance`, embedding fallback) —
+  the embedding gauge measured topical overlap, not "advances the goal," so an A/B
+  couldn't see the pressure. (Same crude-gauge lesson as the keyword tension heuristic.)
 - **Loop-aging pressure** — *not started.* Older open loops surface louder,
   biasing toward payoff. (Motivation observed: a test run opened 23 loops and
   closed 0 — threads pile up without payoff.)
@@ -176,6 +181,9 @@ coherence rubric before Phase 3.~~ **Resolved — shipped** as `CoherenceMetrics
 (loops opened/closed/open, contradictions, disputed lore, tension + target +
 delta, goal relevance), viewable via `novel metrics`. It already surfaced two
 findings — arc-pressure being too gentle, and loops accumulating without payoff.
+Two of these gauges (tension, goal-relevance) started as crude proxies — keyword
+density and embedding similarity — that couldn't see the property they named, and
+were each upgraded to an anchored LLM judge so the matching pressure is measurable.
 
 ## 6. Tooling caveat (separate from the roadmap)
 
@@ -200,18 +208,20 @@ further hardening; the neutral cwd was the decisive fix.)
 ## 7. Status & current frontier
 
 Phases 1 and 2 are shipped. Phase 3 is in progress: the coherence rubric,
-contradiction enforcement, the LLM tension scorer, and arc-pressure are all in;
-the throughline gate, loop-aging, and the block/sub-block DSL are not yet started.
+contradiction enforcement, the LLM tension scorer, arc-pressure, the throughline
+gate, and its LLM goal-relevance judge are all in; loop-aging and the
+block/sub-block DSL are not yet started.
 
 Next, in rough priority:
 1. **Strengthen arc-pressure** — *writer-prompt injection landed* (firm,
    band-specific target). Open: re-run and read `novel metrics` to see whether it
    now dominates a tense generator; if not, firm the planner wording or plan an
    explicit low-tension beat when far below target.
-2. **Loop-aging** — the rubric shows loops accumulating without payoff; surface
+2. **Validate the throughline gate** — re-run the on/off A/B now that the gauge is
+   an LLM judge (the embedding gauge showed no lift because it couldn't see "advances
+   the goal"); if the judge still shows no lift, firm the planner wording.
+3. **Loop-aging** — the rubric shows loops accumulating without payoff; surface
    older open loops louder to bias toward resolution.
-3. **Throughline gate** — score scene relevance to the primary goal (the rubric
-   already records `goal_relevance`).
 
 *(Original first step, now done: the grounded `name.generate` / entity-minting
 tool and "reference by selection, not free-typing" contract — Phase 1.)*
