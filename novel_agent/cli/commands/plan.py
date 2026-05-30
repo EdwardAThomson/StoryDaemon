@@ -45,7 +45,7 @@ def preview_plan(project_dir: Path, save: Optional[Path] = None, verbose: bool =
         codex_bin = config.get('llm.codex_bin_path', 'codex')
         model = (
             config.get('llm.model')
-            or config.get('llm.openai_model', 'gpt-5.1')
+            or config.get('llm.openai_model', 'gpt-5.5')
         )
         try:
             llm = initialize_llm(

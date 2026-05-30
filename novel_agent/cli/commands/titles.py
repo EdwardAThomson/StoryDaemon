@@ -139,7 +139,7 @@ def generate_titles(
     # Initialize LLM
     backend = config.get("llm.backend", "codex")
     codex_bin = config.get("llm.codex_bin_path", "codex")
-    model = config.get("llm.model") or config.get("llm.openai_model", "gpt-5.1")
+    model = config.get("llm.model") or config.get("llm.openai_model", "gpt-5.5")
     
     try:
         initialize_llm(backend=backend, codex_bin=codex_bin, model=model)

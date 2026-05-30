@@ -9,8 +9,8 @@ Backends:
 - "gemini-cli"  → Gemini CLI backend using the local `gemini` binary.
 - "claude-cli"  → Claude Code CLI backend using the local `claude` binary.
 
-The API backend uses model names (e.g. "gpt-5.1", "claude-4.5",
-"gemini-2.5-pro") to route to the correct provider.
+The API backend uses model names (e.g. "gpt-5.5", "claude-sonnet-4.5",
+"claude-haiku-4.5", "gemini-3-flash-preview") to route to the correct provider.
 """
 from typing import Optional, Union
 
@@ -30,7 +30,7 @@ _llm_client: Optional[LLMClient] = None
 def initialize_llm(
     backend: str = "codex",
     codex_bin: str = "codex",
-    model: str = "gpt-5.1",
+    model: str = "gpt-5.5",
     timeout: Optional[int] = None,
 ) -> LLMClient:
     """Initialize the LLM client for the given backend.
