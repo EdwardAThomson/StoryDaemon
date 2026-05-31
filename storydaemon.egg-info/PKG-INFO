@@ -33,7 +33,13 @@ Dynamic: summary
 
 **Agentic Novel Generation System with Emergent Narrative**
 
-StoryDaemon is a Python-based system that generates long-form fiction through an autonomous agent that plans, writes, and evolves stories organically. Unlike traditional story generators, StoryDaemon emphasizes emergence over pre-planning, allowing narrative structure to develop naturally through iterative "story ticks."
+StoryDaemon is a Python-based system that generates long-form fiction through an autonomous agent that plans, writes, and evolves stories organically. Unlike my previous [story generator](https://github.com/EdwardAThomson/NovelWriter), StoryDaemon emphasizes emergence over pre-planning, allowing narrative structure to develop naturally through iterative "story ticks."
+
+## YouTube Explainer
+
+An introduction and overview.
+
+* [StoryDaemon: The Future of Story Generation?](https://youtu.be/vIBRLavyxbs)
 
 ## Features
 
@@ -43,8 +49,9 @@ StoryDaemon is a Python-based system that generates long-form fiction through an
 - 🎯 **Emergent Structure** - No pre-outlining; story develops organically
 - 📚 **Story Foundation** - Optional genre, premise, setting, tone to guide emergence
 - 🎯 **Goal Hierarchy** - Protagonist goals emerge naturally or can be user-specified
+- 📋 **Plot-First Mode** - Optional emergent plot beats guide scene generation for forward momentum
 - ⚡ **Tension Tracking** - Automatic scene tension scoring (0-10) for pacing awareness
-- 💰 **Zero Additional Cost** - Uses Codex CLI for GPT-5 access (included in subscription)
+- 💰 **Flexible LLM Backends** - Codex CLI, Gemini CLI, Claude Code CLI (zero additional cost), or API backends (GPT-5/5.1, Claude 4.5, Gemini 2.5 Pro)
 - 🔧 **Tool-Based System** - Extensible tool registry for character generation, memory search, etc.
 - 🔍 **Rich Inspection Tools** - Status, list, inspect, goals commands for full project visibility
 - 💾 **Automatic Checkpointing** - Snapshot and restore project state at any point
@@ -58,11 +65,19 @@ StoryDaemon is a Python-based system that generates long-form fiction through an
 ### Prerequisites
 
 - Python 3.11+
-- Codex CLI installed and authenticated
+- Codex CLI installed and authenticated (default backend)
   ```bash
   npm install -g @openai/codex-cli
   codex auth
   ```
+- (Optional) API access for OpenAI / Claude / Gemini backends
+  - OpenAI GPT-5/5.1 or newer
+  - Claude 4.5 (Anthropic)
+  - Gemini 2.5 Pro
+- (Optional) Gemini CLI installed (for `llm.backend = gemini-cli`)
+  - https://github.com/google-gemini/gemini-cli
+- (Optional) Claude Code CLI installed (for `llm.backend = claude-cli`)
+  - https://github.com/anthropics/claude-code
 
 ### Installation
 
@@ -71,7 +86,11 @@ StoryDaemon is a Python-based system that generates long-form fiction through an
 git clone https://github.com/EdwardAThomson/StoryDaemon.git
 cd StoryDaemon
 
-# Install dependencies
+# (Recommended) Create and activate a virtual environment
+python3 -m venv venv
+source venv/bin/activate  # On Windows use: venv\\Scripts\\activate
+
+# Install dependencies into the virtual environment
 pip install -e .
 
 # Or install with development dependencies
@@ -81,17 +100,19 @@ pip install -e ".[dev]"
 ### Create Your First Novel
 
 ```bash
-# Create a new novel project (gets unique UUID automatically)
+# Recommended: create a new novel project with interactive story foundation
 novel new my-story --dir work/novels
-# → Creates: work/novels/my-story_a1b2c3d4/
+#  Creates: work/novels/my-story_a1b2c3d4/
+#  You will be prompted for genre, premise, protagonist, setting, tone, etc.,
+#  and to choose the LLM backend/model to store in this project's config.
 
-# Create with story foundation (interactive mode)
-novel new my-story --interactive
+# Advanced: create a bare project without interactive setup
+novel new my-story --dir work/novels --no-interactive
 
-# Or from a YAML file
+# Or create from a YAML foundation file (non-interactive)
 novel new my-story --foundation foundation.yaml
 
-# Or via command-line arguments
+# Or via command-line arguments (non-interactive)
 novel new my-story \
   --genre "science fiction" \
   --premise "A lone engineer discovers an alien signal" \
@@ -145,22 +166,42 @@ novel tick --save-prompts  # Saves to prompts/ directory
 novel lore list
 novel lore list --category world_rules
 novel lore list --importance high
+
+# Plot-first mode commands
+novel plot generate --count 5    # Generate plot beats
+novel plot status --detailed     # View beat status
+novel plot next                  # See next pending beat
+novel plot clear                 # Clear all beats (with confirmation)
+
+# Use API backend instead of Codex
+novel tick --llm-backend api --llm-model gpt-5.1      # OpenAI GPT-5.1
+novel tick --llm-backend api --llm-model claude-4.5   # Anthropic Claude 4.5
+novel tick --llm-backend api --llm-model gemini-2.5-pro  # Gemini 2.5 Pro
+
+# Use Gemini CLI backend (local `gemini` binary)
+novel tick --llm-backend gemini-cli --llm-model gemini-2.5-pro
+
+# Use Claude Code CLI backend (local `claude` binary, headless mode)
+novel tick --llm-backend claude-cli --llm-model claude-4.5
 ```
 
 ## How It Works
 
 StoryDaemon uses a **story tick loop** where each tick produces one scene passage:
 
-1. **Summarize State** - Collect context from previous passages and memory
-2. **Plan** - Planner LLM decides which tools to use, scene intention, and optional length guidance
-3. **Execute Tools** - Run character generation, memory search, etc.
-4. **Write** - Writer LLM generates prose in deep POV (flexible length based on scene needs)
-5. **Evaluate** - Check continuity and POV integrity
-6. **Evaluate Tension** - Analyze scene tension (0-10 scale) for pacing awareness
-7. **Commit** - Save scene and update memory
-8. **Extract Facts** - Update character/location state from scene content
-9. **Extract Lore** - Identify world rules, constraints, and capabilities
-10. **Check Goals** - Promote story goals when conditions are met
+1. **Check Plot Beats** (if plot-first mode enabled) - Regenerate beats if needed, get next beat to execute
+2. **Summarize State** - Collect context from previous passages and memory
+3. **Plan** - Planner LLM decides which tools to use, scene intention, and optional length guidance
+4. **Execute Tools** - Run character generation, memory search, etc.
+5. **Write** - Writer LLM generates prose in deep POV (flexible length based on scene needs)
+   - In plot-first mode, beat constraints are injected into writer context as hard requirements
+6. **Evaluate** - Check continuity and POV integrity and compute QA metrics (change/milestone, dialogue density, transitions, mode, novelty) that feed back into planning
+7. **Evaluate Tension** - Analyze scene tension (0-10 scale) for pacing awareness
+8. **Commit** - Save scene and update memory
+9. **Verify Beat** (if plot-first mode enabled) - Check if scene accomplished the target beat, mark complete
+10. **Extract Facts** - Update character/location state from scene content
+11. **Extract Lore** - Identify world rules, constraints, and capabilities
+12. **Check Goals** - Promote story goals when conditions are met
 
 ### Real-World Example
 
@@ -169,7 +210,7 @@ Here's what tension tracking looks like in a generated story:
 ```bash
 $ novel list scenes
 
-📝 Scenes (5 total)
+ Scenes (5 total)
 
   file          word_count  pov_character  tension_level
   ------------  ----------  -------------  -----------------
@@ -192,6 +233,7 @@ The tension naturally oscillates between 5-6/10, maintaining engagement without 
 Each novel maintains its own working directory with:
 
 - **Story Foundation** - Optional immutable constraints (genre, premise, protagonist, setting, tone, themes, primary goal)
+- **Plot Outline** - Optional emergent plot beats for forward momentum (plot-first mode)
 - **Characters** - Dynamic character data with goals, relationships, emotional state
 - **Locations** - Evolving location descriptions with sensory details
 - **Scenes** - Scene metadata and summaries
@@ -221,6 +263,9 @@ StoryDaemon/
 │   │   ├── entities.py         # Entity dataclasses
 │   │   ├── vector_store.py     # ChromaDB integration
 │   │   └── checkpoint.py       # Checkpoint system
+│   ├── plot/            # Plot management (emergent plotting)
+│   │   ├── manager.py          # PlotOutlineManager
+│   │   └── entities.py         # PlotBeat, PlotOutline
 │   ├── cli/             # Command-line interface
 │   │   ├── main.py             # CLI entry point
 │   │   ├── project.py          # Project management
@@ -230,6 +275,7 @@ StoryDaemon/
 │   │       ├── status.py       # Status command
 │   │       ├── goals.py        # Goals command
 │   │       ├── lore.py         # Lore command
+│   │       ├── plot.py         # Plot commands (generate, status, next)
 │   │       ├── list.py         # List commands
 │   │       ├── inspect.py      # Inspect command
 │   │       ├── plan.py         # Plan preview
@@ -246,6 +292,7 @@ StoryDaemon/
 │   │       ├── memory/      # Entity storage
 │   │       ├── scenes/      # Generated scene markdown files
 │   │       ├── plans/       # Plan JSON files
+│   │       ├── plot_outline.json  # Plot beats (if using plot-first mode)
 │   │       ├── checkpoints/ # Project snapshots
 │   │       └── errors/      # Error logs
 │   ├── experiments/     # Quick experiments
@@ -265,12 +312,14 @@ StoryDaemon/
 ### Core Generation Commands
 
 ```bash
-# Create new novel project (automatically gets UUID suffix)
+# Create new novel project (interactive foundation by default, UUID suffix)
 novel new <name> [--dir <path>]
-# Example: novel new my-story → creates my-story_a1b2c3d4/
+# Example: novel new my-story  creates my-story_a1b2c3d4/ and runs the foundation wizard
 
-# Create with story foundation
-novel new <name> --interactive                    # Interactive prompts
+# Disable interactive wizard (bare project)
+novel new <name> --no-interactive [--dir <path>]
+
+# Create with story foundation (non-interactive variants)
 novel new <name> --foundation <yaml_file>         # From YAML file
 novel new <name> --genre <genre> --premise <text> # Command-line args
 
@@ -331,6 +380,12 @@ novel checkpoint create [--message <msg>] [--project <path>]
 novel checkpoint list [--project <path>]
 novel checkpoint restore --id <checkpoint_id> [--project <path>]
 novel checkpoint delete --id <checkpoint_id> [--project <path>]
+
+# Plot-first mode commands
+novel plot generate [--count 5] [--project <path>]
+novel plot status [--detailed] [--project <path>]
+novel plot next [--project <path>]
+novel plot clear [--yes] [--project <path>]
 ```
 
 ## Configuration
@@ -339,7 +394,10 @@ Global configuration in `~/.storydaemon/config.yaml`:
 
 ```yaml
 llm:
+  backend: codex              # "codex" (Codex CLI), "api" (multi-provider API), "gemini-cli" (Gemini CLI), or "claude-cli" (Claude Code CLI)
   codex_bin_path: codex
+  model: gpt-5.1              # Generic API model (gpt-5, gpt-5.1, claude-4.5, gemini-2.5-pro)
+  openai_model: gpt-5.1       # Legacy OpenAI-specific key (still honored)
   planner_max_tokens: 1000
   writer_max_tokens: 3000
 
@@ -351,114 +409,45 @@ generation:
   recent_scenes_count: 3           # Context for planner
   include_overall_summary: true    # Include story-wide summary
   # Scene length is flexible - planner can optionally suggest "brief", "short", "long", or "extended"
+  
+  # Plot-first mode (optional, disabled by default)
+  use_plot_first: false            # Enable emergent plot-first architecture
+  plot_beats_ahead: 5              # Generate this many beats at a time
+  plot_regeneration_threshold: 2   # Regenerate when pending beats < this
+  verify_beat_execution: true      # Verify beat was accomplished via LLM
+  allow_beat_skip: false           # Allow skipping beats that aren't accomplished
+  fallback_to_reactive: true       # Fall back to reactive mode if beat generation fails
 ```
 
 Project-specific configuration in `<project>/config.yaml`.
 
-## Development Status
+### API Environment Variables
 
-**Phase 1: Core Framework** ✅ Complete
-- [x] Project structure
-- [x] File I/O utilities
-- [x] Codex CLI interface
-- [x] Configuration management
-- [x] Basic CLI commands
-- [x] Tool base classes
+For API backends, set these environment variables (e.g., in a `.env` file):
 
-**Phase 2: Memory System** ✅ Complete
-- [x] Character/Location/Scene/OpenLoop dataclasses
-- [x] Relationship graph with bidirectional perspectives
-- [x] Memory manager with CRUD operations
-- [x] ChromaDB vector database integration
-- [x] Memory tools (search, character.generate, location.generate)
-- [x] Relationship tools (create, update, query)
-- [x] Scene summarization
-- [x] 39 tests passing
+```text
+OPENAI_API_KEY   # OpenAI GPT-5/5.1
+CLAUDE_API_KEY   # Claude 4.5 (Anthropic)
+GEMINI_API_KEY   # Gemini 2.5 Pro
+```
 
-**Phase 3: Planner and Execution Loop** ✅ Complete
-- [x] Tool base class and ToolRegistry
-- [x] Planner LLM prompt template
-- [x] Plan JSON schema validation
-- [x] Context builder for story state
-- [x] Plan executor with error handling
-- [x] Plan storage and error logging
-- [x] StoryAgent orchestrator
-- [x] CLI integration
-- [x] 52 tests passing
+## Development Status & Roadmap
 
-**Phase 4: Writer and Evaluator** ✅ Complete
-- [x] Writer LLM prompt template with deep POV instructions
-- [x] WriterContextBuilder for gathering scene context
-- [x] SceneWriter for generating 500-900 word prose
-- [x] SceneEvaluator for quality checks (word count, POV, continuity)
-- [x] SceneCommitter for persisting scenes to disk and memory
-- [x] Full integration into StoryAgent tick cycle
-- [x] Enhanced CLI output with scene generation steps
-- [x] Complete end-to-end scene generation pipeline
+StoryDaemon has a mature end-to-end pipeline (agent, memory, writer, evaluator, CLI, and multi-stage planner) and is actively evolving around **emergent plotting and plot-first generation**.
 
-**Phase 5: Dynamic Memory Updates** ✅ Complete
-- [x] Fact extraction from scene prose
-- [x] Character emotional state updates
-- [x] Character inventory, goals, and beliefs tracking
-- [x] Location state changes
-- [x] Open loop creation/resolution from text
-- [x] Relationship tracking and updates
-- [x] Entity history tracking
-- [x] Enhanced continuity checking
-- [x] Graceful error handling with retry logic
+- **High-level status:** Phases 1–7A (bounded emergence) are implemented and used in real projects.
+- **Latest:** Phase 5 (Full Emergent Plot-First Tick) is complete - optional plot-first mode with automatic beat generation, beat-constrained writing, and beat verification.
+- **Current focus:** Testing plot-first mode in production, Phase 6 enhancements (multi-arc management, beat branching).
 
-**Phase 6: CLI Enhancements and Workflow** ✅ Complete
-- [x] Enhanced status command with statistics
-- [x] List commands (characters, locations, loops, scenes)
-- [x] Inspect command for deep entity examination
-- [x] Plan preview command (non-destructive)
-- [x] Compile command (Markdown/HTML export)
-- [x] Checkpoint system (create, list, restore, delete)
-- [x] Automatic checkpointing in `novel run`
-- [x] JSON output support for all commands
-- [x] 10 tests passing
+For detailed documentation on plot-first mode and emergent plotting:
 
-**Phase 7A: Bounded Emergence Framework** 🚧 In Progress
-- [x] **7A.1: Story Foundation** - Optional immutable constraints (genre, premise, protagonist, setting, tone, themes, primary goal)
-  - [x] Interactive/file/CLI input modes
-  - [x] Foundation display in `novel status`
-  - [x] Tests for foundation functionality
-- [x] **7A.2: Goal Hierarchy** - Protagonist goals and auto-promotion
-  - [x] Character goal fields (immediate, arc, story goals)
-  - [x] OpenLoop tracking fields (scenes_mentioned, is_story_goal)
-  - [x] Auto-promotion logic (ticks 10-15, 5+ mentions)
-  - [x] User-specified primary goal support
-  - [x] `novel goals` command to view hierarchy
-  - [x] Tests for goal promotion logic
-- [x] **7A.3: Tension Tracking** - Scene-level tension scoring (0-10 scale) ✅ **TESTED IN PRODUCTION**
-  - [x] TensionEvaluator with keyword/structure/emotion analysis
-  - [x] Configurable on/off via `enable_tension_tracking`
-  - [x] Tension history in planner context with gentle pacing guidance
-  - [x] Adaptive suggestions (steady/high/low tension patterns)
-  - [x] Visualization in `novel status` and `novel list scenes`
-  - [x] Tests for tension evaluation and guidance
-  - [x] Real-world story generation test (5 scenes, accurate scoring)
-- [x] **7A.4: Lore Consistency** - World rules and constraint checking ✅ **COMPLETE**
-  - [x] Lore dataclass with comprehensive fields
-  - [x] LLM-based extraction (rules, constraints, facts, capabilities, limitations)
-  - [x] VectorStore integration for semantic search
-  - [x] Contradiction detection using similarity threshold
-  - [x] `novel lore` command with filtering and grouping
-  - [x] 12 unit tests covering all operations
-  - [x] Configurable via `enable_lore_tracking`
-- [x] **7A.5: Multi-Stage Prompts** - Semantic context selection with 3-stage planning ✅ **COMPLETE**
-  - [x] Stage 1: Strategic planning (~200 tokens, high-level intention)
-  - [x] Stage 2: Semantic context gathering (vector search, no LLM)
-  - [x] Stage 3: Tactical planning (~1,000 tokens, detailed plan)
-  - [x] 50-70% token reduction vs single-stage
-  - [x] Prompt logging with `--save-prompts` flag
-  - [x] Performance statistics display
-  - [x] Story stats summary after each tick
-  - [x] Configurable via `use_multi_stage_planner`
+- [Plot-First Mode User Guide](docs/PLOT_FIRST_MODE_GUIDE.md)
+- [Phase 5 Implementation Summary](docs/PHASE5_IMPLEMENTATION_SUMMARY.md)
+- [Emergent Plotting Implementation Checklist](docs/IMPLEMENTATION_CHECKLIST_EMERGENT_PLOTTING.md)
+- [Architecture Proposal](docs/ARCHITECTURE_PROPOSAL_EMERGENT_PLOTTING.md)
+- [Implementation Plan](docs/plan.md)
 
-**Phase 7A Status:** ✅ Production ready with comprehensive test coverage
-
-**Phase 7B+:** See [docs/phase7a_bounded_emergence.md](docs/phase7a_bounded_emergence.md) for full roadmap.
+Historical phase documents and older roadmap notes live under `docs/archive/`.
 
 ## Testing
 
@@ -492,8 +481,6 @@ python tests/manual_tension_test.py
 - **Manual Tests:** 4 comprehensive test suites with real scene generation
 - **Production Test:** Successfully generated 5-scene story with accurate tension scoring
 
-All Phase 7A.1-7A.4 features have comprehensive test coverage and are production-ready.
-
 ## Documentation
 
 ### Core Documentation
@@ -501,25 +488,27 @@ All Phase 7A.1-7A.4 features have comprehensive test coverage and are production
 - [Implementation Plan](docs/plan.md) - Phase-by-phase roadmap
 
 ### Phase Documentation
-- [Phase 1 Guide](docs/phase1_implementation.md) - Core framework implementation
-- [Phase 2 Detailed Plan](docs/phase2_detailed.md) - Memory system design
-- [Phase 2 Completion](docs/phase2_completion.md) - Implementation summary
-- [Phase 3 Detailed Plan](docs/phase3_detailed.md) - Planner and execution loop design
-- [Phase 3 Completion](docs/phase3_completion.md) - Implementation summary
-- [Phase 4 Detailed Plan](docs/phase4_detailed.md) - Writer and evaluator design
-- [Phase 4 Implementation Summary](docs/phase4_implementation_summary.md) - Implementation summary
-- [Phase 5 Detailed Plan](docs/phase5_detailed.md) - Dynamic entity updates design
-- [Phase 6 Detailed Plan](docs/phase6_detailed_plan.md) - CLI enhancements design
-- [Phase 6 Implementation Summary](docs/phase6_implementation_summary.md) - Implementation summary
-- [Phase 6 Quick Reference](docs/phase6_quick_reference.md) - Command reference guide
-- [Phase 6 Complete](docs/PHASE6_COMPLETE.md) - Completion summary
+- [Phase 1 Guide](docs/archive/phase1_implementation.md) - Core framework implementation
+- [Phase 2 Detailed Plan](docs/archive/phase2_detailed.md) - Memory system design
+- [Phase 2 Completion](docs/archive/phase2_completion.md) - Implementation summary
+- [Phase 3 Detailed Plan](docs/archive/phase3_detailed.md) - Planner and execution loop design
+- [Phase 3 Completion](docs/archive/phase3_completion.md) - Implementation summary
+- [Phase 4 Detailed Plan](docs/archive/phase4_detailed.md) - Writer and evaluator design
+- [Phase 4 Implementation Summary](docs/archive/phase4_implementation_summary.md) - Implementation summary
+- [Phase 5 Detailed Plan](docs/archive/phase5_detailed.md) - Dynamic entity updates design
+- [Phase 6 Detailed Plan](docs/archive/phase6_detailed_plan.md) - CLI enhancements design
+- [Phase 6 Implementation Summary](docs/archive/phase6_implementation_summary.md) - Implementation summary
+- [Phase 6 Quick Reference](docs/archive/phase6_quick_reference.md) - Command reference guide
+- [Phase 6 Complete](docs/archive/PHASE6_COMPLETE.md) - Completion summary
 
 ### Feature Documentation
-- [Phase 7A: Bounded Emergence Framework](docs/phase7a_bounded_emergence.md) - Story foundation and goal hierarchy
-- [Name Generator Implementation](docs/name_generator_implementation_plan.md) - Syllable-based name generation
-- [Project Safety Improvements](docs/project_safety_improvements.md) - UUID system and scene titles
-- [Resume Workflow](docs/resume_workflow.md) - Recent projects and resume commands
-- [Agent vs CLI Tools](docs/agent_vs_cli_tools.md) - Understanding tool layers
+- [Phase 7A: Bounded Emergence Framework](docs/archive/phase7a_bounded_emergence.md) - Story foundation and goal hierarchy
+- [Plot-First Mode Guide](docs/PLOT_FIRST_MODE_GUIDE.md) - User guide for emergent plot-first generation
+- [Phase 5 Implementation Summary](docs/PHASE5_IMPLEMENTATION_SUMMARY.md) - Technical details of plot-first implementation
+- [Name Generator Implementation](docs/archive/name_generator_implementation_plan.md) - Syllable-based name generation
+- [Project Safety Improvements](docs/archive/project_safety_improvements.md) - UUID system and scene titles
+- [Resume Workflow](docs/archive/resume_workflow.md) - Recent projects and resume commands
+- [Agent vs CLI Tools](docs/archive/agent_vs_cli_tools.md) - Understanding tool layers
 
 ## Philosophy
 
@@ -537,7 +526,7 @@ MIT License - See [LICENSE](LICENSE) file for details.
 ## Acknowledgments
 
 - Inspired by my own [NovelWriter](https://github.com/EdwardAThomson/NovelWriter)
-- Built with Codex CLI for GPT-5 access
+- Built with Codex CLI and multi-provider API backends (OpenAI, Claude, Gemini)
 - Uses Typer for CLI, Chroma for vector storage
 
 ---

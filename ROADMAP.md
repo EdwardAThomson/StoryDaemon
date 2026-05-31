@@ -10,7 +10,7 @@ strategic plan is `docs/EMERGENT_COHERENCE_PLAN.md`.
 ## Shipped
 
 - [x] Agentic story-tick loop (plan → tool use → write → evaluate)
-- [x] Multi-backend LLM support (Codex / Gemini / Claude Code CLIs + OpenAI / Claude / Gemini APIs)
+- [x] Multi-backend LLM support (Codex / Gemini / Claude Code CLIs + OpenAI / Claude / Gemini APIs / Self-hosted OpenAI compatible)
 - [x] Deep-POV writing with POV validation + character-continuity checks
 - [x] Dynamic memory — characters, locations, factions, relationships, scenes persist and evolve
 - [x] ChromaDB vector search for semantic context retrieval
@@ -30,6 +30,7 @@ strategic plan is `docs/EMERGENT_COHERENCE_PLAN.md`.
 
 ## Next
 
+- [ ] Add support for guided generation per tick
 - [ ] Loop-aging pressure (older open loops surface louder for payoff)
 - [ ] Block / sub-block DSL contracts (per-beat deterministic checks)
 - [ ] Validate arc-pressure effectiveness across multi-tick runs

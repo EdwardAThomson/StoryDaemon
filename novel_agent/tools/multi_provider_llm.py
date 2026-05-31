@@ -45,6 +45,29 @@ _anthropic_client: Optional["anthropic.Anthropic"] = None
 _gemini_configured: bool = False
 
 
+def _get_hosted_llm_client() -> "OpenAI":
+    """Return an OpenAI client using self-hosted endpoint, initialized from HOSTED_LLM_API_KEY."""
+    global _openai_client
+    url = os.environ.get("HOSTED_LLM_URL")
+    port = os.environ.get("HOSTED_LLM_PORT")
+    api_key = os.environ.get("HOSTED_LLM_API_KEY")
+
+    if OpenAI is None:
+        raise RuntimeError(
+            "openai package is not installed. Install it with 'pip install openai' "
+            "or switch llm.backend to 'codex'."
+        )
+
+    if _openai_client is None:
+        if not api_key:
+            raise RuntimeError(
+                "Environment variable 'HOSTED_LLM_API_KEY' is not set. "
+                "Set your HOSTED_LLM_API_KEY or use a different backend (e.g. Codex)."
+            )
+        _openai_client = OpenAI(base_url=f"http://{url}:{port}/v1", api_key=api_key)
+
+    return _openai_client
+
 def _get_openai_client() -> "OpenAI":
     """Return a shared OpenAI client, initialized from OPENAI_API_KEY."""
     global _openai_client
@@ -115,6 +138,35 @@ def _ensure_gemini_configured():
 
 # --- Provider-specific prompt helpers -------------------------------------------------
 
+def send_prompt_hosted_llm(
+    prompt: str,
+    model: str = "",
+    max_tokens: int = 2000,
+    temperature: float = 0.7,
+    role_description: str = (
+        "You are a helpful fiction writing assistant. You will create original text only."
+    ),
+) -> str:
+    """Send a prompt to the OpenAI Chat API."""
+    if model == "":
+        model = os.environ.get("HOSTED_LLM_MODEL", None)
+    if not model:
+        raise ValueError(
+            "Model name must be specified either as a parameter or via HOSTED_LLM_MODEL environment variable."
+        )
+    client = _get_hosted_llm_client()
+    response = client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": role_description},
+            {"role": "user", "content": prompt},
+        ],
+        max_tokens=max_tokens,
+        temperature=temperature,
+        # Disable "thinking" for more deterministic output (if supported by the hosted LLM
+        extra_body={"chat_template_kwargs": {"enable_thinking": False}},  
+    )
+    return response.choices[0].message.content
 
 def send_prompt_openai(
     prompt: str,
@@ -188,8 +240,10 @@ def send_prompt_claude(
 
 ModelFn = Callable[[str, int], str]
 
-
 _model_config: Dict[str, ModelFn] = {
+    "hosted-llm": lambda prompt, max_tokens: send_prompt_hosted_llm(
+        prompt=prompt, max_tokens=max_tokens,
+    ),
     # OpenAI GPT-5 family (kept in sync with LLM-Remote-Runner)
     "gpt-5.5": lambda prompt, max_tokens: send_prompt_openai(
         prompt=prompt, model="gpt-5.5", max_tokens=max_tokens,

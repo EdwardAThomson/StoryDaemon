@@ -208,7 +208,6 @@ class MultiStagePlanner:
         
         # Call LLM
         response = self.llm.generate(prompt, max_tokens=150)
-        
         # Save response if requested
         if self.save_prompts and self.prompts_dir:
             tick = state.get('current_tick', 0)
@@ -385,7 +384,7 @@ class MultiStagePlanner:
             state.get('current_tick', 0), self.config, last_scene_tension(self.memory)
         )
 
-        prompt = f"""You are planning the next scene in a story.
+        prompt = f"""You are a story planner and writer. You are planning the next scene in a story.
 
 ## Story Foundation (IMMUTABLE)
 Genre: {foundation.get('genre', 'Unknown')}

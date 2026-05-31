@@ -43,6 +43,7 @@ An introduction and overview.
   - OpenAI GPT-5/5.1 or newer
   - Claude 4.5 (Anthropic)
   - Gemini 2.5 Pro
+  - Self-hosted LLM via HOSTED_LLM_URL, HOSTED_LLM_PORT, HOSTED_LLM_KEY env variables (hosted-llm)
 - (Optional) Gemini CLI installed (for `llm.backend = gemini-cli`)
   - https://github.com/google-gemini/gemini-cli
 - (Optional) Claude Code CLI installed (for `llm.backend = claude-cli`)
@@ -146,6 +147,7 @@ novel plot clear                 # Clear all beats (with confirmation)
 novel tick --llm-backend api --llm-model gpt-5.1      # OpenAI GPT-5.1
 novel tick --llm-backend api --llm-model claude-4.5   # Anthropic Claude 4.5
 novel tick --llm-backend api --llm-model gemini-2.5-pro  # Gemini 2.5 Pro
+novel tick --llm-backend api --llm-model hosted-llm   # Custom OpenAI api llm
 
 # Use Gemini CLI backend (local `gemini` binary)
 novel tick --llm-backend gemini-cli --llm-model gemini-2.5-pro
