@@ -131,7 +131,7 @@ Typer quirk worked around in `tick()`: when `tick()` is called programmatically 
 
 ## Roadmap (active: `docs/EMERGENT_COHERENCE_PLAN.md`)
 
-The current direction is **emergent content + high structural constraint**: the LLM decides *what happens*; Python holds it to canon, arc shape, and a short revisable "rolling horizon" of beats regenerated from the prose just written. Status as of 2026-05-28:
+The current direction is **emergent content + high structural constraint**: the LLM decides *what happens*; Python holds it to canon, arc shape, and a short revisable "rolling horizon" of beats regenerated from the prose just written. Status as of 2026-05-31:
 
 - **Phase 1 — Grounded identity** (the LLM selects names/IDs, never authors them): shipped — Python-grounded `name.generate`, entity references resolved by selection, writer-introduced names grounded, planner POV/location refs resolved to canonical IDs, the two beat-generation prompts unified onto `PLOT_GENERATION_PROMPT_TEMPLATE` (both `plot/manager.py` and `cli/commands/plot.py` render it), and contradiction detection upgraded from a coarse type heuristic to a similarity pre-filter + LLM judge (`LoreContradictionDetector`, tick step 13). Detection now *records* a verdict per pair (`Lore.contradiction_details`: confirmed partner, canon = older item, reason); it does **not** yet enforce — quarantining the non-canon item is deliberately deferred to Phase 3.
 - **Phase 2 — Rolling horizon** (lookahead emerges *from* the prose, beats are revisable): core shipped — rolling-horizon beat revision plus the `novel plot revise` CLI trigger.

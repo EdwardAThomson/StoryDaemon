@@ -19,8 +19,9 @@ An introduction and overview.
 - 📚 **Story Foundation** - Optional genre, premise, setting, tone to guide emergence
 - 🎯 **Goal Hierarchy** - Protagonist goals emerge naturally or can be user-specified
 - 📋 **Plot-First Mode** - Optional emergent plot beats guide scene generation for forward momentum
-- ⚡ **Tension Tracking** - Automatic scene tension scoring (0-10) for pacing awareness
-- 💰 **Flexible LLM Backends** - Codex CLI, Gemini CLI, Claude Code CLI (zero additional cost), or API backends (GPT-5/5.1, Claude 4.5, Gemini 2.5 Pro)
+- ⚡ **Tension Tracking** - LLM-rated scene tension scoring (0-10) for pacing awareness
+- 🎚️ **Coherence Pressures** - Arc-tension targeting, a throughline gate, and contradiction detection keep emergent prose on canon and on arc (see the Emergent Coherence roadmap)
+- 💰 **Flexible LLM Backends** - Codex CLI, Gemini CLI, Claude Code CLI (zero additional cost), or API backends (GPT-5.5, Claude Sonnet/Haiku 4.5, Gemini 3)
 - 🔧 **Tool-Based System** - Extensible tool registry for character generation, memory search, etc.
 - 🔍 **Rich Inspection Tools** - Status, list, inspect, goals commands for full project visibility
 - 💾 **Automatic Checkpointing** - Snapshot and restore project state at any point
@@ -40,9 +41,9 @@ An introduction and overview.
   codex auth
   ```
 - (Optional) API access for OpenAI / Claude / Gemini backends
-  - OpenAI GPT-5/5.1 or newer
-  - Claude 4.5 (Anthropic)
-  - Gemini 2.5 Pro
+  - OpenAI GPT-5.5 (default) / 5.4 / 5.2
+  - Anthropic Claude Sonnet 4.5 / Haiku 4.5
+  - Google Gemini 3 (flash/pro preview) or 2.5 (pro/flash)
 - (Optional) Gemini CLI installed (for `llm.backend = gemini-cli`)
   - https://github.com/google-gemini/gemini-cli
 - (Optional) Claude Code CLI installed (for `llm.backend = claude-cli`)
@@ -123,7 +124,7 @@ novel list locations
 novel list scenes  # Shows tension: 6/10 (rising), 5/10 (rising), etc.
 
 # Inspect a character
-novel inspect --id C0
+novel inspect --id C000
 
 # Compile a manuscript
 novel compile --output draft.md
@@ -143,15 +144,15 @@ novel plot next                  # See next pending beat
 novel plot clear                 # Clear all beats (with confirmation)
 
 # Use API backend instead of Codex
-novel tick --llm-backend api --llm-model gpt-5.1      # OpenAI GPT-5.1
-novel tick --llm-backend api --llm-model claude-4.5   # Anthropic Claude 4.5
-novel tick --llm-backend api --llm-model gemini-2.5-pro  # Gemini 2.5 Pro
+novel tick --llm-backend api --llm-model gpt-5.5          # OpenAI GPT-5.5 (default)
+novel tick --llm-backend api --llm-model claude-sonnet-4.5  # Anthropic Claude Sonnet 4.5
+novel tick --llm-backend api --llm-model gemini-3-pro-preview  # Gemini 3 Pro
 
 # Use Gemini CLI backend (local `gemini` binary)
-novel tick --llm-backend gemini-cli --llm-model gemini-2.5-pro
+novel tick --llm-backend gemini-cli --llm-model gemini-3-flash-preview
 
 # Use Claude Code CLI backend (local `claude` binary, headless mode)
-novel tick --llm-backend claude-cli --llm-model claude-4.5
+novel tick --llm-backend claude-cli --llm-model claude-sonnet-4.5
 ```
 
 ## How It Works
@@ -365,8 +366,8 @@ Global configuration in `~/.storydaemon/config.yaml`:
 llm:
   backend: codex              # "codex" (Codex CLI), "api" (multi-provider API), "gemini-cli" (Gemini CLI), or "claude-cli" (Claude Code CLI)
   codex_bin_path: codex
-  model: gpt-5.1              # Generic API model (gpt-5, gpt-5.1, claude-4.5, gemini-2.5-pro)
-  openai_model: gpt-5.1       # Legacy OpenAI-specific key (still honored)
+  model: gpt-5.5             # Generic API model (gpt-5.5/5.4/5.2, claude-sonnet-4.5, claude-haiku-4.5, gemini-3-pro-preview, gemini-3-flash-preview, gemini-2.5-pro)
+  openai_model: gpt-5.5       # Legacy OpenAI-specific key (still honored)
   planner_max_tokens: 1000
   writer_max_tokens: 3000
 
@@ -395,26 +396,28 @@ Project-specific configuration in `<project>/config.yaml`.
 For API backends, set these environment variables (e.g., in a `.env` file):
 
 ```text
-OPENAI_API_KEY   # OpenAI GPT-5/5.1
-CLAUDE_API_KEY   # Claude 4.5 (Anthropic)
-GEMINI_API_KEY   # Gemini 2.5 Pro
+OPENAI_API_KEY   # OpenAI GPT-5.5 / 5.4 / 5.2
+CLAUDE_API_KEY   # Anthropic Claude Sonnet 4.5 / Haiku 4.5
+GEMINI_API_KEY   # Google Gemini 3 / 2.5
 ```
 
 ## Development Status & Roadmap
 
-StoryDaemon has a mature end-to-end pipeline (agent, memory, writer, evaluator, CLI, and multi-stage planner) and is actively evolving around **emergent plotting and plot-first generation**.
+StoryDaemon has a mature end-to-end pipeline (agent, memory, writer, evaluator, CLI, multi-stage planner, and optional plot-first mode). The active direction is **Emergent Coherence** — *emergent content under high structural constraint*: the LLM decides **what happens** while Python holds it to canon, arc shape, and a short revisable "rolling horizon" of beats regenerated from the prose just written.
 
-- **High-level status:** Phases 1–7A (bounded emergence) are implemented and used in real projects.
-- **Latest:** Phase 5 (Full Emergent Plot-First Tick) is complete - optional plot-first mode with automatic beat generation, beat-constrained writing, and beat verification.
-- **Current focus:** Testing plot-first mode in production, Phase 6 enhancements (multi-arc management, beat branching).
+The active roadmap is [docs/EMERGENT_COHERENCE_PLAN.md](docs/EMERGENT_COHERENCE_PLAN.md). Current status:
 
-For detailed documentation on plot-first mode and emergent plotting:
+- **Phase 1 — Grounded identity** (the LLM *selects* names/IDs, never authors them) — **shipped.** Python-grounded `name.generate`, resolved entity references, similarity-pre-filtered + LLM-judged contradiction detection.
+- **Phase 2 — Rolling horizon** (lookahead emerges *from* the prose; beats are revisable) — **shipped.** Plus the `novel plot revise` trigger.
+- **Phase 3 — Constraint-as-pressure** — **in progress.** Shipped: the per-tick coherence rubric (`novel metrics`), contradiction enforcement (disputed-lore quarantine), an **LLM tension scorer** + **arc-pressure** (a target tension curve injected into planner and writer), and a **throughline gate** with an **LLM goal-relevance judge**. Still to come: loop-aging and the block/sub-block DSL.
+- **Phase 4 — Setup/payoff foresight** (planted-element ledger for clues/reveals) — deferred until 1–3 prove out.
 
+Plot-first mode (Phase 5 of the *legacy* roadmap) is complete and available — automatic beat generation, beat-constrained writing, and beat verification — see the guide below. Note the two phase-numbering schemes differ: the legacy roadmap lives in [docs/plan.md](docs/plan.md), the active one in [docs/EMERGENT_COHERENCE_PLAN.md](docs/EMERGENT_COHERENCE_PLAN.md).
+
+- [Emergent Coherence Roadmap](docs/EMERGENT_COHERENCE_PLAN.md) - active direction and status
 - [Plot-First Mode User Guide](docs/PLOT_FIRST_MODE_GUIDE.md)
 - [Phase 5 Implementation Summary](docs/PHASE5_IMPLEMENTATION_SUMMARY.md)
-- [Emergent Plotting Implementation Checklist](docs/IMPLEMENTATION_CHECKLIST_EMERGENT_PLOTTING.md)
-- [Architecture Proposal](docs/ARCHITECTURE_PROPOSAL_EMERGENT_PLOTTING.md)
-- [Implementation Plan](docs/plan.md)
+- [Legacy Implementation Plan](docs/plan.md)
 
 Historical phase documents and older roadmap notes live under `docs/archive/`.
 
@@ -443,12 +446,11 @@ python tests/manual_tension_test.py
 
 ### Test Coverage
 
-- **Unit Tests:** 34 total tests
-  - 22 tests for tension evaluation and guidance
-  - 12 tests for lore tracking (dataclass, persistence, vector search, contradictions)
-- **Integration Tests:** 10 tests for end-to-end tension tracking in story generation
-- **Manual Tests:** 4 comprehensive test suites with real scene generation
-- **Production Test:** Successfully generated 5-scene story with accurate tension scoring
+- **Automated suite:** 250+ tests across `tests/unit/` and `tests/integration/`, covering the
+  tick loop, memory/entities, planner, tension scoring, arc-pressure, lore + contradiction
+  detection, the coherence rubric, and the CLI commands. Run with `pytest`.
+- **Manual checks:** `python tests/manual_tension_test.py` exercises tension scoring on real
+  scene generation (not auto-discovered by pytest).
 
 ## Documentation
 
