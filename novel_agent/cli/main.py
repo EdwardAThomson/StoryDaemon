@@ -540,6 +540,11 @@ def run(
         "--checkpoint-interval",
         help="Create checkpoint every N ticks (0 to disable)"
     ),
+    retries: int = typer.Option(
+        1,
+        "--retries",
+        help="Retry a failed tick up to N times before stopping (helps transient CLI-backend timeouts)"
+    ),
     llm_backend: Optional[str] = typer.Option(
         None,
         "--llm-backend",
@@ -572,6 +577,9 @@ def run(
         llm_model = None
     if not isinstance(codex_bin, (str, type(None))):
         codex_bin = None
+    if not isinstance(retries, int):  # programmatic callers may pass an OptionInfo
+        retries = 1
+    retries = max(0, retries)
 
     from ..memory.checkpoint import create_checkpoint, should_create_checkpoint
     
@@ -613,84 +621,97 @@ def run(
         
         for i in range(n):
             typer.echo(f"--- Tick {i+1}/{n} ---")
-            
-            # Execute single tick by calling tick() logic
-            # We need to import and reuse the tick logic here
-            try:
-                # Load fresh state
-                state = load_project_state(project_dir)
-                config = get_project_config(project_dir)
-                current_tick = state['current_tick']
-                
-                # Initialize LLM backend
-                backend = llm_backend or config.get('llm.backend', 'codex')
-                codex_bin_effective = codex_bin or config.get('llm.codex_bin_path', 'codex')
-                model = (
-                    llm_model
-                    or config.get('llm.model')
-                    or config.get('llm.openai_model', 'gpt-5.5')
-                )
-                llm = initialize_llm(
-                    backend=backend,
-                    codex_bin=codex_bin_effective,
-                    model=model,
-                    timeout=config.get('llm.timeout', 300),
-                )
 
-                # Initialize tool registry
-                tool_registry = ToolRegistry()
-                memory_manager = MemoryManager(project_dir)
-                vector_store = VectorStore(project_dir)
-                
-                # Get data directory for name generator
-                data_dir = Path(__file__).parent.parent / "data" / "names"
-                name_gen_tool = NameGeneratorTool(data_dir)
-                
-                # Get beat_mode for strict name generation enforcement
-                beat_mode = config.get('plot.beat_mode', 'soft_hint')
-                # Genre drives grounded name generation (falls back to scifi banks)
-                genre = (state.get('story_foundation') or {}).get('genre') or 'scifi'
+            # Retry a failed tick before giving up. CLI-agent backends
+            # (gemini-cli / claude-cli) occasionally time out on a heavy planner
+            # call, and the same tick usually succeeds on a fresh attempt. Each
+            # attempt reloads fresh state, so a retry is a clean re-run.
+            tick_ok = False
+            for attempt in range(retries + 1):
+                try:
+                    # Load fresh state
+                    state = load_project_state(project_dir)
+                    config = get_project_config(project_dir)
+                    current_tick = state['current_tick']
 
-                tool_registry.register(name_gen_tool)
-                tool_registry.register(MemorySearchTool(memory_manager, vector_store))
-                tool_registry.register(CharacterGenerateTool(memory_manager, vector_store, name_gen_tool.generator, beat_mode=beat_mode, genre=genre))
-                tool_registry.register(LocationGenerateTool(memory_manager, vector_store, name_gen_tool.generator, genre=genre))
-                tool_registry.register(RelationshipCreateTool(memory_manager))
-                tool_registry.register(RelationshipUpdateTool(memory_manager))
-                tool_registry.register(RelationshipQueryTool(memory_manager))
-                # Faction tools
-                tool_registry.register(FactionGenerateTool(memory_manager, vector_store, name_gen_tool.generator))
-                
-                # Create agent
-                agent = StoryAgent(project_dir, llm, tool_registry, config)
-                
-                # Execute tick
-                result = agent.tick()
-                
-                typer.echo(f"   ✅ Tick {current_tick} completed")
-                typer.echo(f"   📝 Scene: {result['scene_file']}")
-                typer.echo(f"   📊 Words: {result['word_count']}\n")
-                
-                successful_ticks += 1
-                
-                # Check if we should create checkpoint
-                if checkpoint_interval > 0:
-                    new_tick = current_tick + 1  # Tick was incremented
-                    if should_create_checkpoint(new_tick, checkpoint_interval, last_checkpoint_tick):
-                        typer.echo(f"   💾 Creating checkpoint...")
-                        try:
-                            checkpoint_path = create_checkpoint(
-                                project_dir, 
-                                new_tick, 
-                                f"auto (novel run --n {n})"
-                            )
-                            typer.echo(f"   ✅ Checkpoint created: {checkpoint_path.name}\n")
-                            last_checkpoint_tick = new_tick
-                        except Exception as e:
-                            typer.echo(f"   ⚠️  Checkpoint failed: {e}\n")
-                
-            except Exception as e:
-                typer.echo(f"   ❌ Tick failed: {e}\n")
+                    # Initialize LLM backend
+                    backend = llm_backend or config.get('llm.backend', 'codex')
+                    codex_bin_effective = codex_bin or config.get('llm.codex_bin_path', 'codex')
+                    model = (
+                        llm_model
+                        or config.get('llm.model')
+                        or config.get('llm.openai_model', 'gpt-5.5')
+                    )
+                    llm = initialize_llm(
+                        backend=backend,
+                        codex_bin=codex_bin_effective,
+                        model=model,
+                        timeout=config.get('llm.timeout', 300),
+                    )
+
+                    # Initialize tool registry
+                    tool_registry = ToolRegistry()
+                    memory_manager = MemoryManager(project_dir)
+                    vector_store = VectorStore(project_dir)
+
+                    # Get data directory for name generator
+                    data_dir = Path(__file__).parent.parent / "data" / "names"
+                    name_gen_tool = NameGeneratorTool(data_dir)
+
+                    # Get beat_mode for strict name generation enforcement
+                    beat_mode = config.get('plot.beat_mode', 'soft_hint')
+                    # Genre drives grounded name generation (falls back to scifi banks)
+                    genre = (state.get('story_foundation') or {}).get('genre') or 'scifi'
+
+                    tool_registry.register(name_gen_tool)
+                    tool_registry.register(MemorySearchTool(memory_manager, vector_store))
+                    tool_registry.register(CharacterGenerateTool(memory_manager, vector_store, name_gen_tool.generator, beat_mode=beat_mode, genre=genre))
+                    tool_registry.register(LocationGenerateTool(memory_manager, vector_store, name_gen_tool.generator, genre=genre))
+                    tool_registry.register(RelationshipCreateTool(memory_manager))
+                    tool_registry.register(RelationshipUpdateTool(memory_manager))
+                    tool_registry.register(RelationshipQueryTool(memory_manager))
+                    # Faction tools
+                    tool_registry.register(FactionGenerateTool(memory_manager, vector_store, name_gen_tool.generator))
+
+                    # Create agent
+                    agent = StoryAgent(project_dir, llm, tool_registry, config)
+
+                    # Execute tick
+                    result = agent.tick()
+
+                    typer.echo(f"   ✅ Tick {current_tick} completed")
+                    typer.echo(f"   📝 Scene: {result['scene_file']}")
+                    typer.echo(f"   📊 Words: {result['word_count']}\n")
+
+                    successful_ticks += 1
+
+                    # Check if we should create checkpoint
+                    if checkpoint_interval > 0:
+                        new_tick = current_tick + 1  # Tick was incremented
+                        if should_create_checkpoint(new_tick, checkpoint_interval, last_checkpoint_tick):
+                            typer.echo(f"   💾 Creating checkpoint...")
+                            try:
+                                checkpoint_path = create_checkpoint(
+                                    project_dir,
+                                    new_tick,
+                                    f"auto (novel run --n {n})"
+                                )
+                                typer.echo(f"   ✅ Checkpoint created: {checkpoint_path.name}\n")
+                                last_checkpoint_tick = new_tick
+                            except Exception as e:
+                                typer.echo(f"   ⚠️  Checkpoint failed: {e}\n")
+
+                    tick_ok = True
+                    break  # tick succeeded; stop retrying
+
+                except Exception as e:
+                    if attempt < retries:
+                        typer.echo(f"   ⚠️  Tick failed (attempt {attempt + 1}/{retries + 1}): {e}")
+                        typer.echo(f"   Retrying...\n")
+                        continue
+                    typer.echo(f"   ❌ Tick failed after {retries + 1} attempts: {e}\n")
+
+            if not tick_ok:
                 typer.echo(f"   Stopping after {successful_ticks} successful ticks")
                 break
         
