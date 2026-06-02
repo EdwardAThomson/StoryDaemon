@@ -31,9 +31,9 @@ strategic plan is `docs/EMERGENT_COHERENCE_PLAN.md`.
 
 ## Next
 
+- [ ] **Arc-_phase_ planner mandate** — validation (`docs/progress_report_20260602.md`) showed arc-pressure tracks *rising* targets but can't de-escalate for a resolution: the planner keeps choosing tense events and the prose rewrite can't lower them. Give the planner rising/peak/falling phase → escalate/confront/**resolve** (aftermath, close a loop, time-skip); skip the rewrite for big drops.
 - [ ] Loop-aging pressure (older open loops surface louder for payoff)
 - [ ] Block / sub-block DSL contracts (per-beat deterministic checks)
-- [ ] Validate arc-pressure effectiveness across multi-tick runs
 - [ ] Validate the throughline gate with a headroom scenario (goal-aligned foundations hit a ceiling — the LLM gauge is sound, but the pressure shows no lift when the story is already on-goal)
 - [ ] Resolve embedding-similarity placeholders in `multi_stage_planner.py`
 - [ ] Scene-summarization callback stub in `cli/main.py` (Phase 2)

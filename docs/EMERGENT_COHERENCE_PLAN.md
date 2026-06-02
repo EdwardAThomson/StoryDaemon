@@ -213,13 +213,20 @@ gate, and its LLM goal-relevance judge are all in; loop-aging and the
 block/sub-block DSL are not yet started.
 
 Next, in rough priority:
-1. **Strengthen arc-pressure** — *writer-prompt injection landed* (firm,
-   band-specific target). Open: re-run and read `novel metrics` to see whether it
-   now dominates a tense generator; if not, firm the planner wording or plan an
-   explicit low-tension beat when far below target.
+1. **Arc-_phase_ planner mandate** — *validated 2026-06* (`progress_report_20260602.md`):
+   over ~16-20 tick `claude-cli` runs arc-pressure *tracks rising targets* (drift ~1.2)
+   but **cannot de-escalate for a resolution** — at a sharp downward target the planner
+   keeps choosing tense *events* and the prose rewrite can't lower them. Diagnostic
+   confirmed the scorer is fine (a calm denouement control scores 1/10) and the generator
+   *can* write calm; the floor is the *planner*. Fix: give the planner the arc *phase*
+   (rising/peak/falling) → escalate/confront/**resolve** (aftermath, close a loop,
+   time-skip), and skip the rewrite for big drops. Note the throughline↔arc-pressure
+   conflict at low targets (advance-the-goal vs. be-calm) — arc-pressure must win in the
+   resolution phase.
 2. **Validate the throughline gate** — re-run the on/off A/B now that the gauge is
-   an LLM judge (the embedding gauge showed no lift because it couldn't see "advances
-   the goal"); if the judge still shows no lift, firm the planner wording.
+   an LLM judge. *First pass (2026-05) was inconclusive*: a goal-aligned foundation keeps
+   `goal_relevance` high (~7-10) with the pressure on *or* off — a ceiling effect, not a
+   gauge artifact. Needs a looser / multi-thread foundation with headroom to drift.
 3. **Loop-aging** — the rubric shows loops accumulating without payoff; surface
    older open loops louder to bias toward resolution.
 
