@@ -10,7 +10,7 @@ strategic plan is `docs/EMERGENT_COHERENCE_PLAN.md`.
 ## Shipped
 
 - [x] Agentic story-tick loop (plan → tool use → write → evaluate)
-- [x] Multi-backend LLM support (Codex / Gemini / Claude Code CLIs + OpenAI / Claude / Gemini APIs)
+- [x] Multi-backend LLM support (Codex / Gemini / Claude Code CLIs + OpenAI / Claude / Gemini APIs / Self-hosted OpenAI compatible)
 - [x] Deep-POV writing with POV validation + character-continuity checks
 - [x] Dynamic memory — characters, locations, factions, relationships, scenes persist and evolve
 - [x] ChromaDB vector search for semantic context retrieval
@@ -32,6 +32,7 @@ strategic plan is `docs/EMERGENT_COHERENCE_PLAN.md`.
 ## Next
 
 - [ ] **Arc-_phase_ planner mandate** — validation (`docs/progress_report_20260602.md`) showed arc-pressure tracks *rising* targets but can't de-escalate for a resolution: the planner keeps choosing tense events and the prose rewrite can't lower them. Give the planner rising/peak/falling phase → escalate/confront/**resolve** (aftermath, close a loop, time-skip); skip the rewrite for big drops.
+- [ ] Add support for guided generation per tick
 - [ ] Loop-aging pressure (older open loops surface louder for payoff)
 - [ ] Block / sub-block DSL contracts (per-beat deterministic checks)
 - [ ] Validate the throughline gate with a headroom scenario (goal-aligned foundations hit a ceiling — the LLM gauge is sound, but the pressure shows no lift when the story is already on-goal)
