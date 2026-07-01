@@ -328,6 +328,9 @@ novel status [--json] [--project <path>]
 # Show goal hierarchy and protagonist goals
 novel goals [--json] [--project <path>]
 
+# Show per-tick coherence metrics (loop churn, contradictions, tension vs. target, goal relevance)
+novel metrics [--json] [--project <path>]
+
 # Show world lore and rules
 novel lore [--group-by category|type|none] [--category <cat>] [--type <type>] [--importance <level>] [--stats] [--json] [--project <path>]
 
@@ -346,6 +349,9 @@ novel plan [--save <file>] [-v] [--project <path>]
 
 # Compile scenes into manuscript
 novel compile [--output <file>] [--format markdown|html] [--scenes <range>] [--project <path>]
+
+# Generate LLM title suggestions from the story's foundation and content
+novel titles [--count 10] [--output <file>] [--project <path>]
 
 # Manage checkpoints
 novel checkpoint create [--message <msg>] [--project <path>]
