@@ -2,9 +2,9 @@
 
 **Complementary aspects:**
 
-1. **Beat generation uses open loops** - When generating new beats, the system passes open loops to the LLM (`plot/manager.py` lines 97-104). The prompt explicitly shows open loops so beats can address them.
+1. **Beat generation uses open loops** - When generating new beats, the system passes open loops to the LLM (`plot/manager.py`, `_build_generation_context()`). The prompt explicitly shows open loops so beats can address them.
 
-2. **Beats can declare loop relationships** - `PlotBeat` has `resolves_loops` and `creates_loops` fields (lines 574-575), so beats can explicitly state "this beat will resolve OL23" or "this beat creates a new mystery."
+2. **Beats can declare loop relationships** - `PlotBeat` (in `memory/entities.py`) has `resolves_loops` and `creates_loops` fields, so beats can explicitly state "this beat will resolve OL23" or "this beat creates a new mystery."
 
 3. **Both feed into context** - The planner sees both open loops and the current beat when planning a scene.
 
