@@ -442,6 +442,7 @@ Tone: {tone}
 {recent_beats}
 
 {arc_guidance_section}
+{contract_section}
 # Beat style and granularity rules
 
 Each beat must follow these constraints:
@@ -475,10 +476,11 @@ def format_plot_generation_prompt(context: dict) -> str:
     Returns:
         Formatted prompt string
     """
-    # Phase 3 bridge: the arc schedule section is optional. Callers that predate it
-    # (or run with arc-pressure disabled) render an empty section.
+    # Phase 3: the arc schedule and contract sections are optional. Callers that
+    # predate them (or run with the gates off) render empty sections.
     context = dict(context)
     context.setdefault("arc_guidance_section", "")
+    context.setdefault("contract_section", "")
     return PLOT_GENERATION_PROMPT_TEMPLATE.format(**context)
 
 

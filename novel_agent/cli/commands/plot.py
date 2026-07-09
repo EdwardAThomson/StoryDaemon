@@ -10,6 +10,7 @@ from ...memory.entities import PlotBeat, PlotOutline
 from ...tools.llm_interface import send_prompt_with_retry
 from ...agent.prompts import format_plot_generation_prompt
 from ...agent.arc_pressure import arc_guidance_for_beats, reconcile_beat_tension_targets
+from ...contracts.authoring import contract_authoring_section, sanitize_beat_conditions
 
 
 def _project_config(project_dir: Path) -> Config:
@@ -200,6 +201,8 @@ def _assign_new_beat_ids(outline: PlotOutline, beat_dicts: List[Dict[str, Any]])
                 advances_character_arcs=b.get("advances_character_arcs", []) or [],
                 resolves_loops=b.get("resolves_loops", []) or [],
                 creates_loops=b.get("creates_loops", []) or [],
+                preconditions=b.get("preconditions", []) or [],
+                postconditions=b.get("postconditions", []) or [],
             )
         )
 
@@ -289,6 +292,13 @@ def _build_plot_generation_prompt(
     except Exception:
         arc_guidance_section = ""
 
+    # Contract vocabulary section (Phase 3, contracts Slice 1); "" when
+    # generation.use_contracts is off. Never a hard failure.
+    try:
+        contract_section = contract_authoring_section(_project_config(project_dir))
+    except Exception:
+        contract_section = ""
+
     # Single source of truth for the beat-generation prompt lives in
     # agent/prompts.py; this CLI path and the agent's PlotOutlineManager both
     # render the same template, only differing in how they assemble context.
@@ -308,6 +318,7 @@ def _build_plot_generation_prompt(
         "tension_history": "\n".join(tension_lines) if tension_lines else "None",
         "recent_beats": "\n".join(recent_beats_lines) if recent_beats_lines else "None",
         "arc_guidance_section": arc_guidance_section,
+        "contract_section": contract_section,
     }
     return format_plot_generation_prompt(ctx)
 
@@ -326,6 +337,24 @@ def _reconcile_generated_beats(project_dir: Path, beats: List[PlotBeat]) -> None
             print(f"  ⚠️  {warning}")
     except Exception as e:
         print(f"  ⚠️  Beat tension reconciliation skipped: {e}")
+
+
+def _sanitize_beat_conditions(project_dir: Path, beats: List[PlotBeat]) -> None:
+    """Hold authored contract conditions to the checker vocabulary (Phase 3, Slice 1).
+
+    Same sanitize-not-trust pass the agent path runs in
+    PlotOutlineManager._resolve_beat_conditions, via the shared helper: drop
+    unknown checks and phantom refs, reconcile tension conditions against each
+    beat's tension_target. Never raises; a bad condition must not break beat
+    generation.
+    """
+    try:
+        memory = MemoryManager(project_dir)
+        config = _project_config(project_dir)
+        for warning in sanitize_beat_conditions(beats, memory, config):
+            print(f"  ⚠️  {warning}")
+    except Exception as e:
+        print(f"  ⚠️  Beat condition sanitization skipped: {e}")
 
 
 def generate_and_append_beats_cli(
@@ -351,6 +380,7 @@ def generate_and_append_beats_cli(
 
     new_beats = _assign_new_beat_ids(outline, beat_dicts)
     _reconcile_generated_beats(project_dir, new_beats)
+    _sanitize_beat_conditions(project_dir, new_beats)
     updated_outline = manager.add_beats(new_beats)
     issues = manager.validate_outline(updated_outline)
 
@@ -433,6 +463,7 @@ def revise_and_regenerate_beats_cli(
     outline = manager.load_outline()
     new_beats = _assign_new_beat_ids(outline, beat_dicts)
     _reconcile_generated_beats(project_dir, new_beats)
+    _sanitize_beat_conditions(project_dir, new_beats)
     updated_outline = manager.add_beats(new_beats)
     issues = manager.validate_outline(updated_outline)
 
