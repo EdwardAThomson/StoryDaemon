@@ -49,8 +49,13 @@ DEFAULT_CONFIG = {
         'fallback_to_reactive': True,  # Fall back to reactive mode if beat generation fails
         'rolling_horizon': False,  # Phase 2: when a beat diverges from the written scene, abandon the pending horizon and regenerate it from current canon
 
-        # Contract validation layer (docs/CONTRACTS_AND_BLOCKS_ARCHITECTURE.md)
-        'use_contracts': False,  # Check beat postconditions after writing (record-only for now)
+        # Beat contracts (Phase 3, docs/BLOCKS_CONTRACTS_LANDING_SKETCH.md Slice 1):
+        # postconditions are authored with each beat at generation time, sanitized
+        # against the closed checker vocabulary, shown to the writer, and checked at
+        # beat verification (tick step 8.5). All passing upgrades the verification
+        # method to "contract"; any failing keeps the beat pending (or triggers a
+        # rolling-horizon revision when generation.rolling_horizon is on).
+        'use_contracts': False,
     },
     'lore': {
         'contradiction_threshold': 0.5,  # Similarity threshold for the candidate pre-filter (0.0-2.0)

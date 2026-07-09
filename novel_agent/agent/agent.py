@@ -29,8 +29,7 @@ from ..memory.manager import MemoryManager
 from ..memory.vector_store import VectorStore
 from ..memory.summarizer import SceneSummarizer
 from ..plot.manager import PlotOutlineManager
-from ..contracts.manager import ContractManager
-from ..contracts.conditions import CheckContext
+from ..contracts.conditions import CheckContext, Condition, evaluate_conditions
 
 
 class StoryAgent:
@@ -131,9 +130,6 @@ class StoryAgent:
         
         # Plot-first components (config feeds the arc-pressure beat schedule, Phase 3)
         self.plot_manager = PlotOutlineManager(self.project_path, llm_interface, config)
-
-        # Contract validation layer (opt-in via generation.use_contracts)
-        self.contract_manager = ContractManager(self.project_path)
 
         # Load state
         self.state = self._load_state()
@@ -249,6 +245,11 @@ class StoryAgent:
                     "tension_target": current_beat.tension_target,
                     "plot_threads": current_beat.plot_threads
                 }
+                # Phase 3 contracts Slice 1: show the writer what will be checked
+                # (rendered as plain language in the plot beat section).
+                if (self.config.get('generation.use_contracts', False)
+                        and getattr(current_beat, "postconditions", None)):
+                    plan["plot_beat"]["postconditions"] = current_beat.postconditions
             
             writer_context = self.writer_context_builder.build_writer_context(
                 plan,
@@ -298,63 +299,20 @@ class StoryAgent:
                 except Exception:
                     pass
             
-            # Verify beat execution and mark complete
+            # Verify beat execution and mark complete (Phase 5; contract-aware
+            # since Phase 3 contracts Slice 1)
+            contract_result = None
             if use_plot_first and current_beat:
                 print("   8.5. Verifying beat execution...")
-                
-                # Check if planner explicitly targeted this beat
-                beat_target = plan.get("beat_target", {}) or {}
-                planner_targeted = beat_target.get("beat_id") == current_beat.id
-                
-                # Compute semantic similarity score (always, for visibility)
-                semantic_score = self.vector.compute_semantic_similarity(
-                    current_beat.description,
-                    scene_data["text"][:3000]  # Use first 3000 chars
+                contract_result = self._verify_and_complete_beat(
+                    current_beat,
+                    plan,
+                    scene_data["text"],
+                    scene_id,
+                    tension_result.get("tension_level"),
+                    tick,
                 )
-                
-                if planner_targeted:
-                    # Trust the planner - mark complete with semantic score for reference
-                    print(f"        ✓ Beat {current_beat.id} accomplished (trusted planner, score={semantic_score:.2f})")
-                    self._mark_beat_complete(
-                        current_beat.id, 
-                        scene_id,
-                        verification_score=semantic_score,
-                        verification_method="trusted_planner"
-                    )
-                    if semantic_score < 0.4:
-                        print(f"        ⚠️  Low confidence score - consider manual review")
-                elif self.config.get('generation.verify_beat_execution', True):
-                    # No explicit target - use semantic score with threshold
-                    score_threshold = self.config.get('generation.beat_verification_threshold', 0.5)
-                    
-                    if semantic_score >= score_threshold:
-                        print(f"        ✓ Beat {current_beat.id} accomplished (semantic, score={semantic_score:.2f})")
-                        self._mark_beat_complete(
-                            current_beat.id,
-                            scene_id,
-                            verification_score=semantic_score,
-                            verification_method="semantic"
-                        )
-                    else:
-                        print(f"        ⚠️  Beat may not have been fully executed (score={semantic_score:.2f} < {score_threshold})")
-                        if self.config.get('generation.rolling_horizon', False):
-                            # The story diverged from the planned beat: re-derive the
-                            # pending horizon from what was actually written.
-                            self._revise_horizon(
-                                reason=f"beat {current_beat.id} diverged (score={semantic_score:.2f} < {score_threshold})",
-                                tick=tick,
-                            )
-                        elif not self.config.get('generation.allow_beat_skip', False):
-                            print(f"        Keeping beat {current_beat.id} as pending")
-                else:
-                    # Auto-mark complete without verification
-                    self._mark_beat_complete(
-                        current_beat.id, 
-                        scene_id,
-                        verification_score=semantic_score,
-                        verification_method="auto"
-                    )
-            
+
             # Step 8.5: Update scene with tension data (Phase 7A.3)
             if tension_result.get('enabled'):
                 scene = self.memory.load_scene(scene_id)
@@ -364,13 +322,7 @@ class StoryAgent:
                     self.memory.save_scene(scene)
                     print(f"        Tension: {tension_result['tension_level']}/10 ({tension_result['tension_category']})")
 
-            # Step 8.7: Validate beat contract postconditions (opt-in, record-only)
-            contract_result = self._check_beat_contract(
-                current_beat,
-                scene_data["text"],
-                tension_result.get("tension_level"),
-            )
-            
+
             # Step 8.6: Detect new characters (Phase 6)
             if self.config.get('generation.auto_detect_characters', True):
                 print("   8.6. Detecting new characters...")
@@ -430,7 +382,9 @@ class StoryAgent:
             self._save_state()
 
             # Phase 3: record per-tick coherence metrics (instrumentation only)
-            coherence_record = self._record_coherence_metrics(tick, scene_id, scene_data, tension_result)
+            coherence_record = self._record_coherence_metrics(
+                tick, scene_id, scene_data, tension_result, contract_result
+            )
 
             result = {
                 "success": True,
@@ -990,7 +944,8 @@ class StoryAgent:
             logging.getLogger(__name__).warning(f"Tension rewrite failed (tick {tick}): {e}")
             return scene_data, tension_result
 
-    def _record_coherence_metrics(self, tick, scene_id, scene_data, tension_result):
+    def _record_coherence_metrics(self, tick, scene_id, scene_data, tension_result,
+                                  contract_result=None):
         """Phase 3 coherence instrumentation. Never raises (graceful degradation).
 
         Returns the per-tick metric record, or None if disabled/failed. A failure here
@@ -1008,6 +963,7 @@ class StoryAgent:
                 word_count=scene_data.get("word_count", 0),
                 tension_result=tension_result,
                 goal_description=primary.get("description"),
+                contract_result=contract_result,
             )
         except Exception as e:
             logging.getLogger(__name__).warning(f"Coherence metrics failed (tick {tick}): {e}")
@@ -1327,42 +1283,125 @@ Answer:"""
             # Default to True on error (graceful degradation)
             return True
     
-    def _check_beat_contract(self, beat, scene_text: str, tension_level) -> dict:
-        """Validate a beat's contract postconditions against the written scene.
+    def _verify_and_complete_beat(
+        self,
+        current_beat,
+        plan: dict,
+        scene_text: str,
+        scene_id: str,
+        tension_level,
+        tick: int,
+    ) -> Optional[dict]:
+        """Step 8.5: decide beat completion and route failures (Phase 5 + Phase 3 Slice 1).
 
-        Opt-in via ``generation.use_contracts``. Record-only: a failing contract
-        is logged and returned in the tick result but never raises, matching the
-        graceful-degradation convention of the other extractors. Returns None
-        when contracts are disabled or no contract is defined for this beat.
+        Verification signals, in order: trust the planner when it explicitly
+        targeted this beat; otherwise gate on semantic similarity
+        (generation.beat_verification_threshold); with verification off, auto-
+        complete. When contracts are on and the beat carries postconditions,
+        they are evaluated here (deterministic, tension already scored at step
+        7.5) and recorded on the beat either way:
+
+        - all conditions passing on a verified beat upgrades confidence
+          (verification_method="contract");
+        - any condition failing downgrades an otherwise-verified beat to the
+          existing failure routing (rolling-horizon revision, or keep-pending).
+          Never a raise: a hard contract gate would stall the multi-tick run
+          loop on the first stubborn beat.
+
+        Returns the contract payload for the tick result and metrics, or None
+        when contracts did not run.
         """
-        if beat is None:
+        beat_target = plan.get("beat_target", {}) or {}
+        planner_targeted = beat_target.get("beat_id") == current_beat.id
+
+        # Compute semantic similarity score (always, for visibility)
+        semantic_score = self.vector.compute_semantic_similarity(
+            current_beat.description,
+            scene_text[:3000]  # Use first 3000 chars
+        )
+
+        # Phase 3 contracts Slice 1: postconditions ride the beat; evaluate them
+        # against the written scene and persist the verdict on the beat (audit
+        # trail whether or not it changes the completion decision).
+        contract_result = self._evaluate_beat_contract(current_beat, scene_text, tension_level)
+        if contract_result is not None:
+            self._record_contract_results(current_beat.id, contract_result)
+        contract_failed = contract_result is not None and not contract_result["is_valid"]
+
+        score_threshold = self.config.get('generation.beat_verification_threshold', 0.5)
+        verified = False
+        method = ""
+        if planner_targeted:
+            verified, method = True, "trusted_planner"
+        elif not self.config.get('generation.verify_beat_execution', True):
+            # Auto-mark complete without verification
+            verified, method = True, "auto"
+        elif semantic_score >= score_threshold:
+            verified, method = True, "semantic"
+
+        if verified and not contract_failed:
+            if contract_result is not None:
+                # Deterministic postconditions all passed: upgrade confidence.
+                method = "contract"
+            print(f"        ✓ Beat {current_beat.id} accomplished ({method}, score={semantic_score:.2f})")
+            self._mark_beat_complete(
+                current_beat.id,
+                scene_id,
+                verification_score=semantic_score,
+                verification_method=method
+            )
+            if planner_targeted and semantic_score < 0.4:
+                print(f"        ⚠️  Low confidence score - consider manual review")
+            return contract_result
+
+        # Failure routing, shared by semantic misses and contract failures: the
+        # beat is not marked complete; the rolling horizon re-derives the pending
+        # lookahead from what was actually written, or the beat stays pending.
+        if verified and contract_failed:
+            print(f"        ⚠️  Beat {current_beat.id} verified ({method}) but contract failed; not marking complete")
+            reason = (f"beat {current_beat.id} failed contract "
+                      f"({contract_result['failed']}/{contract_result['checked']} postconditions)")
+        else:
+            print(f"        ⚠️  Beat may not have been fully executed (score={semantic_score:.2f} < {score_threshold})")
+            reason = f"beat {current_beat.id} diverged (score={semantic_score:.2f} < {score_threshold})"
+
+        if self.config.get('generation.rolling_horizon', False):
+            # The story diverged from the planned beat: re-derive the
+            # pending horizon from what was actually written.
+            self._revise_horizon(reason=reason, tick=tick)
+        elif not self.config.get('generation.allow_beat_skip', False):
+            print(f"        Keeping beat {current_beat.id} as pending")
+        return contract_result
+
+    def _evaluate_beat_contract(self, beat, scene_text: str, tension_level) -> Optional[dict]:
+        """Evaluate a beat's embedded postconditions against the written scene.
+
+        Phase 3 contracts Slice 1: conditions live on the beat itself (inside
+        plot_outline.json), authored at beat-generation time, so they survive
+        exactly as long as their beat does. Opt-in via ``generation.use_contracts``.
+        Returns a result payload, or None when contracts are disabled, the beat
+        carries no postconditions, or evaluation crashed; never raises.
+        """
+        if beat is None or not self.config.get('generation.use_contracts', False):
             return None
-        if not self.config.get('generation.use_contracts', False):
+        raw_conditions = getattr(beat, "postconditions", None) or []
+        if not raw_conditions:
             return None
 
         import logging
         logger = logging.getLogger(__name__)
 
         try:
-            contract = self.contract_manager.get(beat.id)
+            conditions = [Condition.from_dict(c) for c in raw_conditions]
+            ctx = CheckContext(
+                memory=self.memory,
+                state=self.state,
+                prose=scene_text,
+                scene_tension=tension_level,
+            )
+            result = evaluate_conditions(conditions, ctx)
         except Exception as e:
-            logger.warning(f"Failed to load contract for beat {beat.id}: {e}")
-            return None
-
-        if contract is None:
-            return None
-
-        ctx = CheckContext(
-            memory=self.memory,
-            state=self.state,
-            prose=scene_text,
-            scene_tension=tension_level,
-        )
-
-        try:
-            result = contract.validate_postconditions(ctx)
-        except Exception as e:
-            logger.error(f"Contract validation crashed for beat {beat.id}: {e}")
+            logger.error(f"Contract evaluation crashed for beat {beat.id}: {e}")
             return None
 
         if result.is_valid:
@@ -1375,7 +1414,25 @@ Answer:"""
 
         payload = result.to_dict()
         payload["beat_id"] = beat.id
+        payload["checked"] = len(conditions)
+        payload["failed"] = len(result.failures)
+        payload["checked_at_tick"] = self.state.get("current_tick")
         return payload
+
+    def _record_contract_results(self, beat_id: str, contract_result: dict) -> None:
+        """Persist a contract evaluation onto its beat in the outline. Never raises."""
+        import logging
+        logger = logging.getLogger(__name__)
+
+        try:
+            outline = self.plot_manager.load_outline()
+            for beat in outline.beats:
+                if beat.id == beat_id:
+                    beat.contract_results = dict(contract_result)
+                    break
+            self.plot_manager.save_outline(outline)
+        except Exception as e:
+            logger.warning(f"Failed to record contract results for beat {beat_id}: {e}")
 
     def _mark_beat_complete(
         self,
