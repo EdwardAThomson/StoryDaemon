@@ -943,7 +943,7 @@ class StoryAgent:
         """
         try:
             from .arc_pressure import (compute_target_tension, needs_tension_rewrite,
-                                       rewrite_improved, last_scene_tension)
+                                       rewrite_futile, rewrite_improved, last_scene_tension)
 
             if not self.config.get('coherence.tension_rewrite', True):
                 return scene_data, tension_result
@@ -953,6 +953,16 @@ class StoryAgent:
             current = tension_result.get('tension_level')
             threshold = self.config.get('coherence.tension_rewrite_threshold', 2)
             if not needs_tension_rewrite(current, target, threshold):
+                return scene_data, tension_result
+
+            # Phase 3 arc-phase mandate: a drop of a full transition step or more cannot
+            # be rewritten away (the EVENTS set the floor, and only the planner changes
+            # those), so skip the revision pass instead of wasting two LLM calls.
+            step = self.config.get('coherence.tension_step_for_transition', 3)
+            if (self.config.get('coherence.arc_phase_mandate', True)
+                    and rewrite_futile(current, target, step)):
+                print(f"   7.6. Tension {current}/10 vs target {target:g}: drop too big for a "
+                      f"prose rewrite; skipping (events set the floor)")
                 return scene_data, tension_result
 
             print(f"   7.6. Tension {current}/10 off target {target:g} — revising once...")

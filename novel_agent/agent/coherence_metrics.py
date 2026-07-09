@@ -24,7 +24,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from .arc_pressure import compute_target_tension
+from .arc_pressure import compute_arc_phase, compute_target_tension
 
 logger = logging.getLogger(__name__)
 
@@ -142,6 +142,9 @@ class CoherenceMetrics:
             "tension_pre_rewrite": tension_pre_rewrite,
             "target_tension": target_tension,
             "tension_delta": tension_delta,
+            # Arc phase (Phase 3 arc-phase mandate): lets validation runs correlate the
+            # phase against achieved tension (did the resolution phase actually land calm).
+            "arc_phase": compute_arc_phase(tick, self.config),
             "goal_relevance": goal_relevance,
             "goal_relevance_method": goal_relevance_method,
             "goal_relevance_rationale": goal_relevance_rationale,

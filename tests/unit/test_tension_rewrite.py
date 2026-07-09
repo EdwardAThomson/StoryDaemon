@@ -87,9 +87,18 @@ def _tr(level):
     return {"enabled": True, "tension_level": level, "tension_category": "high"}
 
 
+def _rewrite_config():
+    """Config with the arc-phase futility skip off: a current-8 / target-3 drop would
+    otherwise be skipped as futile (see test_arc_phase.py), and these tests exercise
+    the rewrite mechanics themselves."""
+    cfg = Config()
+    cfg.set("coherence.arc_phase_mandate", False)
+    return cfg
+
+
 def test_rewrite_kept_when_closer():
     writer = FakeWriter("calmer prose")
-    agent = _agent(Config(), writer, FakeTension(4))  # revised 4 -> closer to target 3 than 8
+    agent = _agent(_rewrite_config(), writer, FakeTension(4))  # revised 4 -> closer to target 3 than 8
     scene, tr = agent._maybe_rewrite_for_tension({"text": "tense", "word_count": 1}, _tr(8), 0, {})
     assert writer.called
     assert scene["text"] == "calmer prose" and scene["word_count"] == 2
@@ -98,7 +107,7 @@ def test_rewrite_kept_when_closer():
 
 def test_rewrite_discarded_when_not_closer():
     writer = FakeWriter("still tense")
-    agent = _agent(Config(), writer, FakeTension(9))  # revised 9 -> not closer to 3 than 8
+    agent = _agent(_rewrite_config(), writer, FakeTension(9))  # revised 9 -> not closer to 3 than 8
     scene, tr = agent._maybe_rewrite_for_tension({"text": "tense", "word_count": 1}, _tr(8), 0, {})
     assert writer.called
     assert scene["text"] == "tense"  # original kept

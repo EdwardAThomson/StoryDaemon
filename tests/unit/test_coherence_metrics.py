@@ -184,6 +184,24 @@ def test_arc_target_without_tension_has_no_delta(project):
     assert rec["tension_delta"] is None
 
 
+def test_records_arc_phase(project):
+    # Default curve peaks at 0.9; progress 10/40 = 0.25 is on the climb.
+    cm = _metrics(project)
+    rec = cm.record_tick(tick=10, scene_id="S010", tension_result=None)
+    assert rec["arc_phase"] == "rising"
+    # Progress 39/40 = 0.975 is past the peak, in the resolution tail.
+    assert cm.record_tick(tick=39, scene_id="S039", tension_result=None)["arc_phase"] == "resolution"
+
+
+def test_arc_phase_none_when_curve_disabled(project):
+    cfg = Config()
+    cfg.set("coherence.target_tension_curve", None)
+    cm = CoherenceMetrics(project, MemoryManager(project), FakeVector(), cfg)
+    rec = cm.record_tick(tick=10, scene_id="S010", tension_result=None)
+    assert rec["arc_phase"] is None
+    assert rec["target_tension"] is None
+
+
 def test_read_metrics_missing_file(project):
     assert read_metrics(project / "memory" / "nope.jsonl") == []
 

@@ -14,7 +14,8 @@ from pathlib import Path
 from ..memory.manager import MemoryManager
 from ..memory.vector_store import VectorStore
 from ..tools.registry import ToolRegistry
-from .arc_pressure import arc_pressure_guidance_for_planner, last_scene_tension
+from .arc_pressure import (arc_phase_mandate, arc_pressure_guidance_for_planner,
+                           compute_arc_phase, last_scene_tension)
 from .throughline import primary_goal, throughline_guidance
 
 logger = logging.getLogger(__name__)
@@ -140,12 +141,26 @@ class MultiStagePlanner:
         )
         logger.info("Found %d relevant items (beat-first)", self.stage_stats['stage2_items'])
         
+        # Phase 3 arc-phase mandate: beat-first planning bypasses Stage 1 (where the
+        # arc-pressure guidance lands), so inject the phase mandate into the tactical
+        # prompt here. Suppressed when the beat carries an explicit tension_target,
+        # mirroring the writer-side precedence rule (the beat governs then).
+        beat_tension_target = getattr(beat, "tension_target", None)
+        if beat_tension_target is None and isinstance(beat, dict):
+            beat_tension_target = beat.get("tension_target")
+        arc_mandate = ""
+        if beat_tension_target is None and self.config.get('coherence.arc_phase_mandate', True):
+            arc_mandate = arc_phase_mandate(
+                compute_arc_phase(project_state.get('current_tick', 0), self.config)
+            )
+
         # Stage 3: Tactical planning with beat-focused intention
         logger.info("Stage 3 (beat-first): Tactical planning...")
         plan = self._tactical_planning(
             scene_intention,
             relevant_context,
             project_state,
+            arc_mandate=arc_mandate,
         )
         logger.info("Beat-first multi-stage planning complete")
         
@@ -304,25 +319,28 @@ class MultiStagePlanner:
         self,
         scene_intention: str,
         context: dict,
-        state: dict
+        state: dict,
+        arc_mandate: str = ""
     ) -> dict:
         """Stage 3: Detailed plan with tool calls.
-        
+
         Medium prompt with intention and relevant context only.
-        
+
         Args:
             scene_intention: Scene intention from Stage 1
             context: Relevant context from Stage 2
             state: Current project state
-            
+            arc_mandate: Optional arc-phase mandate text (beat-first path only;
+                the normal path already receives it via the Stage 1 prompt)
+
         Returns:
             Plan dictionary
         """
         import time
         start_time = time.time()
-        
+
         # Build tactical prompt
-        prompt = self._build_tactical_prompt(scene_intention, context, state)
+        prompt = self._build_tactical_prompt(scene_intention, context, state, arc_mandate)
         
         # Track token count (approximate)
         self.stage_stats['stage3_tokens'] = len(prompt.split())
@@ -431,27 +449,32 @@ Scene intention:"""
         self,
         scene_intention: str,
         context: dict,
-        state: dict
+        state: dict,
+        arc_mandate: str = ""
     ) -> str:
         """Build Stage 3 tactical planning prompt.
-        
+
         Args:
             scene_intention: Scene intention from Stage 1
             context: Relevant context from Stage 2
             state: Current project state
-            
+            arc_mandate: Optional arc-phase mandate text (beat-first path only)
+
         Returns:
             Formatted prompt string
         """
         # Get protagonist
         protagonist_id = state.get('active_character')
         protagonist = self.memory.load_character(protagonist_id) if protagonist_id else None
-        
+
+        # Arc-phase mandate section (Phase 3): only supplied on the beat-first path.
+        arc_section = f"\n## Arc Phase Mandate\n{arc_mandate}\n" if arc_mandate else ""
+
         prompt = f"""You are creating a detailed plan for the next scene.
 
 ## Scene Intention
 {scene_intention}
-
+{arc_section}
 ## Relevant Context
 
 ### Relevant Past Scenes
