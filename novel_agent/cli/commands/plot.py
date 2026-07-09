@@ -3,11 +3,18 @@ from pathlib import Path
 from typing import Dict, Any, Optional, List
 
 from ..project import load_project_state
+from ...configs.config import Config
 from ...memory.manager import MemoryManager
 from ...memory.plot_outline import PlotOutlineManager
 from ...memory.entities import PlotBeat, PlotOutline
 from ...tools.llm_interface import send_prompt_with_retry
 from ...agent.prompts import format_plot_generation_prompt
+from ...agent.arc_pressure import arc_guidance_for_beats, reconcile_beat_tension_targets
+
+
+def _project_config(project_dir: Path) -> Config:
+    """Project-level Config (config.yaml over defaults) for arc-pressure reads."""
+    return Config(str(Path(project_dir) / "config.yaml"))
 
 
 def get_plot_status(project_dir: Path) -> Dict[str, Any]:
@@ -273,6 +280,15 @@ def _build_plot_generation_prompt(
             continue
         loc_lines.append(f"{loc.id}: {loc.name}")
 
+    # Arc schedule for the beats about to be authored (Phase 3 bridge); "" when
+    # arc-pressure or the mandate gate is off. Never a hard failure.
+    try:
+        arc_guidance_section = arc_guidance_for_beats(
+            current_tick, count, _project_config(project_dir)
+        )
+    except Exception:
+        arc_guidance_section = ""
+
     # Single source of truth for the beat-generation prompt lives in
     # agent/prompts.py; this CLI path and the agent's PlotOutlineManager both
     # render the same template, only differing in how they assemble context.
@@ -291,8 +307,25 @@ def _build_plot_generation_prompt(
         "recent_scenes": "\n".join(recent_summaries) if recent_summaries else "None",
         "tension_history": "\n".join(tension_lines) if tension_lines else "None",
         "recent_beats": "\n".join(recent_beats_lines) if recent_beats_lines else "None",
+        "arc_guidance_section": arc_guidance_section,
     }
     return format_plot_generation_prompt(ctx)
+
+
+def _reconcile_generated_beats(project_dir: Path, beats: List[PlotBeat]) -> None:
+    """Hold authored tension targets to the arc schedule (Phase 3 bridge).
+
+    Same sanitize-not-trust reconciliation the agent path runs after parsing:
+    fill missing targets from the schedule, clamp far-off ones toward it. Never
+    raises; a reconciliation problem must not break beat generation.
+    """
+    try:
+        current_tick = load_project_state(str(project_dir)).get("current_tick", 0)
+        config = _project_config(project_dir)
+        for warning in reconcile_beat_tension_targets(beats, current_tick, config):
+            print(f"  ⚠️  {warning}")
+    except Exception as e:
+        print(f"  ⚠️  Beat tension reconciliation skipped: {e}")
 
 
 def generate_and_append_beats_cli(
@@ -317,6 +350,7 @@ def generate_and_append_beats_cli(
         beat_dicts = beat_dicts[:count]
 
     new_beats = _assign_new_beat_ids(outline, beat_dicts)
+    _reconcile_generated_beats(project_dir, new_beats)
     updated_outline = manager.add_beats(new_beats)
     issues = manager.validate_outline(updated_outline)
 
@@ -398,6 +432,7 @@ def revise_and_regenerate_beats_cli(
     #    outline so abandoned beats are counted and never reused.
     outline = manager.load_outline()
     new_beats = _assign_new_beat_ids(outline, beat_dicts)
+    _reconcile_generated_beats(project_dir, new_beats)
     updated_outline = manager.add_beats(new_beats)
     issues = manager.validate_outline(updated_outline)
 
