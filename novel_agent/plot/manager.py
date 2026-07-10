@@ -79,8 +79,10 @@ class PlotOutlineManager:
 
         ctx = self._build_generation_context(count)
         prompt = format_plot_generation_prompt(ctx)
-        # Use planner token budget as a safe default
-        max_tokens = ctx.get("planner_max_tokens", 1000)
+        # generation.beat_max_tokens: beat batches carry contract and arc-guidance
+        # lines and outgrew the old hardcoded 1000 (deterministic JSON truncation,
+        # 2026-07-10 run, docs/progress_report_20260710.md section 4).
+        max_tokens = ctx.get("planner_max_tokens", 2000)
         response = self.llm.generate(prompt, max_tokens=max_tokens)
         beats = self._extract_beats_json(response)
         if beats is None:
@@ -292,7 +294,10 @@ class PlotOutlineManager:
             "contract_section": contract_section,
             "contract_schema_example": schema_example,
             "count": count,
-            "planner_max_tokens": 1000,
+            # Beat-generation token budget, from config (generation.beat_max_tokens):
+            # the old hardcoded 1000 truncated contract + arc-guidance batches
+            # deterministically and was proven inert to config bumps (2026-07-10 run).
+            "planner_max_tokens": self.config.get('generation.beat_max_tokens', 2000),
         }
 
     def _parse_beats_response(self, response: str) -> List[PlotBeat]:

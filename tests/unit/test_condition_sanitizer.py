@@ -89,33 +89,45 @@ def test_unknown_check_dropped_with_warning():
     assert any("unknown check 'scene_has_vibes'" in w for w in warnings)
 
 
-def test_phantom_entity_and_loop_refs_dropped():
+def test_phantom_entity_refs_dropped():
     beat = _beat(postconditions=[
         {"check": "char_in_prose", "char": "C999"},
         {"check": "entity_exists", "id": "L999"},
         {"check": "entity_exists", "id": "X001"},
-        {"check": "char_at_location", "char": "C000", "location": "L999"},
-        {"check": "loop_resolved", "loop": "OL999"},
-        {"check": "loop_resolved", "loop": "OL001"},
+        {"check": "entity_exists", "id": "C000"},
     ])
     warnings = sanitize_beat_conditions([beat], FakeMemory(), _config())
-    assert beat.postconditions[0] == {"check": "loop_resolved", "loop": "OL001"}
-    assert len(warnings) == 5
+    assert beat.postconditions == [{"check": "entity_exists", "id": "C000"}]
+    assert len(warnings) == 3
     assert any("C999" in w for w in warnings)
     assert any("L999" in w for w in warnings)
-    assert any("OL999" in w for w in warnings)
+    assert any("X001" in w for w in warnings)
 
 
 def test_resolvable_refs_kept():
     conditions = [
         {"check": "entity_exists", "id": "C000"},
-        {"check": "char_at_location", "char": "C000", "location": "L000"},
+        {"check": "char_in_prose", "char": "C000"},
         {"check": "prose_contains", "any": ["Skyvault"]},
     ]
     beat = _beat(postconditions=list(conditions))
     warnings = sanitize_beat_conditions([beat], FakeMemory(), _config())
     assert beat.postconditions == conditions
     assert warnings == []
+
+
+def test_gated_checks_dropped_even_with_resolvable_refs():
+    # char_at_location and loop_resolved are structurally unsatisfiable today
+    # (2026-07-10 run): authored conditions on them are dropped by the gate
+    # regardless of whether their refs resolve.
+    beat = _beat(postconditions=[
+        {"check": "char_at_location", "char": "C000", "location": "L000"},
+        {"check": "loop_resolved", "loop": "OL001"},
+    ])
+    warnings = sanitize_beat_conditions([beat], FakeMemory(), _config())
+    assert beat.postconditions == []
+    assert len(warnings) == 2
+    assert all("gated from authoring" in w for w in warnings)
 
 
 def test_malformed_params_dropped():

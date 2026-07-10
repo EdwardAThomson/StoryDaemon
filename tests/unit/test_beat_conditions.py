@@ -13,7 +13,12 @@ from pathlib import Path
 import pytest
 
 from novel_agent.configs.config import Config
-from novel_agent.contracts.authoring import contract_authoring_section, describe_condition
+from novel_agent.contracts.authoring import (
+    GATED_AUTHORING_CHECKS,
+    contract_authoring_section,
+    describe_condition,
+    sanitize_beat_conditions,
+)
 from novel_agent.plot.entities import PlotBeat, PlotOutline
 
 
@@ -150,10 +155,13 @@ def test_contract_section_empty_when_gate_off():
 
 def test_contract_section_documents_vocabulary_when_gate_on():
     section = contract_authoring_section(_config(**{"generation.use_contracts": True}))
-    for checker in ("entity_exists", "char_at_location", "char_in_prose",
-                    "prose_contains", "tension_at_least", "tension_at_most",
-                    "loop_resolved"):
+    for checker in ("entity_exists", "char_in_prose", "prose_contains",
+                    "tension_at_least", "tension_at_most"):
         assert checker in section
+    # Structurally unsatisfiable today (2026-07-10 run): gated out of authoring
+    # entirely, so the prompt must not steer the LLM toward them.
+    for gated in GATED_AUTHORING_CHECKS:
+        assert gated not in section
     # Section 5 of the landing sketch: steer away from surface-vocabulary checks.
     assert "AVOID prose_contains" in section
 
@@ -207,4 +215,68 @@ def test_schema_example_puts_postconditions_in_the_shape_block():
     shape_block_on = prompt_on.split("# Current story state")[0]
     # The fragment attaches directly after creates_loops, inside the example object.
     assert '"creates_loops": [],\n      "postconditions"' in shape_block_on
-    assert '{"check": "loop_resolved"' in shape_block_on
+    # The example check must be an authorable one, never a gated one (the shape
+    # block is the strongest steer the prompt has).
+    assert '{"check": "char_in_prose"' in shape_block_on
+    for gated in GATED_AUTHORING_CHECKS:
+        assert gated not in shape_block_on
+
+
+# ---------------------------------------------------------------------------
+# Authoring gate in the sanitizer (structurally unsatisfiable checks)
+# ---------------------------------------------------------------------------
+
+class _GateLoop:
+    def __init__(self, loop_id):
+        self.id = loop_id
+
+
+class _GateMemory:
+    """Roster surface where every referenced id resolves, so a drop can only
+    come from the authoring gate, not from a phantom ref."""
+
+    def list_characters(self):
+        return ["C000"]
+
+    def list_locations(self):
+        return ["L000"]
+
+    def load_open_loops(self):
+        return [_GateLoop("OL001")]
+
+
+def _contracts_on():
+    return _config(**{"generation.use_contracts": True})
+
+
+def test_authored_char_at_location_dropped_by_gate():
+    beat = PlotBeat(id="PB001", description="x", postconditions=[
+        {"check": "char_at_location", "char": "C000", "location": "L000"},
+        {"check": "char_in_prose", "char": "C000"},
+    ])
+    warnings = sanitize_beat_conditions([beat], _GateMemory(), _contracts_on())
+    assert beat.postconditions == [{"check": "char_in_prose", "char": "C000"}]
+    assert any("gated from authoring" in w and "char_at_location" in w
+               for w in warnings)
+    # Distinct wording from the unknown-check drop.
+    assert not any("unknown check" in w for w in warnings)
+
+
+def test_authored_loop_resolved_dropped_by_gate():
+    beat = PlotBeat(id="PB001", description="x", postconditions=[
+        {"check": "loop_resolved", "loop": "OL001"},
+    ])
+    warnings = sanitize_beat_conditions([beat], _GateMemory(), _contracts_on())
+    assert beat.postconditions == []
+    assert any("gated from authoring" in w and "loop_resolved" in w
+               for w in warnings)
+
+
+def test_gate_does_not_block_derived_tension_conditions():
+    # The gate is authoring-only: system-derived tension conditions (from the
+    # beat's own tension_target) still land after gated conditions are dropped.
+    beat = PlotBeat(id="PB001", description="x", tension_target=8, postconditions=[
+        {"check": "loop_resolved", "loop": "OL001"},
+    ])
+    sanitize_beat_conditions([beat], _GateMemory(), _contracts_on())
+    assert beat.postconditions == [{"check": "tension_at_least", "value": 6}]

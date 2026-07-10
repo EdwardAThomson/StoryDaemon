@@ -34,7 +34,7 @@ class PlotBeat:
     preconditions: List[Dict[str, Any]] = field(default_factory=list)
     postconditions: List[Dict[str, Any]] = field(default_factory=list)
     # Postcondition evaluation record: written at beat verification (tick step
-    # 8.5) when generation.use_contracts is on and the beat carries conditions.
+    # 11.5) when generation.use_contracts is on and the beat carries conditions.
     contract_results: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:

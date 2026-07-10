@@ -48,11 +48,16 @@ DEFAULT_CONFIG = {
         'allow_beat_skip': False,  # Allow skipping beats that aren't accomplished
         'fallback_to_reactive': True,  # Fall back to reactive mode if beat generation fails
         'rolling_horizon': False,  # Phase 2: when a beat diverges from the written scene, abandon the pending horizon and regenerate it from current canon
+        # Token budget for beat-generation LLM calls (read by BOTH the agent path,
+        # plot/manager.py, and the CLI path, cli/commands/plot.py). Beat batches
+        # carry contract and arc-guidance lines and truncate deterministically at
+        # 1000 tokens; the CLI path's 2000 parsed first-try on the 2026-07-10 run.
+        'beat_max_tokens': 2000,
 
         # Beat contracts (Phase 3, docs/BLOCKS_CONTRACTS_LANDING_SKETCH.md Slice 1):
         # postconditions are authored with each beat at generation time, sanitized
         # against the closed checker vocabulary, shown to the writer, and checked at
-        # beat verification (tick step 8.5). All passing upgrades the verification
+        # beat verification (tick step 11.5). All passing upgrades the verification
         # method to "contract"; any failing keeps the beat pending (or triggers a
         # rolling-horizon revision when generation.rolling_horizon is on).
         'use_contracts': False,

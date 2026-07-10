@@ -366,13 +366,18 @@ def _sanitize_beat_conditions(project_dir: Path, beats: List[PlotBeat]) -> None:
 def generate_and_append_beats_cli(
     project_dir: Path,
     count: int,
-    max_tokens: int = 2000,
+    max_tokens: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Generate beats with the LLM and append them to the plot outline.
 
     This function assumes the LLM backend has already been initialized via
     initialize_llm in the CLI layer (e.g., inside the Typer command).
+
+    max_tokens defaults to generation.beat_max_tokens (the shared beat budget,
+    same key the agent path reads) so the two paths cannot drift.
     """
+    if max_tokens is None:
+        max_tokens = _project_config(project_dir).get('generation.beat_max_tokens', 2000)
     manager = PlotOutlineManager(project_dir)
     outline = manager.load_outline()
 
@@ -426,7 +431,7 @@ def revise_and_regenerate_beats_cli(
     project_dir: Path,
     count: int,
     reason: str = "manual revise",
-    max_tokens: int = 2000,
+    max_tokens: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Rolling horizon (manual trigger): regenerate the pending beats from canon.
 
@@ -440,7 +445,12 @@ def revise_and_regenerate_beats_cli(
     are left untouched.
 
     Assumes the LLM backend has already been initialized via initialize_llm.
+
+    max_tokens defaults to generation.beat_max_tokens (the shared beat budget,
+    same key the agent path reads) so the two paths cannot drift.
     """
+    if max_tokens is None:
+        max_tokens = _project_config(project_dir).get('generation.beat_max_tokens', 2000)
     manager = PlotOutlineManager(project_dir)
 
     # 1. Generate first — a failure here raises before we touch the outline.

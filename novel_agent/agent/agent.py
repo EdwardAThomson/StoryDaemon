@@ -299,20 +299,6 @@ class StoryAgent:
                 except Exception:
                     pass
             
-            # Verify beat execution and mark complete (Phase 5; contract-aware
-            # since Phase 3 contracts Slice 1)
-            contract_result = None
-            if use_plot_first and current_beat:
-                print("   8.5. Verifying beat execution...")
-                contract_result = self._verify_and_complete_beat(
-                    current_beat,
-                    plan,
-                    scene_data["text"],
-                    scene_id,
-                    tension_result.get("tension_level"),
-                    tick,
-                )
-
             # Step 8.5: Update scene with tension data (Phase 7A.3)
             if tension_result.get('enabled'):
                 scene = self.memory.load_scene(scene_id)
@@ -361,7 +347,24 @@ class StoryAgent:
                 # Step 11: Re-index updated entities (Phase 5)
                 print("   11. Syncing vector database...")
                 self._reindex_updated_entities(facts)
-            
+
+            # Step 11.5: Verify beat execution and mark complete (Phase 5;
+            # contract-aware since Phase 3 contracts Slice 1). Runs after fact
+            # extraction and entity updates (steps 9-11) so state-reading
+            # contract checks evaluate the post-scene world, not a stale one
+            # (2026-07-10 run, docs/progress_report_20260710.md section 5).
+            contract_result = None
+            if use_plot_first and current_beat:
+                print("   11.5. Verifying beat execution...")
+                contract_result = self._verify_and_complete_beat(
+                    current_beat,
+                    plan,
+                    scene_data["text"],
+                    scene_id,
+                    tension_result.get("tension_level"),
+                    tick,
+                )
+
             # Step 12: Extract lore (Phase 7A.4)
             print("   12. Extracting lore...")
             lore_items = self._extract_lore_with_retry(
@@ -1292,7 +1295,7 @@ Answer:"""
         tension_level,
         tick: int,
     ) -> Optional[dict]:
-        """Step 8.5: decide beat completion and route failures (Phase 5 + Phase 3 Slice 1).
+        """Step 11.5: decide beat completion and route failures (Phase 5 + Phase 3 Slice 1).
 
         Verification signals, in order: trust the planner when it explicitly
         targeted this beat; otherwise gate on semantic similarity

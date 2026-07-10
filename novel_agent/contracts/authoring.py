@@ -24,6 +24,18 @@ MAX_CONDITIONS_PER_BEAT = 3
 
 _TENSION_CHECKS = ("tension_at_least", "tension_at_most")
 
+# Checks the LLM may not author, because they are structurally unsatisfiable
+# today (Phase 3; proven live, docs/progress_report_20260710.md section 5):
+# char_at_location reads character.current_state.location_id, which nothing in
+# the fact-extraction pipeline ever populates, and loop_resolved requires a loop
+# status of "resolved", which the pipeline never sets in practice (0 of 70 loops
+# on the 2026-07-10 run). An authored condition on either wedges the beat queue
+# indefinitely. Both checkers stay registered in conditions.py and BeatContract
+# evaluation still supports them (a hand-written outline may use them); lift the
+# gate per check when the pipeline actually writes the state it reads (loop
+# resolution is part of the planned loop-aging work).
+GATED_AUTHORING_CHECKS = {"char_at_location", "loop_resolved"}
+
 
 # ---------------------------------------------------------------------------
 # Prompt section (beat generation)
@@ -35,17 +47,15 @@ Each beat MAY also carry a "postconditions" list: 1-3 machine-checkable conditio
 that must hold AFTER the beat's scene is written. Each condition is a flat JSON
 object {"check": "<name>", ...params} using ONLY these checks:
 
-- loop_resolved: an open loop has been resolved. Example: {"check": "loop_resolved", "loop": "OL003"}
 - entity_exists: an entity is established in canon. Example: {"check": "entity_exists", "id": "C001"}
 - char_in_prose: the character appears in the scene. Example: {"check": "char_in_prose", "char": "C001"}
-- char_at_location: the character ends the scene at a location. Example: {"check": "char_at_location", "char": "C001", "location": "L000"}
 - tension_at_least: the scene's tension score (0-10) is at least the value. Example: {"check": "tension_at_least", "value": 6}
 - tension_at_most: the scene's tension score (0-10) is at most the value. Example: {"check": "tension_at_most", "value": 4}
 - prose_contains: the prose literally contains a term. Example: {"check": "prose_contains", "any": ["Skyvault Accord"]}
 
 Postcondition rules:
 - Check the beat's JOB (what must be true of the story afterward), not the scene's wording.
-- Prefer state checks (loop_resolved, entity_exists), tension checks, and char_in_prose.
+- Prefer entity_exists, char_in_prose, and the tension checks.
 - AVOID prose_contains except for a required proper noun: a scene can depict an event
   without any given word, and contain the word without the event.
 - Use ONLY the exact entity/loop IDs listed above; conditions referencing unknown IDs are dropped.
@@ -70,8 +80,10 @@ def contract_authoring_section(config) -> str:
 # "must have this shape" JSON block, not by section text further down: with
 # postconditions absent from that block, a schema-obedient model omitted them
 # every time (proven live, 2026-07-10 smoke run). This fragment is injected
-# right after "creates_loops" in the shape example when contracts are on.
-_CONTRACT_SCHEMA_EXAMPLE = ',\n      "postconditions": [{"check": "loop_resolved", "loop": "OL003"}]'
+# right after "creates_loops" in the shape example when contracts are on. The
+# example check must not name a GATED_AUTHORING_CHECKS member, or the shape
+# block itself would steer authoring toward a condition the sanitizer drops.
+_CONTRACT_SCHEMA_EXAMPLE = ',\n      "postconditions": [{"check": "char_in_prose", "char": "C001"}]'
 
 
 def contract_schema_example(config) -> str:
@@ -94,8 +106,9 @@ def sanitize_beat_conditions(beats, memory, config) -> List[str]:
     """Hold freshly authored beats' conditions to the checker vocabulary, in place.
 
     Drops (with a warning, never a failure): non-object conditions, unknown check
-    names, conditions referencing entities/loops that do not exist, malformed
-    checker params, and anything past ``MAX_CONDITIONS_PER_BEAT``. Then reconciles
+    names, checks in ``GATED_AUTHORING_CHECKS`` (structurally unsatisfiable today,
+    authoring-only gate), conditions referencing entities/loops that do not exist,
+    malformed checker params, and anything past ``MAX_CONDITIONS_PER_BEAT``. Then reconciles
     tension conditions against each beat's own ``tension_target`` (see
     ``_reconcile_tension_conditions``). Returns human-readable warnings.
 
@@ -117,6 +130,14 @@ def sanitize_beat_conditions(beats, memory, config) -> List[str]:
             conditions = getattr(beat, attr, None) or []
             kept: List[Dict[str, Any]] = []
             for cond in conditions:
+                check = cond.get("check") if isinstance(cond, dict) else None
+                if check in GATED_AUTHORING_CHECKS:
+                    warnings.append(
+                        f"beat {label}: dropped {attr[:-1]} {cond!r}: check "
+                        f"{check!r} is gated from authoring (structurally "
+                        f"unsatisfiable until the pipeline writes the state it reads)"
+                    )
+                    continue
                 problem = _condition_problem(
                     cond, known_checks, known_chars, known_locs, known_loops
                 )

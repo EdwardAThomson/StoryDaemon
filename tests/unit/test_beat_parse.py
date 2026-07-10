@@ -75,6 +75,32 @@ BULLET_RESPONSE = """- Mara finds the hidden ledger in the vault
 """
 
 
+# ---- Beat-generation token budget (generation.beat_max_tokens) -------------------
+
+def test_generation_context_honors_beat_max_tokens(tmp_path):
+    # The 2026-07-10 run proved the old hardcoded 1000 truncated contract +
+    # arc-guidance batches and made config bumps inert: the context must read
+    # generation.beat_max_tokens.
+    mgr = PlotOutlineManager(
+        tmp_path, llm_interface=None,
+        config=FakeConfig({"generation.beat_max_tokens": 3000}),
+    )
+    ctx = mgr._build_generation_context(count=2)
+    assert ctx["planner_max_tokens"] == 3000
+
+
+def test_generation_context_beat_max_tokens_defaults_to_2000(manager):
+    # FakeConfig has no value set, so the code-level fallback applies.
+    ctx = manager._build_generation_context(count=2)
+    assert ctx["planner_max_tokens"] == 2000
+
+
+def test_default_config_beat_max_tokens_is_2000():
+    from novel_agent.configs.config import Config
+
+    assert Config().get('generation.beat_max_tokens') == 2000
+
+
 # ---- JSON extraction ------------------------------------------------------------
 
 def test_extract_returns_none_on_malformed_json(manager, capsys):
