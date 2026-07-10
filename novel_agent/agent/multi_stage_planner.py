@@ -15,7 +15,7 @@ from ..memory.manager import MemoryManager
 from ..memory.vector_store import VectorStore
 from ..tools.registry import ToolRegistry
 from .arc_pressure import (arc_phase_mandate, arc_pressure_guidance_for_planner,
-                           compute_arc_phase, last_scene_tension)
+                           beat_target_is_stale, compute_arc_phase, last_scene_tension)
 from .throughline import primary_goal, throughline_guidance
 
 logger = logging.getLogger(__name__)
@@ -143,15 +143,25 @@ class MultiStagePlanner:
         
         # Phase 3 arc-phase mandate: beat-first planning bypasses Stage 1 (where the
         # arc-pressure guidance lands), so inject the phase mandate into the tactical
-        # prompt here. Suppressed when the beat carries an explicit tension_target,
-        # mirroring the writer-side precedence rule (the beat governs then).
+        # prompt here. Suppressed when the beat carries a FRESH tension_target,
+        # mirroring the writer-side precedence rule (the beat governs then). A STALE
+        # target (a transition-step or more off the current curve target,
+        # beat_target_is_stale) yields to the schedule instead: the beat is being
+        # consumed far off its scheduled position (Phase 3, 2026-07-10 report
+        # addendum: the tension floor cap in contracts/authoring.py makes the
+        # observed wedge unlikely to recur; this is the backstop for any other cause
+        # of staleness). Fresh-beat precedence is unchanged.
         beat_tension_target = getattr(beat, "tension_target", None)
         if beat_tension_target is None and isinstance(beat, dict):
             beat_tension_target = beat.get("tension_target")
+        current_tick = project_state.get('current_tick', 0)
+        beat_target_governs = beat_tension_target is not None and not beat_target_is_stale(
+            beat_tension_target, current_tick, self.config
+        )
         arc_mandate = ""
-        if beat_tension_target is None and self.config.get('coherence.arc_phase_mandate', True):
+        if not beat_target_governs and self.config.get('coherence.arc_phase_mandate', True):
             arc_mandate = arc_phase_mandate(
-                compute_arc_phase(project_state.get('current_tick', 0), self.config)
+                compute_arc_phase(current_tick, self.config)
             )
 
         # Stage 3: Tactical planning with beat-focused intention

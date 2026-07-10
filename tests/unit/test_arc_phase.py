@@ -192,12 +192,23 @@ def test_beat_first_plan_carries_phase_mandate():
     assert plan["beat_target"]["beat_id"] == "B001"
 
 
-def test_beat_first_mandate_suppressed_by_beat_tension_target():
-    # An explicit beat tension_target governs, mirroring the writer-side precedence.
+def test_beat_first_mandate_suppressed_by_fresh_beat_tension_target():
+    # A fresh beat tension_target (near the tick-19 curve target 2.7) governs,
+    # mirroring the writer-side precedence.
     planner, llm = _beat_planner(_resolution_cfg())
     planner.plan_for_beat({"current_tick": 19},
-                          {"id": "B001", "description": "the aftermath", "tension_target": 7})
+                          {"id": "B001", "description": "the aftermath", "tension_target": 3})
     assert "Arc phase" not in llm.prompt
+
+
+def test_beat_first_mandate_restored_when_beat_target_is_stale():
+    # A stale beat target (a transition-step or more off the current curve target)
+    # yields to the schedule: the phase mandate renders despite the beat's target
+    # (2026-07-10 addendum backstop, e.g. a wedged peak beat consumed in the tail).
+    planner, llm = _beat_planner(_resolution_cfg())
+    planner.plan_for_beat({"current_tick": 19},
+                          {"id": "B001", "description": "the aftermath", "tension_target": 8.8})
+    assert "Arc phase: RESOLUTION" in llm.prompt
 
 
 def test_beat_first_mandate_gated_off():

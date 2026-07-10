@@ -36,6 +36,17 @@ _TENSION_CHECKS = ("tension_at_least", "tension_at_most")
 # resolution is part of the planned loop-aging work).
 GATED_AUTHORING_CHECKS = {"char_at_location", "loop_resolved"}
 
+# The LLM tension scorer's practical ceiling (Phase 3; measured across all four
+# descent validation arms, docs/progress_report_20260710.md addendum): climax
+# scenes fairly score 7, and 8 has been granted exactly once, at the last tick
+# of the clean re-run. A tension_at_least floor above 7 is therefore
+# unsatisfiable in practice and wedges the beat queue (the re-run's peak beat,
+# authored tension_at_least 8, stayed pending through the whole resolution
+# window). Floors above this cap are clamped down to it, authored and derived
+# alike. Ceilings (tension_at_most) are satisfiable and never clamped: the
+# failure mode is floors.
+TENSION_FLOOR_CAP = 7
+
 
 # ---------------------------------------------------------------------------
 # Prompt section (beat generation)
@@ -252,6 +263,9 @@ def _reconcile_tension_conditions(beat, config) -> List[str]:
     - When no tension condition was authored and the beat has a target, derive one
       (target 8 with band 2 yields ``tension_at_least: 6``); Python owns where the
       tension should be, so the check always exists once a target does.
+    - Finally, any ``tension_at_least`` above ``TENSION_FLOOR_CAP`` (authored or
+      derived) is clamped down to the cap: the scorer almost never grants 8+, so a
+      higher floor is unsatisfiable in practice (2026-07-10 report addendum).
 
     Beats without a ``tension_target`` are left alone (nothing to reconcile against).
     """
@@ -295,6 +309,23 @@ def _reconcile_tension_conditions(beat, config) -> List[str]:
         )
         postconditions.append(derived)
         beat.postconditions = postconditions
+        tension_conds = [derived]
+
+    # Cap tension floors at the scorer's practical ceiling (see TENSION_FLOOR_CAP),
+    # authored and derived alike. tension_at_most is deliberately left alone:
+    # ceilings are satisfiable, only floors wedge the queue.
+    for cond in tension_conds:
+        if cond["check"] != "tension_at_least":
+            continue
+        value = _as_float(cond.get("value"))
+        if value is not None and value > TENSION_FLOOR_CAP:
+            warnings.append(
+                f"beat {label}: tension_at_least {value:g} is above the scorer's "
+                f"practical ceiling (scenes rarely score 8+, so a floor above "
+                f"{TENSION_FLOOR_CAP} is unsatisfiable in practice and wedges "
+                f"the beat queue); clamped to {TENSION_FLOOR_CAP}"
+            )
+            cond["value"] = TENSION_FLOOR_CAP
 
     return warnings
 

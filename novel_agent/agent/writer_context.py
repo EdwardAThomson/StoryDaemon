@@ -4,7 +4,7 @@ from typing import Dict, Any, List, Optional
 from pathlib import Path
 
 from ..tools.name_generator import NameGenerator
-from .arc_pressure import arc_pressure_guidance_for_writer
+from .arc_pressure import arc_pressure_guidance_for_writer, beat_target_is_stale
 
 
 class WriterContextBuilder:
@@ -78,8 +78,9 @@ class WriterContextBuilder:
         # Format plot beat section (Phase 5)
         plot_beat_section = self._format_plot_beat_section(plan)
 
-        # Arc-pressure: firm tension target for the writer (Phase 3). Suppressed when a
-        # plot beat already specifies a tension_target — the beat section governs then.
+        # Arc-pressure: firm tension target for the writer (Phase 3). Suppressed when
+        # a plot beat carries a fresh tension_target (the beat section governs then);
+        # a stale beat target yields to the schedule (see _build_arc_pressure_section).
         arc_pressure_section = self._build_arc_pressure_section(plan, current_tick)
 
         # Cast roster + a pool of pre-minted names for any new character (Phase 1 grounding)
@@ -116,11 +117,21 @@ class WriterContextBuilder:
     def _build_arc_pressure_section(self, plan: Dict[str, Any], current_tick: int) -> str:
         """Firm arc-pressure tension instruction for the writer, or "" when not applicable.
 
-        Suppressed when the plan's plot beat already carries a ``tension_target`` — that
+        Suppressed when the plan's plot beat carries a fresh ``tension_target``: that
         target is injected by ``_format_plot_beat_section`` and must not be doubled.
+        A STALE beat target (a transition-step or more off the current curve target,
+        ``beat_target_is_stale``) does NOT suppress: the beat was consumed far off its
+        scheduled position, so the schedule governs and this section renders alongside
+        the beat section's own target line, explicitly current (Phase 3, 2026-07-10
+        report addendum: the tension floor cap in contracts/authoring.py makes the
+        observed wedge unlikely to recur; this is the backstop for any other cause of
+        staleness). Fresh-beat precedence is unchanged.
         """
         beat = plan.get("plot_beat") or {}
-        if beat.get("tension_target") is not None:
+        beat_target = beat.get("tension_target")
+        if beat_target is not None and not beat_target_is_stale(
+            beat_target, current_tick, self.config
+        ):
             return ""
         return arc_pressure_guidance_for_writer(current_tick, self.config)
 

@@ -87,6 +87,37 @@ def compute_target_tension(current_tick: int, config) -> Optional[float]:
     return round(target, 1) if target is not None else None
 
 
+def beat_target_is_stale(beat_target, current_tick: int, config) -> bool:
+    """True when a beat's numeric ``tension_target`` has drifted a transition-step
+    or more from the CURRENT curve target: the beat is being consumed far off its
+    scheduled position (e.g. after failing its contract for several ticks).
+
+    Used at both precedence points where a beat's tension_target normally silences
+    the schedule (the writer's arc-pressure section and the planner's beat-first
+    arc-phase mandate): a stale target yields to the schedule instead of
+    suppressing it. Observed live (Phase 3, docs/progress_report_20260710.md
+    addendum): a peak beat with tension_target 8.8 wedged on an unsatisfiable
+    tension floor and was still governing at the tick whose curve target was 4.0,
+    so the finale escalated exactly when the schedule wanted calm. The tension
+    floor cap in contracts/authoring.py makes that particular wedge unlikely to
+    recur; this check is the backstop for any other cause of staleness.
+
+    Graceful: False (normal fresh-beat precedence) when the target is missing or
+    non-numeric, or when the curve is disabled. The deviation threshold reuses
+    ``coherence.tension_step_for_transition`` (default 3), the same "this gap
+    needs a transition" step the rest of arc-pressure uses.
+    """
+    try:
+        beat_value = float(beat_target)
+    except (TypeError, ValueError):
+        return False
+    scheduled = compute_target_tension(current_tick, config)
+    if scheduled is None:
+        return False
+    step = config.get('coherence.tension_step_for_transition', 3)
+    return abs(beat_value - scheduled) >= step
+
+
 def derive_arc_phase(
     progress: float,
     curve: Optional[Sequence[Sequence[float]]],

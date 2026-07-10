@@ -8,6 +8,7 @@ from novel_agent.agent.arc_pressure import (
     arc_pressure_guidance,
     arc_pressure_guidance_for_writer,
     arc_pressure_guidance_for_planner,
+    beat_target_is_stale,
     last_scene_tension,
 )
 from novel_agent.agent.tension_scale import band_for
@@ -112,15 +113,69 @@ def test_writer_guidance_is_firm_calibrated_and_shows_full_scale():
     assert "6/10 (high" in arc_pressure_guidance_for_writer(10, cfg)
 
 
-def test_writer_section_suppressed_when_beat_has_tension_target():
+def _writer_context_builder(cfg):
     from novel_agent.agent.writer_context import WriterContextBuilder
-    cfg = FakeConfig({"coherence.target_tension_curve": CURVE, "coherence.target_story_length": 20})
     wcb = WriterContextBuilder.__new__(WriterContextBuilder)  # bypass __init__ (no deps needed)
     wcb.config = cfg
-    # Beat with a tension_target -> arc section suppressed (beat governs)
-    assert wcb._build_arc_pressure_section({"plot_beat": {"tension_target": 7}}, current_tick=0) == ""
+    return wcb
+
+
+def test_writer_section_suppressed_when_beat_has_fresh_tension_target():
+    cfg = FakeConfig({"coherence.target_tension_curve": CURVE, "coherence.target_story_length": 20})
+    wcb = _writer_context_builder(cfg)
+    # Beat with a fresh tension_target (near the tick-0 curve target 3) -> arc
+    # section suppressed (the beat governs)
+    assert wcb._build_arc_pressure_section({"plot_beat": {"tension_target": 4}}, current_tick=0) == ""
     # No beat -> arc section emitted
     assert wcb._build_arc_pressure_section({}, current_tick=0).startswith("**TENSION TARGET")
+
+
+def test_writer_section_rendered_when_beat_tension_target_is_stale():
+    # The 2026-07-10 addendum's wedge shape: a peak beat (tension_target 8.8)
+    # consumed at the tick whose curve target is 4; the stale target yields and
+    # the schedule's arc section renders.
+    cfg = FakeConfig({"coherence.target_tension_curve": CURVE, "coherence.target_story_length": 20})
+    wcb = _writer_context_builder(cfg)
+    section = wcb._build_arc_pressure_section(
+        {"plot_beat": {"tension_target": 8.8}}, current_tick=20
+    )
+    assert section.startswith("**TENSION TARGET FOR THIS SCENE: 4/10")
+
+
+# ---- stale beat targets yield to the schedule (2026-07-10 addendum backstop) ----
+
+def _curve_cfg(**extra):
+    values = {"coherence.target_tension_curve": CURVE, "coherence.target_story_length": 20}
+    values.update(extra)
+    return FakeConfig(values)
+
+
+def test_beat_target_fresh_near_curve_target():
+    # tick 20 -> curve target 4; a target within the transition step is fresh
+    cfg = _curve_cfg()
+    assert beat_target_is_stale(4, 20, cfg) is False
+    assert beat_target_is_stale(6, 20, cfg) is False   # deviation 2 < step 3
+
+
+def test_beat_target_stale_at_step_or_more():
+    cfg = _curve_cfg()
+    # the observed wedge: peak target 8.8 carried into a slot whose target is 4
+    assert beat_target_is_stale(8.8, 20, cfg) is True
+    assert beat_target_is_stale(7, 20, cfg) is True    # deviation 3 == step
+    assert beat_target_is_stale(1, 20, cfg) is True    # staleness is symmetric
+
+
+def test_beat_target_stale_honors_configured_step():
+    cfg = _curve_cfg(**{"coherence.tension_step_for_transition": 2})
+    assert beat_target_is_stale(6, 20, cfg) is True    # deviation 2 >= step 2
+
+
+def test_beat_target_stale_graceful_when_missing_or_disabled():
+    cfg = _curve_cfg()
+    assert beat_target_is_stale(None, 20, cfg) is False      # no target: fresh precedence
+    assert beat_target_is_stale("loud", 20, cfg) is False    # non-numeric target
+    off = FakeConfig({"coherence.target_tension_curve": None})
+    assert beat_target_is_stale(8.8, 20, off) is False       # curve off: no schedule to yield to
 
 
 def test_writer_template_renders_with_arc_section():

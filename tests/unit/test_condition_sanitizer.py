@@ -10,6 +10,7 @@ import pytest
 from novel_agent.configs.config import Config
 from novel_agent.contracts.authoring import (
     MAX_CONDITIONS_PER_BEAT,
+    TENSION_FLOOR_CAP,
     sanitize_beat_conditions,
 )
 from novel_agent.plot.entities import PlotBeat
@@ -225,3 +226,64 @@ def test_authored_tension_condition_suppresses_derivation():
                  tension_target=4)
     sanitize_beat_conditions([beat], FakeMemory(), _config())
     assert beat.postconditions == [{"check": "tension_at_most", "value": 5}]
+
+
+# ---------------------------------------------------------------------------
+# Tension floor cap (the scorer's practical ceiling, 2026-07-10 addendum)
+# ---------------------------------------------------------------------------
+
+def test_authored_floor_of_8_clamped_to_cap():
+    # The clean re-run's wedge shape: authored tension_at_least 8 on the peak
+    # beat (target 8.8) is consistent with the target, and unsatisfiable in
+    # practice (the scorer almost never grants 8+).
+    beat = _beat(postconditions=[{"check": "tension_at_least", "value": 8}],
+                 tension_target=8.8)
+    warnings = sanitize_beat_conditions([beat], FakeMemory(), _config())
+    assert beat.postconditions == [
+        {"check": "tension_at_least", "value": TENSION_FLOOR_CAP}
+    ]
+    assert any("practical ceiling" in w for w in warnings)
+
+
+def test_authored_floor_of_9_clamped_to_cap():
+    beat = _beat(postconditions=[{"check": "tension_at_least", "value": 9}],
+                 tension_target=9)
+    warnings = sanitize_beat_conditions([beat], FakeMemory(), _config())
+    assert beat.postconditions == [{"check": "tension_at_least", "value": 7}]
+    assert any("practical ceiling" in w for w in warnings)
+
+
+def test_floor_at_cap_or_below_untouched():
+    for value in (7, 6):
+        beat = _beat(postconditions=[{"check": "tension_at_least", "value": value}],
+                     tension_target=8)
+        warnings = sanitize_beat_conditions([beat], FakeMemory(), _config())
+        assert beat.postconditions == [{"check": "tension_at_least", "value": value}]
+        assert warnings == []
+
+
+def test_tension_at_most_never_capped():
+    # Ceilings are satisfiable; the failure mode is floors, so tension_at_most
+    # values above the cap pass through untouched.
+    beat = _beat(postconditions=[{"check": "tension_at_most", "value": 9}],
+                 tension_target=8.8)
+    warnings = sanitize_beat_conditions([beat], FakeMemory(), _config())
+    assert beat.postconditions == [{"check": "tension_at_most", "value": 9}]
+    assert warnings == []
+
+
+def test_derived_floor_within_cap_unchanged():
+    # target 8.8 derives round(8.8 - band 2) = 7: at the cap already, no clamp.
+    beat = _beat(tension_target=8.8)
+    warnings = sanitize_beat_conditions([beat], FakeMemory(), _config())
+    assert beat.postconditions == [{"check": "tension_at_least", "value": 7}]
+    assert warnings == []
+
+
+def test_derived_floor_above_cap_clamped():
+    # target 10 derives round(10 - band 2) = 8, above the scorer's ceiling; the
+    # cap applies to derived conditions the same as authored ones.
+    beat = _beat(tension_target=10)
+    warnings = sanitize_beat_conditions([beat], FakeMemory(), _config())
+    assert beat.postconditions == [{"check": "tension_at_least", "value": 7}]
+    assert any("practical ceiling" in w for w in warnings)
