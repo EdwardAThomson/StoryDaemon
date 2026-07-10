@@ -687,3 +687,255 @@ both now validated live.
   `memory/metrics.jsonl` with contract counters, `plot_outline.json` with per-beat
   `contract_results`, planner snapshots in `plans/`, `errors/error_006.json`).
 - Run log: scratchpad copy (`descent-run3.log`), not committed.
+
+## Addendum 4: descent run 4, slot alignment live
+
+The run built to exercise the slot-alignment fix (cbf921d: batches cap to the
+remaining runway, the final slot carries an explicit final-scene clause) never
+reached the code it was built to exercise. Fresh project `descent-run4`
+(`work/novels/descent-run4_b724fd32/`), same foundation, user goal, and config as
+the arbiter arm verbatim, executed at cbf921d: 16 scenes (ticks 0 through 15),
+~31.3k words, **zero manual interventions**, zero run-level retries, `errors/`
+empty. The number to beat was the arbiter's 6.
+
+Headline: the final scene ("The Ashhearth Proposition") scored **8 against target
+4**, tying the two worst endings (June control, clean re-run), and the
+slot-alignment fix is unimplicated: it was never invoked. A single authored
+postcondition, `char_in_prose C003` on beat PB008, failed **seven consecutive
+ticks (9 through 15)**, the worst wedge in any arm (the marred run's PB003 wedged
+five and was manually abandoned; this run was intervention-free by design, so it
+rode to the end). The wedge froze the pending count at 3, above the regeneration
+threshold of 2, so the third batch, the one the runway cap and the final-scene
+clause exist for, was never authored. The finale slot got the seventh
+re-execution of a rising-phase beat (tension_target 6.8), and the staleness
+backstop stayed legally dormant while it happened (|6.8 - 4.0| = 2.8, just under
+the step-3 threshold). Nothing the fix touches ever ran; a new delivery defect
+one layer upstream consumed the experiment.
+
+### Predictions, pre-registered
+
+- **P1 (late-window batch capped, last beat on tick 15 with the curve-endpoint
+  target and the final-scene clause): not exercised, and that is the finding.**
+  Zero "Capping batch" lines in the run output, because only two batches were
+  ever authored (tick 2 and tick 6, runways 13 and 9, correctly uncapped) and the
+  third never happened: beat regeneration requires pending < 2 and PB008's wedge
+  held pending at 3 (PB008, PB009, PB010) from tick 9 to the end. The cap did not
+  fail; the run never reached it.
+- **P2 (finale beat authored as a genuine denouement event): not authored.** The
+  final-scene clause never entered any generation prompt because no batch was
+  authored inside the final window. The beat that actually held the finale slot,
+  quoted verbatim in the next section, is PB008, a rising-phase escalation beat
+  authored at tick 6 for the tick-9 slot. Whether haiku obeys the clause remains
+  untested.
+- **P3 (finale consumes the capped beat at tick 15, scores at or below 5):
+  failed, 8 against target 4.** The five prior arms scored 8, 6, 7, 8, 6; this
+  run ties the worst. The scene is the beat's own hot event (an immunity
+  ultimatum delivered at a safe house), the prose rewrite correctly
+  futile-skipped ("drop too big for a prose rewrite; events set the floor"), and
+  the scorer's 8 is a fair grade of a coercion scene with a ticking choice.
+- **P4 (no wedge anywhere, staleness dormant): failed on the first half.** The
+  floor-cap had nothing to clamp (no authored floor above 7 in either batch) and
+  the staleness backstop stayed dormant, but dormant is not vindicated this time:
+  at tick 15 the wedged beat's 6.8 sat 2.8 off the schedule's 4.0, under the
+  step-3 threshold, so the beat governed the finale legally. That is the second
+  consecutive run (arbiter P4 near-miss, now a real miss) in which the finale
+  slot needed the yield-to-schedule rule and arithmetic kept it asleep.
+
+### Six-way comparison
+
+| metric | June (control) | July (reactive + mandate) | plot-first, marred | plot-first, clean | arbiter | this run (slot alignment) |
+|---|---|---|---|---|---|---|
+| overall drift, all scored ticks | **1.20** | 1.55 | 1.60 | 1.65 | 1.72 | 1.73 |
+| overall bias (signed) | +0.75 | **+0.55** | +1.15 | +1.21 | +1.15 | +0.95 |
+| rising drift (ticks 0-12) | **0.96** | 1.51 | 1.54 | 1.56 | 1.69 | 1.66 |
+| peak drift (tick 13) | 1.8 (7 vs 8.8) | 1.8 (7 vs 8.8) | 1.8 (7 vs 8.8) | 1.8 (7 vs 8.8) | 1.8 (7 vs 8.8) | 1.8 (7 vs 8.8) |
+| resolution drift (ticks 14-15) | 2.35 | **1.65** | 1.85 | 2.15 | 1.85 | 2.15 |
+| final scene: target 4.0, actual | 8 | **6** | 7 | 8 | **6** | 8 |
+| final-scene event kind | still the climax | aftermath | the exposure itself | still the climax (stale peak beat) | the arrest (watched on monitors) | still the climax (7th re-execution of a wedged rising beat) |
+| beats steering scenes | n/a | n/a | ticks 2-10 and 15 | every tick 2-15 | every tick 2-15 | every tick 2-15, but 9-15 all the same beat |
+| manual interventions | 0 | 0 | 2 | 0 | 0 | **0** |
+
+Mid-run tracking (ticks 5-14) is the best of any arm at 1.03, and the hot start
+persists (ticks 1-5 mean drift 2.68, sixth run out of six). The overall number is
+bracketed by the same two spikes as always: the start and the ending. The ending
+is the whole story here.
+
+### The wedge, precisely: an ID the writer was never told the name of
+
+PB008 reads "Galen is approached by Holtwick security and offered a deal:
+silence in exchange for immunity, forcing him to choose between
+self-preservation and helping Vela", and its author pinned the postcondition to
+the canonical security investigator: `char_in_prose C001` (Galen Yoraen),
+`char_in_prose C003` (Grimax Texyx), `tension_at_least 6`. Every tick from 9 to
+15, C001 and the tension floor passed and C003 failed. The causal chain has five
+links, each independently small:
+
+1. **The beat names a role, the contract names an ID.** The description says
+   "Holtwick security"; only the postcondition knows it means C003.
+2. **The contract surface renders raw IDs.** The writer's beat section says
+   "Required Characters: C001, C003, C004" and `describe_condition` renders
+   "character C003 appears in the scene" (`contracts/authoring.py`). Nothing
+   resolves C003 to "Grimax Texyx" for the writer. The Phase 1 grounded-identity
+   rule (the LLM selects names, Python resolves references) was applied to the
+   planner and the writer's entity refs, and never to the contract rendering.
+3. **The writer re-cast the role instead.** Grimax Texyx appears in scenes 2-6
+   and 8 (PB007, whose `char_in_prose C003` passed at tick 8), then never again.
+   From tick 9 the writer staged "Holtwick security" with freelance personnel,
+   and the run minted **nine new named Holtwick security characters** while the
+   check waited for the one it had pinned: C010-C019 include a Security Director
+   (Rheaix Drakux, who carried the antagonist thread from scene 8 onward), a
+   Head of Executive Security, three Security Operatives, an Enforcer, and the
+   finale's negotiator Brixen Coroen. The role was on the page every single
+   tick; the ID never was.
+4. **Keep-pending semantics with no give-up rule.** Recommendation 2 of this
+   report's original verdict (attempt counter, abandon or downgrade after N
+   contract failures) was never implemented. The arbiter run's mildest-ever
+   wedge (one tick) made it look affordable; this run's seven-tick pin is the
+   same defect at full size.
+5. **The pinned queue starves regeneration.** Pending stayed at 3, regeneration
+   fires below 2, so the capped batch (and with it P1, P2, P3) was structurally
+   unreachable after tick 9.
+
+The irony that makes this the run's sharpest observation: **the beat's event was
+delivered on the page, repeatedly.** Scene 15 IS "Galen approached by Holtwick
+security and offered immunity for silence", staged as Brixen Coroen at the safe
+house door: "The immunity agreement is waiting for you... All you have to do is
+let Vela believe that you abandoned her." The story obeyed the beat seven times
+over while the contract returned false, because the check verifies the actor's
+identity, not the event. A satisfied beat was unverifiable by construction, which
+is the mirror image of the arbiter run's lesson (there, the number was edited
+and the event was wrong; here, the event was right and the name was wrong).
+
+Counterfactual arithmetic, same style as the arbiter's: had PB008 cleared at
+tick 9, PB009 and PB010 land on ticks 10-11, regeneration fires at tick 11
+(pending 1), runway is 15 - 11 = 4, the batch caps 5 to 4 on slots 12-15 with
+targets 8.3 / 8.8 / 7.3 / 4.0, and the tick-15 slot carries the final-scene
+clause: exactly the smoke-tested scenario. One authored condition, unsatisfiable
+in practice, deleted the entire experiment.
+
+### Beat-authoring quality: the batch that held the final window
+
+The capped batch was never authored, so its quality is unobservable. What held
+the final window is the tail of the tick-6 batch (authored at story position
+~40%, phase RISING, scheduled targets 6.8 / 7.3 / 7.9, all within band, no
+clamps), quoted verbatim:
+
+- **PB008** (tension_target 6.8, the wedge): "Galen is approached by Holtwick
+  security and offered a deal: silence in exchange for immunity, forcing him to
+  choose between self-preservation and helping Vela." Postconditions:
+  `char_in_prose C001`, `char_in_prose C003`, `tension_at_least 6`.
+- **PB009** (tension_target 7.3, never consumed): "Vela discovers that the three
+  redacted entries contain evidence of executive-level involvement, including
+  direct authorization for the data transfer to Meridian Holdings."
+  Postconditions: `char_in_prose C000`, `tension_at_least 7`.
+- **PB010** (tension_target 7.9, never consumed): "Vela realizes the
+  forty-eight-hour delay is expiring and must decide whether to attend the
+  Blackwater Station meeting despite knowing she is now actively hunted by
+  security." Postconditions: `char_in_prose C000`, `tension_at_least 7`.
+
+For its own window this is correct authoring: escalation vocabulary, rising
+targets, floors under the cap. None of it is resolution material, and none of it
+was supposed to be; these beats were written for ticks 9-11 of a rising arc and
+ended up owning ticks 9-15 including the finale. The bridge keeps proving it
+writes the right beats for the slot it is told about; delivery keeps finding new
+ways to put them in front of the wrong slot.
+
+### Per-tick trace
+
+Per-tick trace (`memory/metrics.jsonl`; cc = contract conditions checked/failed):
+
+| tick | target | actual | phase | beat | cc |
+|---|---|---|---|---|---|
+| 0 | 3.0 | (not scored) | rising | | |
+| 1 | 3.5 | 8 | rising | | |
+| 2 | 4.1 | 8 | rising | PB001 ✓ | 2/0 |
+| 3 | 4.6 | 7 | rising | PB002 ✓ | 2/0 |
+| 4 | 5.1 | 6 | rising | PB003 ✓ | 2/0 |
+| 5 | 5.3 | 7 | rising | PB004 ✓ | 3/0 |
+| 6 | 5.6 | 7 | rising | PB005 ✓ | 2/0 |
+| 7 | 5.9 | 7 | rising | PB006 ✓ (rewrite 8 to 7) | 3/0 |
+| 8 | 6.3 | 6 | rising | PB007 ✓ (`char_in_prose C003` passed here) | 2/0 |
+| 9 | 6.8 | 7 | rising | PB008 ✗ | 3/1 |
+| 10 | 7.3 | 7 | rising | PB008 ✗ | 3/1 |
+| 11 | 7.9 | 7 | rising | PB008 ✗ | 3/1 |
+| 12 | 8.3 | 6 | rising | PB008 ✗ | 3/1 |
+| 13 | 8.8 | 7 | peak | PB008 ✗ (upward rewrite 6 to 7) | 3/1 |
+| 14 | 7.3 | 7 | resolution | PB008 ✗ | 3/1 |
+| 15 | 4.0 | 8 | resolution | PB008 ✗ | 3/1 |
+
+Contract totals: 37 conditions checked, 7 failed, all seven the same condition
+(`char_in_prose C003` on PB008). All 7 completed beats: `verification_method:
+"contract"`.
+
+### Fix behavior and stability
+
+- **Slot alignment:** never invoked (see P1). The two batches that were authored
+  behaved correctly under the new code path (runways 13 and 9, no cap, no
+  warning), which is the fix's do-no-harm half confirmed; the do-the-work half
+  remains smoke-test-only.
+- **Floor cap:** nothing to clamp (authored floors 4-7 across both batches, 2/2
+  batches inside the vocabulary and the band; zero reconciler target clamps this
+  run, against 1 in the arbiter). **Staleness:** dormant all run, including the
+  one tick it was needed (2.8 < 3 at tick 15).
+- **Prior fixes held:** 2 of 2 batches parsed first-try under the 2000-token
+  default; all 10 beats carried permitted-vocabulary postconditions (zero
+  `char_at_location` / `loop_resolved` authored); the malformed-JSON retry never
+  needed.
+- **Stability:** 15/15 ticks, zero run-level retries, `errors/` empty, no
+  fact-extraction degradations, one cosmetic plan-JSON parse warning absorbed by
+  the fallback. OpenRouter clean (~150 calls, no 5xx, no 429, no timeouts).
+  Per-tick wall time 69-111s (mean 83.3s). Tension rewrites: futile-skips at
+  ticks 1, 2, and 15 (the correct call each time), a kept downward rewrite at
+  tick 7 (8 to 7), a kept upward rewrite at tick 13 (6 to 7, arc-pressure
+  pushing toward the 8.8 peak), revise-but-keep at ticks 3 and 12.
+  Character-detector noise is worse than ever (8-12 junk names per tick late in
+  the run: "Here", "That", "If Holtwick", "Senior Compliance").
+- **Loop economy (Slice 0 baseline): first closure ever recorded.** 79 loops
+  opened, **1 closed** (OL12, "why did Galen escalate Vela's access to senior
+  management", resolved at tick 11), 78 open at the end. Three prior runs
+  measured 0 closures; the counter can move, it just almost never does.
+
+### Decision-map verdict
+
+Pre-registered: at or below 5 closes the delivery story and leaves the material
+floor to curve realism plus the interleaving design; above 5 demands a precise
+diagnosis of which link failed (cap did not fire, event hot despite the clause,
+or scorer floor). The answer is 8, and the diagnosis is the first option with a
+twist: **the cap did not fire because the run never reached it, and the reason
+is a new delivery defect one layer upstream of the one just fixed.** The clause
+was never authored into a prompt, the scorer never saw a denouement, and neither
+of them can be blamed or credited. The delivery story is **not closed**. Ranked
+by what this run actually demonstrated:
+
+1. **The give-up rule is now the binding constraint** (recommendation 2 of the
+   original verdict, still unimplemented). Keep-pending semantics turned one
+   unsatisfiable-in-practice condition into a seven-tick pin that starved
+   regeneration and decided the finale. An attempt counter with
+   abandon-or-downgrade after N failures unblocks every downstream mechanism
+   this week built, including the runway cap.
+2. **Grounded identity has a gap on the contract surface.** `char_in_prose`
+   pins an ID; the writer is shown the raw ID and freelances the role with new
+   names (nine new security characters in seven ticks). Either render canonical
+   names in the beat section and `describe_condition`, or verify the condition
+   against something the writer can actually be steered by. The check graded
+   WHO delivered the event; the story delivered the event seven times.
+3. **The staleness threshold misses the finale slot by arithmetic, twice
+   running.** A beat 2.8 off the schedule governed the final scene. Either the
+   final tick should always yield to the schedule (it carries the final-scene
+   guidance by construction now), or the stale rule needs a tighter threshold in
+   the resolution phase.
+
+P1-P4 as designed are all still open questions; this run answered a different
+one, cheaply and unambiguously, and the answer feeds items 1 and 2 straight into
+the interleaving design's contract work (assignment honesty needs identity
+honesty first). The arbiter's 6 stands as the number to beat.
+
+### Addendum 4 artifacts
+
+- This run (gitignored `work/`): `work/novels/descent-run4_b724fd32/` (scenes,
+  `memory/metrics.jsonl` with contract counters, `plot_outline.json` with PB008's
+  seven-tick `contract_results` audit trail, planner snapshots in `plans/`,
+  `errors/` empty).
+- Run log: scratchpad copy (`descent-run4.log`), not committed.
+- Executed at cbf921d (slot alignment in tree, unexercised); no code changes
+  made during or after the run.
