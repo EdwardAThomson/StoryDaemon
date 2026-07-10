@@ -82,7 +82,16 @@ class PlotOutlineManager:
         # Use planner token budget as a safe default
         max_tokens = ctx.get("planner_max_tokens", 1000)
         response = self.llm.generate(prompt, max_tokens=max_tokens)
-        beats = self._parse_beats_response(response)
+        beats = self._extract_beats_json(response)
+        if beats is None:
+            # Malformed/missing JSON is stochastic (a fresh call with the same
+            # prompt usually parses), so retry once before falling back: the line
+            # fallback is a last resort, not a substitute for real beats.
+            print("        ⚠️  Beat JSON malformed; retrying generation once...")
+            response = self.llm.generate(prompt, max_tokens=max_tokens)
+            beats = self._extract_beats_json(response)
+        if beats is None:
+            beats = self._fallback_beats_from_lines(response)
         self._reconcile_beat_tension(beats, ctx.get("current_tick", 0))
         return beats
 
@@ -255,13 +264,16 @@ class PlotOutlineManager:
         except Exception:
             arc_guidance_section = ""
 
-        # Contract vocabulary section (Phase 3, contracts Slice 1); "" when
-        # generation.use_contracts is off. Never a hard failure.
+        # Contract vocabulary section plus the shape-example fragment (Phase 3,
+        # contracts Slice 1); both "" when generation.use_contracts is off.
+        # Never a hard failure.
         try:
-            from ..contracts.authoring import contract_authoring_section
+            from ..contracts.authoring import contract_authoring_section, contract_schema_example
             contract_section = contract_authoring_section(self.config)
+            schema_example = contract_schema_example(self.config)
         except Exception:
             contract_section = ""
+            schema_example = ""
 
         return {
             "novel_name": novel_name,
@@ -278,14 +290,27 @@ class PlotOutlineManager:
             "locations": locations_text,
             "arc_guidance_section": arc_guidance_section,
             "contract_section": contract_section,
+            "contract_schema_example": schema_example,
             "count": count,
             "planner_max_tokens": 1000,
         }
 
     def _parse_beats_response(self, response: str) -> List[PlotBeat]:
-        # Try JSON extraction - look for code blocks first
+        beats = self._extract_beats_json(response)
+        if beats is not None:
+            return beats
+        return self._fallback_beats_from_lines(response)
+
+    def _extract_beats_json(self, response: str) -> Optional[List[PlotBeat]]:
+        """Parse beats from the response's JSON; None when no valid JSON is found.
+
+        Returning None (rather than salvaging) lets the caller retry the LLM call:
+        a malformed response is stochastic, and the line fallback poisoned the whole
+        beat horizon with JSON-fragment "descriptions" on a live run (2026-07-10
+        smoke run).
+        """
         import re
-        
+
         # Try to extract from markdown code block
         code_block_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", response, re.S)
         if code_block_match:
@@ -295,24 +320,14 @@ class PlotOutlineManager:
             # Use greedy match to get the full JSON object
             match = re.search(r"\{\s*\"beats\"\s*:\s*\[.*\]\s*\}", response, re.S)
             json_str = match.group(0) if match else None
-        
-        data = None
-        if json_str:
-            try:
-                data = json.loads(json_str)
-            except Exception as e:
-                print(f"        ⚠️  JSON parse error: {e}")
-                data = None
-        
-        if not data:
-            # Fallback: try to parse line-based bullets into descriptions
-            lines = [ln.strip(" -\t") for ln in response.splitlines() if ln.strip()]
-            # Filter out JSON syntax lines
-            descs = [ln for ln in lines if ln and not ln.startswith("BEAT") 
-                     and not ln.startswith("{") and not ln.startswith("}")
-                     and not ln.startswith("[") and not ln.startswith("]")
-                     and not ln.startswith('"beats"')]
-            return [PlotBeat(id="", description=d) for d in descs[:5]]
+
+        if not json_str:
+            return None
+        try:
+            data = json.loads(json_str)
+        except Exception as e:
+            print(f"        ⚠️  JSON parse error: {e}")
+            return None
 
         beats_data = data.get("beats", [])
         beats: List[PlotBeat] = []
@@ -334,6 +349,36 @@ class PlotOutlineManager:
                 )
             )
         return beats
+
+    def _fallback_beats_from_lines(self, response: str) -> List[PlotBeat]:
+        """Last-resort parse of a genuinely line-based response into descriptions.
+
+        Lines that look like JSON source are rejected outright: turning fragments
+        of a malformed JSON reply into beat descriptions poisons the outline until
+        the horizon regenerates (live bug, 2026-07-10 smoke run). Returning [] is
+        safe; the pending count stays low and the tick proceeds reactively
+        (fallback_to_reactive).
+        """
+        beats: List[PlotBeat] = []
+        for raw in response.splitlines():
+            line = raw.strip(" -*\t")
+            if not line or self._looks_like_json_fragment(line):
+                continue
+            beats.append(PlotBeat(id="", description=line))
+            if len(beats) >= 5:
+                break
+        return beats
+
+    @staticmethod
+    def _looks_like_json_fragment(line: str) -> bool:
+        """True for lines that are JSON/code source rather than a beat description."""
+        if line.startswith(("```", "{", "}", "[", "]", '"', "BEAT")):
+            return True
+        if '":' in line or line.endswith((",", "{", "[", ":")):
+            return True
+        # A real beat description is a sentence (the style rules ask for roughly
+        # 10-20 words); one or two tokens is a stray label or fragment.
+        return len(line.split()) < 3
 
     def _load_state(self) -> Dict[str, Any]:
         state_path = self.project_dir / "state.json"

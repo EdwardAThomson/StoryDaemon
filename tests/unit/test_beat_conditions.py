@@ -174,3 +174,37 @@ def test_plot_prompt_renders_with_and_without_contract_section():
         _config(**{"generation.use_contracts": True})
     )
     assert "Scene contracts (postconditions)" in format_plot_generation_prompt(ctx)
+
+
+def test_schema_example_empty_when_gate_off():
+    from novel_agent.contracts.authoring import contract_schema_example
+
+    assert contract_schema_example(_config()) == ""
+
+
+def test_schema_example_puts_postconditions_in_the_shape_block():
+    # The live 2026-07-10 smoke run proved a schema-obedient model never emits a
+    # field absent from the "must have this shape" block, whatever the section
+    # text says: the example fragment must land inside that block.
+    from novel_agent.agent.prompts import format_plot_generation_prompt
+    from novel_agent.contracts.authoring import contract_schema_example
+
+    ctx = {
+        "count": 2, "novel_name": "N", "current_tick": 3,
+        "genre": "g", "premise": "p", "setting": "s", "tone": "t",
+        "characters": "None", "locations": "None", "open_loops": "None",
+        "recent_scenes": "None", "tension_history": "None", "recent_beats": "None",
+    }
+    # Gate off (or legacy caller): the shape block has no postconditions field.
+    prompt_off = format_plot_generation_prompt(ctx)
+    shape_block_off = prompt_off.split("# Current story state")[0]
+    assert "postconditions" not in shape_block_off
+
+    ctx["contract_schema_example"] = contract_schema_example(
+        _config(**{"generation.use_contracts": True})
+    )
+    prompt_on = format_plot_generation_prompt(ctx)
+    shape_block_on = prompt_on.split("# Current story state")[0]
+    # The fragment attaches directly after creates_loops, inside the example object.
+    assert '"creates_loops": [],\n      "postconditions"' in shape_block_on
+    assert '{"check": "loop_resolved"' in shape_block_on

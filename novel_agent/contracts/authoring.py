@@ -66,6 +66,26 @@ def contract_authoring_section(config) -> str:
     return _CONTRACT_PROMPT_SECTION
 
 
+# The field the LLM actually emits is governed by the prompt's authoritative
+# "must have this shape" JSON block, not by section text further down: with
+# postconditions absent from that block, a schema-obedient model omitted them
+# every time (proven live, 2026-07-10 smoke run). This fragment is injected
+# right after "creates_loops" in the shape example when contracts are on.
+_CONTRACT_SCHEMA_EXAMPLE = ',\n      "postconditions": [{"check": "loop_resolved", "loop": "OL003"}]'
+
+
+def contract_schema_example(config) -> str:
+    """The shape-example fragment for postconditions, or "" when contracts are off.
+
+    Rendered into ``PLOT_GENERATION_PROMPT_TEMPLATE``'s ``{contract_schema_example}``
+    placeholder (inside the authoritative JSON shape block) by both beat-generation
+    paths, alongside ``contract_authoring_section``.
+    """
+    if not config.get('generation.use_contracts', False):
+        return ""
+    return _CONTRACT_SCHEMA_EXAMPLE
+
+
 # ---------------------------------------------------------------------------
 # Sanitization (after parsing, before the beats are persisted)
 # ---------------------------------------------------------------------------

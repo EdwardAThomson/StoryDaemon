@@ -24,6 +24,7 @@ from .beat_contract import BeatContract
 from .authoring import (
     MAX_CONDITIONS_PER_BEAT,
     contract_authoring_section,
+    contract_schema_example,
     sanitize_beat_conditions,
     describe_condition,
 )
@@ -40,6 +41,7 @@ __all__ = [
     "BeatContract",
     "MAX_CONDITIONS_PER_BEAT",
     "contract_authoring_section",
+    "contract_schema_example",
     "sanitize_beat_conditions",
     "describe_condition",
 ]

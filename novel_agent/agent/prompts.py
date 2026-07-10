@@ -406,7 +406,7 @@ Return your answer as JSON only, with no explanations, no markdown fences, and n
       "prerequisites": [],
       "advances_character_arcs": [],
       "resolves_loops": [],
-      "creates_loops": []
+      "creates_loops": []{contract_schema_example}
     }}
   ]
 }}
@@ -481,6 +481,7 @@ def format_plot_generation_prompt(context: dict) -> str:
     context = dict(context)
     context.setdefault("arc_guidance_section", "")
     context.setdefault("contract_section", "")
+    context.setdefault("contract_schema_example", "")
     return PLOT_GENERATION_PROMPT_TEMPLATE.format(**context)
 
 

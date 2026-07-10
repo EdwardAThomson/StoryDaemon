@@ -10,7 +10,8 @@ from ...memory.entities import PlotBeat, PlotOutline
 from ...tools.llm_interface import send_prompt_with_retry
 from ...agent.prompts import format_plot_generation_prompt
 from ...agent.arc_pressure import arc_guidance_for_beats, reconcile_beat_tension_targets
-from ...contracts.authoring import contract_authoring_section, sanitize_beat_conditions
+from ...contracts.authoring import (contract_authoring_section, contract_schema_example,
+                                    sanitize_beat_conditions)
 
 
 def _project_config(project_dir: Path) -> Config:
@@ -292,12 +293,16 @@ def _build_plot_generation_prompt(
     except Exception:
         arc_guidance_section = ""
 
-    # Contract vocabulary section (Phase 3, contracts Slice 1); "" when
-    # generation.use_contracts is off. Never a hard failure.
+    # Contract vocabulary section plus the shape-example fragment (Phase 3,
+    # contracts Slice 1); both "" when generation.use_contracts is off.
+    # Never a hard failure.
     try:
-        contract_section = contract_authoring_section(_project_config(project_dir))
+        _cfg = _project_config(project_dir)
+        contract_section = contract_authoring_section(_cfg)
+        schema_example = contract_schema_example(_cfg)
     except Exception:
         contract_section = ""
+        schema_example = ""
 
     # Single source of truth for the beat-generation prompt lives in
     # agent/prompts.py; this CLI path and the agent's PlotOutlineManager both
@@ -319,6 +324,7 @@ def _build_plot_generation_prompt(
         "recent_beats": "\n".join(recent_beats_lines) if recent_beats_lines else "None",
         "arc_guidance_section": arc_guidance_section,
         "contract_section": contract_section,
+        "contract_schema_example": schema_example,
     }
     return format_plot_generation_prompt(ctx)
 
