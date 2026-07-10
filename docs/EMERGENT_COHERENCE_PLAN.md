@@ -10,6 +10,8 @@ the detailed designs — it points at the docs that already contain them.
 Related docs (execute against these for detail):
 - `docs/DSL_and_contracts.md` — the scene-composition DSL sketch (blocks/sub-blocks).
 - `docs/CONTRACTS_AND_BLOCKS_ARCHITECTURE.md` — full contract/block/entity-registry spec.
+- `docs/BLOCKS_CONTRACTS_LANDING_SKETCH.md`: reconciles the two docs above with shipped
+  code; the slice plan (Slice 1 shipped) that governs the contracts work.
 - `docs/ARCHITECTURE_PROPOSAL_EMERGENT_PLOTTING.md` — emergent "middle-out" vs. NovelWriter.
 - `docs/archive/name_generator_implementation_plan.md` — Python-backed `name.generate`.
 
@@ -128,7 +130,30 @@ instrumentation so every pressure below is measurable (see §5).
   bounded **rewrite** (`SceneWriter.revise_for_tension`, kept only if closer) polishes
   prose toward the target within that transition. Full live validation is still pending
   a backend that survives a multi-tick run here (gemini-cli reliably completes only ~2
-  ticks before timing out).
+  ticks before timing out). *Update, validated 2026-06* (`progress_report_20260602.md`,
+  claude-cli survived ~16-20 tick runs): tracks rising targets (drift ~1.2) but could
+  not de-escalate for a resolution; the floor was the planner's event selection, fixed
+  by the arc-phase mandate below.
+- **Arc-phase planner mandate**: *shipped, validated 2026-07.* The de-escalation fix
+  at the event level: `derive_arc_phase` reads the phase (rising / peak / falling /
+  resolution) off the target curve's shape, `ARC_PHASE_MANDATES` puts a firm per-phase
+  event mandate (escalate / confront / resolve) into the planner's arc-pressure
+  guidance, `rewrite_futile` skips the prose rewrite when the gap is too big for prose
+  to close, and `arc_phase` is recorded per tick. Gated by `coherence.arc_phase_mandate`
+  (default True). Descent re-run vs the June control (`progress_report_20260709.md`):
+  the planner now chooses aftermath events in the resolution phase; final scene 8 to 6
+  against target 4, resolution drift 2.35 to 1.65. Residuals: the ending is subdued,
+  not calm (the default curve gives little descent runway); the rising phase ran hotter
+  than control at n=1; the "close open loops" clause did not bite (resolution ticks
+  opened 8 loops, closed 0), direct evidence for loop-aging.
+- **Arc-into-beats bridge**: *shipped.* In plot-first mode the same curve/phase now
+  governs beat *authoring*, not just scene planning: `beat_tension_schedule` assigns
+  each future beat a target from the curve, `arc_guidance_for_beats` renders per-phase
+  authoring directives into the beat prompt, and `reconcile_beat_tension_targets`
+  sanitizes LLM-authored targets back toward the schedule after parsing (fill / clamp /
+  replace, the same sanitize-not-trust pattern as entity refs). Shares the mandate's
+  gate (no new knob); wired through both generation paths (`plot/manager.py` and
+  `cli/commands/plot.py`).
 - **Throughline gate** — *shipped.* The planner's strategic prompt now carries the
   primary goal (`agent/throughline.py`, `coherence.throughline_pressure`) so scenes
   serve the throughline; dormant until a goal exists. Its gauge, the rubric's
@@ -138,9 +163,25 @@ instrumentation so every pressure below is measurable (see §5).
   couldn't see the pressure. (Same crude-gauge lesson as the keyword tension heuristic.)
 - **Loop-aging pressure** — *not started.* Older open loops surface louder,
   biasing toward payoff. (Motivation observed: a test run opened 23 loops and
-  closed 0 — threads pile up without payoff.)
-- **Block/sub-block contracts (the DSL)** — *not started.* Per-block deterministic
-  checks are the fine-grained instance of this layer.
+  closed 0 — threads pile up without payoff. Second evidence, 2026-07: the descent
+  re-run's resolution ticks opened 8 loops and closed 0 despite a mandate clause to
+  close them, and contracts can now *check* `loop_resolved` but nothing pressures the
+  planner to close loops.)
+- **Block/sub-block contracts (the DSL)**: *Slice 1 shipped 2026-07*, per the landing
+  sketch (`docs/BLOCKS_CONTRACTS_LANDING_SKETCH.md`, "contracts ride the beats"):
+  `PlotBeat` carries `preconditions`/`postconditions`/`contract_results`; postconditions
+  are authored atomically with their beat from the closed checker vocabulary
+  (`contracts/authoring.py`, checkers in `contracts/conditions.py`), sanitized in both
+  generation paths, evaluated during beat verification (pass upgrades
+  `verification_method` to `contract`; failure routes to keep-pending or horizon
+  revision), and counted in the rubric (`contract_conditions_checked`/`_failed`).
+  Gated by `generation.use_contracts`, default off. The separate
+  `ContractManager`/`contracts.json` store is retired (two contract stores would be
+  worse than one). Live smoke run confirmed LLM-authored conditions on all beats after
+  two fixes (beat-JSON parse retry; the prompt's shape block now carries a
+  postconditions example). Remaining: Slice 2 (precondition pressure), Slice 3 (bounded
+  repair + an `event_occurs` LLM-judge checker), Slice 4 (scene skeletons), Slice 5
+  (per-sub-block generation, a measured A/B).
 
 *Why third:* tunable pressures layered on a *working* emergent loop; easy to
 add/remove/dial in.
@@ -208,12 +249,14 @@ further hardening; the neutral cwd was the decisive fix.)
 ## 7. Status & current frontier
 
 Phases 1 and 2 are shipped. Phase 3 is in progress: the coherence rubric,
-contradiction enforcement, the LLM tension scorer, arc-pressure, the throughline
-gate, and its LLM goal-relevance judge are all in; loop-aging and the
-block/sub-block DSL are not yet started.
+contradiction enforcement, the LLM tension scorer, arc-pressure, the arc-phase
+planner mandate (validated on the descent re-run), the arc-into-beats bridge,
+contracts Slice 1 (default off), the throughline gate, and its LLM goal-relevance
+judge are all in; loop-aging and the remaining contract slices (2-5) are not yet
+started.
 
 Next, in rough priority:
-1. **Arc-_phase_ planner mandate** — *validated 2026-06* (`progress_report_20260602.md`):
+1. ~~**Arc-_phase_ planner mandate** — *validated 2026-06* (`progress_report_20260602.md`):
    over ~16-20 tick `claude-cli` runs arc-pressure *tracks rising targets* (drift ~1.2)
    but **cannot de-escalate for a resolution** — at a sharp downward target the planner
    keeps choosing tense *events* and the prose rewrite can't lower them. Diagnostic
@@ -222,13 +265,20 @@ Next, in rough priority:
    (rising/peak/falling) → escalate/confront/**resolve** (aftermath, close a loop,
    time-skip), and skip the rewrite for big drops. Note the throughline↔arc-pressure
    conflict at low targets (advance-the-goal vs. be-calm) — arc-pressure must win in the
-   resolution phase.
-2. **Validate the throughline gate** — re-run the on/off A/B now that the gauge is
+   resolution phase.~~ **Resolved: shipped and validated 2026-07**
+   (`progress_report_20260709.md`); see the Phase 3 bullet. Residual descent-runway and
+   rising-heat findings tracked there.
+2. **Loop-aging** — the rubric shows loops accumulating without payoff; surface
+   older open loops louder to bias toward resolution. Now the top open item: the descent
+   re-run's resolution ticks opened 8 loops and closed 0, and contracts can check
+   `loop_resolved` but nothing pressures the planner to close loops.
+3. **Remaining contract slices** (Slice 2: precondition pressure; Slice 3: bounded
+   repair + `event_occurs` judge; Slices 4-5: scene skeletons, per-sub-block A/B), per
+   the landing sketch.
+4. **Validate the throughline gate** — re-run the on/off A/B now that the gauge is
    an LLM judge. *First pass (2026-05) was inconclusive*: a goal-aligned foundation keeps
    `goal_relevance` high (~7-10) with the pressure on *or* off — a ceiling effect, not a
    gauge artifact. Needs a looser / multi-thread foundation with headroom to drift.
-3. **Loop-aging** — the rubric shows loops accumulating without payoff; surface
-   older open loops louder to bias toward resolution.
 
 *(Original first step, now done: the grounded `name.generate` / entity-minting
 tool and "reference by selection, not free-typing" contract — Phase 1.)*
