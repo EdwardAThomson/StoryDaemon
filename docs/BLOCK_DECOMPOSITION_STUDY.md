@@ -185,3 +185,108 @@ The 96 percent self-agreement above is a RELIABILITY number: it shows the annota
 | Texture density (setting/lore shading) | SETTING-based rates supported (5/6 cross-model, probe exact); LORE-based rates carry the widest label noise (1/3 cross-model, EXPOSITION overlap), treat lore-per-1k-words with wide error bars |
 
 **Human spot-check: pending.** A 30-paragraph stratified spot-check sheet (numbered, unlabeled, instruction header) and its answer key are prepared in the session scratchpad (`spotcheck_sheet.md`, `spotcheck_key.md`) for a human validity pass; no human labels have been collected yet.
+
+## Corpus expansion
+
+**Date:** 2026-07-10. Four more public-domain masters were fetched from Project Gutenberg and pushed through the identical pipeline (same seven-type rubric, same judge `anthropic/claude-haiku-4.5` via OpenRouter, temperature 0, batches of 20, one retry; 969 new paragraphs, deterministic statistics unchanged). The works were chosen to cover three axes: an interiority-heavy master (the headline whirlpool finding rests on that boundary; two were taken, one third-person and one in free indirect discourse), a second thriller/adventure baseline (the genre axis previously rested on Buchan alone), and a second epic-fantasy point (previously Eddison alone).
+
+| Corpus | Work | Axis | Sample | Paragraphs | Words | Words/para |
+|---|---|---|---|---|---|---|
+| Conrad | *The Secret Agent*, Joseph Conrad (1907), PG #974 | interiority (third person) | Chapters VIII, IX | 415 | 17.6k | 42.4 |
+| Austen | *Pride and Prejudice*, Jane Austen (1813), PG #1342 | interiority (free indirect discourse) | Chapters XLII, XLIII, XLIV, XLV (Pemberley) | 135 | 10.7k | 79.5 |
+| Haggard | *King Solomon's Mines*, H. Rider Haggard (1885), PG #2166 | thriller/adventure | Chapters V, VI, VII (desert march) | 280 | 14.8k | 52.7 |
+| Dunsany | *The King of Elfland's Daughter*, Lord Dunsany (1924), PG #61077 | epic fantasy | Chapters XI to XVI | 139 | 12.2k | 87.6 |
+
+All are mid-book narrative stretches with frontmatter, chapter headings, illustration blocks (the 1894 P&P edition), and numbered footnotes (Haggard) stripped. Dunsany's chapters run about 2k words, a fifth of an Eddison chapter, so six of them make one Eddison-scale stretch; Austen got a fourth chapter for the same reason.
+
+### Extended block-type distribution (percent of paragraphs, primary)
+
+| Label | Eddison | Buchan | Conrad | Austen | Haggard | Dunsany | descent-run3 | claudetest |
+|---|---|---|---|---|---|---|---|---|
+| SETTING | 10.4 | 4.3 | 2.7 | 5.9 | 5.0 | 10.8 | 5.3 | 5.7 |
+| CHARACTER_DESC | 2.2 | 3.8 | 5.8 | 1.5 | 0.7 | 0.7 | 1.8 | 1.7 |
+| LORE | 1.1 | 2.8 | 0.5 | 2.2 | 1.8 | 3.6 | 2.2 | 0.0 |
+| DIALOGUE | 68.7 | 35.5 | 52.5 | 34.8 | 45.0 | 33.1 | 43.3 | 32.6 |
+| ACTION | 17.6 | 39.8 | 27.0 | 29.6 | 37.5 | 38.1 | 23.5 | 29.1 |
+| INTERIORITY | 0.0 | 12.3 | 11.1 | 24.4 | 8.6 | 11.5 | 23.1 | 30.0 |
+| TRANSITION | 0.0 | 1.4 | 0.5 | 1.5 | 1.4 | 2.2 | 0.8 | 0.9 |
+| secondary-label rate | 35.6 | 35.5 | 27.7 | 39.3 | 26.1 | 54.0 | 24.1 | 23.5 |
+
+### Word-normalized mode-segment length (the validated robust form)
+
+Mean words per consecutive same-primary run. The paragraph-count form of the run metrics is reported second and remains convention-confounded (Conrad writes 42-word paragraphs, Dunsany 88-word ones), so it is flagged, not interpreted.
+
+| Corpus | Mean words/segment | Max words in one run | (Mean run in paras, switch rate: confounded) |
+|---|---|---|---|
+| Eddison | 187.8 | 1,025 | 2.65, 34% |
+| Dunsany | 184.5 | 1,618 | 2.11, 45% |
+| Austen | 127.7 | 685 | 1.61, 61% |
+| Buchan | 94.9 | 565 | 1.61, 61% |
+| Haggard | 90.5 | 816 | 1.72, 58% |
+| Conrad | 58.6 | 891 | 1.38, 72% |
+| descent-run3 | 66.2 | 346 | 1.81, 54% |
+| claudetest | 50.3 | 204 | 1.62, 61% |
+
+### Interiority: share versus chaining
+
+| Corpus | INT share % | INT self-transition % | exits to ACT % | exits to DIAL % | row n |
+|---|---|---|---|---|---|
+| Haggard | 8.6 | 0 | 48 | 39 | 23 |
+| Buchan | 12.3 | 8 | 60 | 20 | 25 |
+| Dunsany | 11.5 | 14 | 57 | 14 | 14 |
+| Conrad | 11.1 | 15 | 15 | 65 | 46 |
+| Austen | 24.4 | 28 | 38 | 25 | 32 |
+| descent-run3 | 23.1 | 35 | 27 | 29 | 113 |
+| claudetest | 30.0 | 51 | 28 | 20 | 65 |
+
+### Texture density
+
+| Corpus | SETTING touch (prim or sec) % | Distinct types / 350w page | LORE prim /1kw | LORE prim+sec /1kw |
+|---|---|---|---|---|
+| Eddison | 18.3 | 2.07 | 0.15 | 1.17 |
+| Dunsany | 24.5 | 2.28 | 0.41 | 1.40 |
+| Austen | 9.6 | 2.62 | 0.28 | 0.84 |
+| Haggard | 11.8 | 2.65 | 0.34 | 1.22 |
+| Buchan | 16.1 | 2.83 | 0.48 | 0.72 |
+| Conrad | 4.6 | 3.28 | 0.11 | 0.80 |
+| descent-run3 | 9.8 | 3.24 | 0.62 | 1.29 |
+| claudetest | 8.3 | 3.33 | 0.00 | 0.42 |
+
+LORE figures keep the Validation section's wide error bars (worst cross-model agreement of any label). The master hand-off rule replicates: Conrad's CHARACTER_DESC row (n=24, the largest anywhere) goes to DIALOGUE 54 percent and ACTION 29 percent, and his CHARACTER_DESC share (5.8 percent) is the highest measured: describe the speaker, then let them speak, at scale.
+
+### Structural distance, recomputed against all six masters
+
+Mean pairwise distance among the fifteen master-master pairs: **JSD 0.0688** (range 0.0161 to 0.1880), MAD 0.0928 (range 0.0508 to 0.1625). The spread splits cleanly: the five pairs involving Eddison average JSD 0.139 (his 69 percent DIALOGUE saga style is the outlier), while the ten pairs among the other five masters average JSD 0.034.
+
+| Pair | JSD | MAD |
+|---|---|---|
+| descent-run3 vs Austen | **0.007** | 0.043 |
+| descent-run3 vs Buchan | 0.034 | 0.068 |
+| descent-run3 vs Conrad | 0.035 | 0.102 |
+| descent-run3 vs Haggard | 0.039 | 0.082 |
+| descent-run3 vs Dunsany | 0.044 | 0.085 |
+| descent-run3 vs Eddison | 0.151 | 0.074 |
+| descent-run3, mean vs masters | 0.052 | |
+| claudetest, mean vs masters | 0.081 (min 0.014, vs Austen) | |
+
+### The three headline questions
+
+**(a) Do interiority-heavy masters self-loop or exit?** They exit. Pooled over all master interiority transitions, thought chains to more thought 20/140 = 14.3 percent of the time; generated prose 72/178 = 40.4 percent. Austen is the decisive point: her INTERIORITY share (24.4 percent) matches descent-run3 (23.1) almost exactly, she will sustain a five-paragraph free-indirect meditation, and she still exits within-corpus at 72 percent (self-transition 28 percent, below the *least* loopy generated corpus at 35, far below claudetest at 51). Conrad adds a second exit style: his thought discharges into speech (INT to DIALOGUE 65 percent), where Buchan/Haggard/Dunsany discharge into action (48 to 60 percent). The whirlpool finding sharpens as hoped: the problem is chaining, not quantity. A generated-prose interiority share of ~24 percent is defensible master behavior; a self-transition rate above ~0.3 is not. The DSL implication tightens accordingly: the interiority *budget* recommendation (12 percent) was too conservative, the *exit* rule (leave thought within a paragraph or two) is the load-bearing constraint.
+
+**(b) Does the wider baseline change the "4.5x closer" claim?** Yes, it retires it. The original claim compared ours-vs-Buchan (0.034) to the single Buchan-Eddison pair (0.153), which turns out to sit near the extreme of the master spread. Against the honest yardstick, masters are 0.0688 apart on average (0.034 excluding the Eddison outlier), and descent-run3 averages 0.052 to the six masters. Generated prose is not dramatically closer than masters are to each other; it is simply *inside* the master spread, roughly a typical master's distance from the others. The conclusion the claim served survives and strengthens: bulk distribution is useless as a quality gauge. Exhibit A: descent-run3 vs Austen JSD is 0.007, near-identical bulk distributions, while their dynamics (self-transition 35 vs 28 percent, words/segment 66 vs 128, secondary shading 24 vs 39 percent) still separate them.
+
+**(c) Does words-per-mode-segment hold as the universal master signature?** Mostly, with one honest exception. Five of six masters hold a mode for 90 to 188 words; both generated corpora sit at 50 to 66. But Conrad lands at 58.6, inside the generated range, on the strength of rapid dialogue volleys (72 percent paragraph switch rate, the highest of all eight corpora). So the signature is a strong tendency, not a law: a master *can* churn. Two qualifications keep the metric useful. Conrad still commits when it matters (max single run 891 words; generated maxima are 204 and 346, the lowest anywhere, so the *ceiling* separates perfectly even where the mean does not). And Conrad is anomalous on the other texture axes too (SETTING touch 4.6 percent, below both generated corpora). For the DSL, read it as: target mean 90+ words/segment, and require the *capacity* for 500+ word set-pieces, which no generated corpus exhibits.
+
+### New illustrative quotes
+
+Conrad, thought discharging into speech (INTERIORITY then DIALOGUE, ch. VIII): "The shock must have been severe to make her depart from that distant and uninquiring acceptance of facts which was her force and her safeguard in life." Then, next paragraph: "Weren't you made comfortable enough here?"
+
+Austen, free indirect discourse at generated-level quantity that still exits (ch. XLIII, an INTERIORITY pair then ACTION): "'And of this place,' thought she, 'I might have been mistress!'" Two paragraphs later Elizabeth is asking the housekeeper about her master and turning away with alarm: the thought resolves into an act.
+
+Haggard, the second thriller point behaving exactly like the first (INTERIORITY exits, self-transition 0 of 23): Quatermain's flash of irritation at Umbopa's familiarity is answered immediately in speech, "How dost thou know that I am not the equal of the Inkosi whom I serve?"
+
+Dunsany, carrier commitment with continuous shading (an 11-paragraph, 1,618-word ACTION run, most paragraphs carrying a SETTING or LORE secondary): "He stole away once more to the house of Oth, over crisp grass one morning; and the old witch knew he had gone but did not call him back, for she had no spell to curb the love of roving in man."
+
+### Caveats specific to the expansion
+
+Same single-judge protocol as the main study; no new agreement pass was run, so the Validation section's numbers (roughly 96 percent on easy in-context material, 80 percent on hard decontextualized material, INTERIORITY judge-dependent in first-person prose) carry over. Austen's and Dunsany's interiority rows are thin (n=32 and n=14). Haggard and Austen are first-person-adjacent or omniscient-with-FID, so the ACTION/INTERIORITY margin blurs there the same way it did for Buchan; per the cross-model result, that blur inflates master interiority if anything, which again widens rather than closes the generated-versus-master chaining gap. Artifacts (raw texts, `extract2.py`, `annotate2.py`, `stats2.py`, `corpus2.json`, `annotations2.json`, `results2.json`) live in the session scratchpad alongside the original study artifacts.
