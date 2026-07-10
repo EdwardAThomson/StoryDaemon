@@ -97,6 +97,7 @@ class CoherenceMetrics:
         word_count: int = 0,
         tension_result: Optional[Dict[str, Any]] = None,
         goal_description: Optional[str] = None,
+        contract_result: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Compute one coherence record, append it to the JSONL log, and return it."""
         loops = self.memory.load_open_loops()
@@ -148,6 +149,12 @@ class CoherenceMetrics:
             "goal_relevance": goal_relevance,
             "goal_relevance_method": goal_relevance_method,
             "goal_relevance_rationale": goal_relevance_rationale,
+            # Beat-contract adherence (Phase 3, contracts Slice 1): counts from the
+            # step 8.5 postcondition check. None (not 0) when no contract ran this
+            # tick (gate off, no beat, or beat without conditions), so "checked
+            # nothing" and "checked and all passed" stay distinguishable.
+            "contract_conditions_checked": (contract_result or {}).get("checked"),
+            "contract_conditions_failed": (contract_result or {}).get("failed"),
             "recorded_at": datetime.utcnow().isoformat() + "Z",
         }
         self._append(record)

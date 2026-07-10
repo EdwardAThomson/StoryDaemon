@@ -1,8 +1,10 @@
-"""BeatContract: validation requirements attached to a single plot beat.
+"""BeatContract: a standalone bundle of conditions for a single plot beat.
 
-A contract wraps a beat by ``beat_id`` rather than subclassing ``PlotBeat`` —
-beats keep emerging as they do today, and a contract is the optional, separable
-layer that says what must hold before and after the beat is written.
+Since contracts Slice 1 the canonical store for conditions is the beat itself
+(``PlotBeat.preconditions`` / ``PlotBeat.postconditions`` inside
+``plot_outline.json``), evaluated via ``evaluate_conditions`` at beat
+verification. ``BeatContract`` remains as a convenience wrapper for grouping,
+round-tripping, and manually authoring condition sets outside the outline.
 """
 
 from __future__ import annotations

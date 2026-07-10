@@ -105,6 +105,7 @@ class PlotOutlineManager:
         outline = self.load_outline()
         beats_assigned = self._assign_ids(outline, beats)
         self._resolve_beat_references(beats_assigned)
+        self._resolve_beat_conditions(beats_assigned)
         outline.beats.extend(beats_assigned)
         self.save_outline(outline)
         return beats_assigned
@@ -124,6 +125,23 @@ class PlotOutlineManager:
                 print(f"        ⚠️  Beat {beat.id}: dropped unresolved character refs {dropped_chars}")
             if dropped_loc:
                 print(f"        ⚠️  Beat {beat.id}: dropped unresolved location ref '{dropped_loc}'")
+
+    def _resolve_beat_conditions(self, beats: List[PlotBeat]) -> None:
+        """Hold every beat's contract conditions to the checker vocabulary.
+
+        Sibling of _resolve_beat_references (Phase 3, contracts Slice 1): unknown
+        check names and unresolvable entity/loop refs are dropped with a warning,
+        and tension conditions are reconciled against the beat's own
+        tension_target. Never raises; a bad condition must not break beat
+        generation (fallback_to_reactive relies on that).
+        """
+        try:
+            from ..contracts.authoring import sanitize_beat_conditions
+
+            for warning in sanitize_beat_conditions(beats, self.memory, self.config):
+                print(f"        ⚠️  {warning}")
+        except Exception as e:
+            print(f"        ⚠️  Beat condition sanitization skipped: {e}")
 
     def get_next_beat(self) -> Optional[PlotBeat]:
         outline = self.load_outline()
@@ -237,6 +255,14 @@ class PlotOutlineManager:
         except Exception:
             arc_guidance_section = ""
 
+        # Contract vocabulary section (Phase 3, contracts Slice 1); "" when
+        # generation.use_contracts is off. Never a hard failure.
+        try:
+            from ..contracts.authoring import contract_authoring_section
+            contract_section = contract_authoring_section(self.config)
+        except Exception:
+            contract_section = ""
+
         return {
             "novel_name": novel_name,
             "current_tick": current_tick,
@@ -251,6 +277,7 @@ class PlotOutlineManager:
             "characters": characters_text,
             "locations": locations_text,
             "arc_guidance_section": arc_guidance_section,
+            "contract_section": contract_section,
             "count": count,
             "planner_max_tokens": 1000,
         }
@@ -302,6 +329,8 @@ class PlotOutlineManager:
                     advances_character_arcs=b.get("advances_character_arcs", []) or [],
                     resolves_loops=b.get("resolves_loops", []) or [],
                     creates_loops=b.get("creates_loops", []) or [],
+                    preconditions=b.get("preconditions", []) or [],
+                    postconditions=b.get("postconditions", []) or [],
                 )
             )
         return beats
