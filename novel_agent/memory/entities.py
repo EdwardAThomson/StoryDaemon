@@ -580,6 +580,12 @@ class PlotBeat:
     abandoned_reason: str = ""
     revised_at_tick: Optional[int] = None
 
+    # Contract conditions + evaluation record (Phase 3, contracts Slice 1);
+    # mirrors novel_agent/plot/entities.py for the same cls(**data) reason.
+    preconditions: List[Dict[str, Any]] = field(default_factory=list)
+    postconditions: List[Dict[str, Any]] = field(default_factory=list)
+    contract_results: Dict[str, Any] = field(default_factory=dict)
+
     # Metadata for validation / analysis
     advances_character_arcs: List[str] = field(default_factory=list)
     resolves_loops: List[str] = field(default_factory=list)

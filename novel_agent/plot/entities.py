@@ -27,6 +27,15 @@ class PlotBeat:
     verification_method: str = ""
     abandoned_reason: str = ""
     revised_at_tick: Optional[int] = None
+    # Contract conditions (Phase 3, contracts Slice 1): flat JSON condition dicts
+    # ({"check": name, ...params}, vocabulary in novel_agent/contracts). Authored
+    # with the beat at generation time so they live and die with it under the
+    # rolling horizon. Preconditions are stored but not yet evaluated (Slice 2).
+    preconditions: List[Dict[str, Any]] = field(default_factory=list)
+    postconditions: List[Dict[str, Any]] = field(default_factory=list)
+    # Postcondition evaluation record: written at beat verification (tick step
+    # 8.5) when generation.use_contracts is on and the beat carries conditions.
+    contract_results: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)

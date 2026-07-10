@@ -6,20 +6,27 @@ from datetime import datetime
 
 from ..memory.manager import MemoryManager
 from ..memory.entity_resolver import EntityResolver
+from ..configs.config import Config
 from .entities import PlotBeat, PlotOutline
 
 
 class PlotOutlineManager:
     """Manages the emergent plot outline (Phase 1, CLI-only).
-    
+
     Stores beats in project_root/plot_outline.json
     """
 
-    def __init__(self, project_dir: Path, llm_interface):
+    def __init__(self, project_dir: Path, llm_interface, config=None):
         self.project_dir = Path(project_dir)
         self.llm = llm_interface
         self.outline_file = self.project_dir / "plot_outline.json"
         self.memory = MemoryManager(self.project_dir)
+        # Config is needed for the arc-pressure beat schedule (Phase 3 bridge). The
+        # agent passes its own instance; standalone callers fall back to the project
+        # config.yaml over defaults, matching what the agent would read.
+        if config is None:
+            config = Config(str(self.project_dir / "config.yaml"))
+        self.config = config
 
     # ---------- Persistence ----------
     def load_outline(self) -> PlotOutline:
@@ -76,12 +83,29 @@ class PlotOutlineManager:
         max_tokens = ctx.get("planner_max_tokens", 1000)
         response = self.llm.generate(prompt, max_tokens=max_tokens)
         beats = self._parse_beats_response(response)
+        self._reconcile_beat_tension(beats, ctx.get("current_tick", 0))
         return beats
+
+    def _reconcile_beat_tension(self, beats: List[PlotBeat], current_tick: int) -> None:
+        """Hold authored tension targets to the arc schedule (Phase 3 bridge).
+
+        Sanitize-not-trust, like _resolve_beat_references: fill missing targets from
+        the schedule and clamp far-off ones toward it. Never raises; a reconciliation
+        problem must not break beat generation (fallback_to_reactive relies on that).
+        """
+        try:
+            from ..agent.arc_pressure import reconcile_beat_tension_targets
+
+            for warning in reconcile_beat_tension_targets(beats, current_tick, self.config):
+                print(f"        ⚠️  {warning}")
+        except Exception as e:
+            print(f"        ⚠️  Beat tension reconciliation skipped: {e}")
 
     def add_beats(self, beats: List[PlotBeat]) -> List[PlotBeat]:
         outline = self.load_outline()
         beats_assigned = self._assign_ids(outline, beats)
         self._resolve_beat_references(beats_assigned)
+        self._resolve_beat_conditions(beats_assigned)
         outline.beats.extend(beats_assigned)
         self.save_outline(outline)
         return beats_assigned
@@ -101,6 +125,23 @@ class PlotOutlineManager:
                 print(f"        ⚠️  Beat {beat.id}: dropped unresolved character refs {dropped_chars}")
             if dropped_loc:
                 print(f"        ⚠️  Beat {beat.id}: dropped unresolved location ref '{dropped_loc}'")
+
+    def _resolve_beat_conditions(self, beats: List[PlotBeat]) -> None:
+        """Hold every beat's contract conditions to the checker vocabulary.
+
+        Sibling of _resolve_beat_references (Phase 3, contracts Slice 1): unknown
+        check names and unresolvable entity/loop refs are dropped with a warning,
+        and tension conditions are reconciled against the beat's own
+        tension_target. Never raises; a bad condition must not break beat
+        generation (fallback_to_reactive relies on that).
+        """
+        try:
+            from ..contracts.authoring import sanitize_beat_conditions
+
+            for warning in sanitize_beat_conditions(beats, self.memory, self.config):
+                print(f"        ⚠️  {warning}")
+        except Exception as e:
+            print(f"        ⚠️  Beat condition sanitization skipped: {e}")
 
     def get_next_beat(self) -> Optional[PlotBeat]:
         outline = self.load_outline()
@@ -205,6 +246,23 @@ class PlotOutlineManager:
             loc_lines.append(f"{loc.id}: {loc.name}")
         locations_text = "\n".join(loc_lines) if loc_lines else "None"
 
+        # Arc schedule for the beats about to be authored (Phase 3 bridge). Imported
+        # lazily for the same circular-import reason as format_plot_generation_prompt;
+        # renders "" when arc-pressure or the mandate gate is off. Never a hard failure.
+        try:
+            from ..agent.arc_pressure import arc_guidance_for_beats
+            arc_guidance_section = arc_guidance_for_beats(current_tick, count, self.config)
+        except Exception:
+            arc_guidance_section = ""
+
+        # Contract vocabulary section (Phase 3, contracts Slice 1); "" when
+        # generation.use_contracts is off. Never a hard failure.
+        try:
+            from ..contracts.authoring import contract_authoring_section
+            contract_section = contract_authoring_section(self.config)
+        except Exception:
+            contract_section = ""
+
         return {
             "novel_name": novel_name,
             "current_tick": current_tick,
@@ -218,6 +276,8 @@ class PlotOutlineManager:
             "recent_beats": recent_beats_text,
             "characters": characters_text,
             "locations": locations_text,
+            "arc_guidance_section": arc_guidance_section,
+            "contract_section": contract_section,
             "count": count,
             "planner_max_tokens": 1000,
         }
@@ -269,6 +329,8 @@ class PlotOutlineManager:
                     advances_character_arcs=b.get("advances_character_arcs", []) or [],
                     resolves_loops=b.get("resolves_loops", []) or [],
                     creates_loops=b.get("creates_loops", []) or [],
+                    preconditions=b.get("preconditions", []) or [],
+                    postconditions=b.get("postconditions", []) or [],
                 )
             )
         return beats

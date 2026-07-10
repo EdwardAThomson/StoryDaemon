@@ -48,7 +48,7 @@ The agent follows this deterministic skeleton:
    * Planner LLM receives:
 
      * Current summary + open loops
-     * Available tools (character.generate, location.update, memory.search, etc.)
+     * Available tools (character.generate, location.generate, memory.search, etc.)
      * Constraints (budget, POV, tone)
    * Returns JSON plan:
 
@@ -58,7 +58,7 @@ The agent follows this deterministic skeleton:
        "actions": [
          {"tool": "memory.search", "args": {"query": "dockworkers"}},
          {"tool": "character.generate", "args": {"brief": "brutish but loyal dockhand ally"}},
-         {"tool": "location.update", "args": {"id": "L0", "changes": {"tension": "guards patrolling"}}}
+         {"tool": "location.generate", "args": {"brief": "a fog-shrouded harbor with patrolling guards"}}
        ],
        "scene_intention": "Tamsin persuades a dockhand to help her hide."
      }
@@ -289,14 +289,14 @@ After each writing tick:
 | Layer         | Tech                                       |
 | ------------- | ------------------------------------------ |
 | Language      | Python 3.11+                               |
-| LLM Interface | Codex CLI (GPT-5) via subprocess           |
+| LLM Interface | Pluggable backends: Codex CLI (default), multi-provider API (OpenAI/Anthropic/Gemini), Claude Code CLI, Gemini CLI |
 | Memory        | JSON + Chroma or FAISS for vector indexing |
 | Persistence   | Local filesystem                           |
 | CLI / UX      | Typer or Click                             |
 | Tests         | Pytest                                     |
 | Optional      | SQLite layer for tracking history          |
 
-**Note:** Codex CLI provides zero-additional-cost access to GPT-5. Direct API support (OpenAI, Claude, Gemini) can be added later if needed.
+**Note:** Codex CLI provides zero-additional-cost access to its underlying model. Direct API support (OpenAI, Anthropic, Gemini, plus a self-hosted OpenAI-compatible `hosted-llm` endpoint) is implemented via the `api` backend, and local `claude-cli` / `gemini-cli` backends are also available.
 
 ---
 

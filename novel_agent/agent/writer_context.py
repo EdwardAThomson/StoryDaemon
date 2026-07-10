@@ -410,7 +410,16 @@ class WriterContextBuilder:
         plot_threads = plot_beat.get("plot_threads", [])
         if plot_threads:
             section += f"**Advances Plot Threads:** {', '.join(plot_threads)}\n"
-        
+
+        # Beat contract (Phase 3, contracts Slice 1): the writer aims at exactly
+        # what the postcondition checker will grade (the tension_scale lesson).
+        postconditions = plot_beat.get("postconditions") or []
+        if postconditions:
+            from ..contracts.authoring import describe_condition
+            section += "**This scene must leave the story in a state where:**\n"
+            for cond in postconditions:
+                section += f"- {describe_condition(cond)}\n"
+
         section += "\n**THIS BEAT MUST BE ACCOMPLISHED IN THIS SCENE.**\n"
-        
+
         return section

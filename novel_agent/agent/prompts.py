@@ -441,6 +441,8 @@ Tone: {tone}
 ## Existing outline beats (last few)
 {recent_beats}
 
+{arc_guidance_section}
+{contract_section}
 # Beat style and granularity rules
 
 Each beat must follow these constraints:
@@ -467,13 +469,18 @@ Remember: respond with JSON only.
 
 def format_plot_generation_prompt(context: dict) -> str:
     """Format the plot generation prompt with context variables.
-    
+
     Args:
         context: Dictionary with all context variables
-    
+
     Returns:
         Formatted prompt string
     """
+    # Phase 3: the arc schedule and contract sections are optional. Callers that
+    # predate them (or run with the gates off) render empty sections.
+    context = dict(context)
+    context.setdefault("arc_guidance_section", "")
+    context.setdefault("contract_section", "")
     return PLOT_GENERATION_PROMPT_TEMPLATE.format(**context)
 
 
