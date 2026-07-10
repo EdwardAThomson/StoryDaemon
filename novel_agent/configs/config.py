@@ -93,6 +93,14 @@ DEFAULT_CONFIG = {
         # deliberate drop that needs a transition (new location / aftermath / time skip)
         # rather than a continuation — used by the planner and the rewrite to avoid whiplash.
         'tension_step_for_transition': 3,
+        # Arc-phase planner mandate (Phase 3): derive the arc phase (rising / peak /
+        # falling / resolution) from the target curve and give the planner firm,
+        # event-level instructions per phase (escalate / confront / resolve). Also skips
+        # the tension rewrite when the scene is a full transition step or more ABOVE the
+        # target, since only different events (not re-wording) can lower it that far.
+        # False = numeric-target guidance only (pre-mandate behavior). The derived phase
+        # is still recorded in metrics either way, so on/off runs stay comparable.
+        'arc_phase_mandate': True,
         # Throughline gate: inject the primary goal into the planner so scenes serve it.
         # Dormant until a primary goal exists; goal_relevance in the rubric measures adherence.
         'throughline_pressure': True,
