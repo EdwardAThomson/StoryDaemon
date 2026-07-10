@@ -129,8 +129,8 @@ class StoryAgent:
                 prompts_dir=prompts_dir
             )
         
-        # Plot-first components
-        self.plot_manager = PlotOutlineManager(self.project_path, llm_interface)
+        # Plot-first components (config feeds the arc-pressure beat schedule, Phase 3)
+        self.plot_manager = PlotOutlineManager(self.project_path, llm_interface, config)
 
         # Contract validation layer (opt-in via generation.use_contracts)
         self.contract_manager = ContractManager(self.project_path)

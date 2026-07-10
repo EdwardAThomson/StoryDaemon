@@ -16,7 +16,7 @@ points, linearly interpolated. Setting ``coherence.target_tension_curve`` to Non
 disables arc-pressure entirely (returns no target, injects nothing).
 """
 
-from typing import Any, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence
 
 from .tension_scale import band_for, scale_overview
 
@@ -175,6 +175,149 @@ ARC_PHASE_MANDATES = {
 def arc_phase_mandate(phase: Optional[str]) -> str:
     """Mandate text for an arc phase, or "" for an unknown/None phase."""
     return ARC_PHASE_MANDATES.get(phase, "")
+
+
+# Per-phase directives for BEAT AUTHORING (Phase 3 bridge: arc-pressure into plot beat
+# generation). Sibling of ARC_PHASE_MANDATES, rephrased for authoring the events future
+# scenes will prescribe, rather than planning the current scene. Single source of truth:
+# prompts.py must not duplicate this prose.
+ARC_PHASE_BEAT_DIRECTIVES = {
+    "rising": (
+        "author beats whose EVENTS escalate: introduce or sharpen a complication, "
+        "raise the stakes, or bring an existing threat closer; leave outcomes uncertain"
+    ),
+    "peak": (
+        "author beats whose EVENTS confront: bring the central conflict to a head, "
+        "spending threats already established rather than planting new ones"
+    ),
+    "falling": (
+        "author beats whose EVENTS resolve: aftermath and consequence, close existing "
+        "open loops rather than opening new ones, time-skips allowed; do NOT introduce "
+        "new threats, dangers, or confrontations"
+    ),
+    "resolution": (
+        "author beats whose EVENTS end the story: denouement only, show the aftermath "
+        "and the cost of what happened, close the remaining open loops, time-skips "
+        "encouraged; do NOT introduce new threats, complications, or confrontations"
+    ),
+}
+
+
+def beat_tension_schedule(current_tick: int, count: int, config) -> List[Dict[str, Any]]:
+    """Per-beat tension schedule for the next ``count`` beats, or [] when disabled.
+
+    Beats are consumed roughly one per tick, so beat ``i`` (1-based) of a batch
+    generated at ``current_tick`` is scheduled at tick ``current_tick + i``. Each
+    entry carries the interpolated tension target for that position, its band name,
+    and the arc phase (which may be None for a flat curve).
+
+    The whole beat-generation bridge shares the mandate's gate (no new knob): it is
+    off when ``coherence.arc_phase_mandate`` is False, and degrades to [] when the
+    curve is None/empty or malformed.
+    """
+    if count <= 0:
+        return []
+    if not config.get('coherence.arc_phase_mandate', True):
+        return []
+    curve = config.get('coherence.target_tension_curve', None)
+    if not curve:
+        return []
+    length = config.get('coherence.target_story_length', 40)
+    schedule: List[Dict[str, Any]] = []
+    for i in range(1, count + 1):
+        progress = _progress(current_tick + i, length)
+        target = interpolate_curve(progress, curve)
+        if target is None:
+            return []
+        schedule.append({
+            "index": i,
+            "tick": current_tick + i,
+            "progress": progress,
+            "target": round(target, 1),
+            "band": band_for(target).name,
+            "phase": derive_arc_phase(progress, curve),
+        })
+    return schedule
+
+
+def arc_guidance_for_beats(current_tick: int, count: int, config) -> str:
+    """The beat-generation prompt's arc schedule section, or "" when disabled.
+
+    Rendered into PLOT_GENERATION_PROMPT_TEMPLATE's ``{arc_guidance_section}`` by
+    BOTH beat-generation paths (plot/manager.py and cli/commands/plot.py); keeping
+    the helper here means the two context assemblies cannot drift.
+    """
+    schedule = beat_tension_schedule(current_tick, count, config)
+    if not schedule:
+        return ""
+    lines = [
+        "# Arc schedule for these beats",
+        "",
+        "The story follows a planned tension arc; beats are consumed roughly one per",
+        "scene. Author each beat's EVENTS to fit its scheduled arc position below, and",
+        "set each beat's \"tension_target\" to its scheduled target. This schedule",
+        "supersedes the general instruction to maintain or increase tension.",
+        "",
+    ]
+    for entry in schedule:
+        pct = int(round(entry["progress"] * 100))
+        line = (
+            f"- Beat {entry['index']} of this batch (story position ~{pct}%): "
+            f"target tension {entry['target']:g}/10 ({entry['band']})"
+        )
+        directive = ARC_PHASE_BEAT_DIRECTIVES.get(entry["phase"] or "")
+        if directive:
+            line += f", phase {entry['phase'].upper()}: {directive}"
+        lines.append(line)
+    return "\n".join(lines) + "\n"
+
+
+def reconcile_beat_tension_targets(
+    beats: Sequence[Any],
+    current_tick: int,
+    config,
+    max_deviation: float = 2.0,
+) -> List[str]:
+    """Sanitize freshly authored beats' tension targets against the schedule, in place.
+
+    Mirrors the sanitize-not-trust pattern of ``_resolve_beat_references``: the prompt
+    tells the LLM the scheduled targets, but the parsed output is reconciled in Python.
+    A beat with no ``tension_target`` is filled from its scheduled target; an authored
+    target more than ``max_deviation`` off schedule is clamped to the nearest edge of
+    the allowed band (keeping as much of the authored intent as the schedule permits,
+    rather than overwriting outright); an unparseable target is replaced. Returns
+    human-readable warnings for the beats that were changed against the LLM's wishes.
+    No-op (returns []) when the schedule is disabled (gate off, or curve None).
+    """
+    schedule = beat_tension_schedule(current_tick, len(beats), config)
+    if not schedule:
+        return []
+    warnings: List[str] = []
+    for beat, entry in zip(beats, schedule):
+        scheduled = entry["target"]
+        authored = getattr(beat, "tension_target", None)
+        if authored is None:
+            beat.tension_target = int(round(scheduled))
+            continue
+        try:
+            authored_val = float(authored)
+        except (TypeError, ValueError):
+            beat.tension_target = int(round(scheduled))
+            warnings.append(
+                f"beat {getattr(beat, 'id', '') or '?'}: unusable tension_target "
+                f"{authored!r} replaced with scheduled {scheduled:g}"
+            )
+            continue
+        if abs(authored_val - scheduled) > max_deviation:
+            edge = scheduled + max_deviation if authored_val > scheduled else scheduled - max_deviation
+            clamped = int(round(max(0.0, min(10.0, edge))))
+            warnings.append(
+                f"beat {getattr(beat, 'id', '') or '?'}: authored tension_target "
+                f"{authored_val:g} is over {max_deviation:g} off the scheduled "
+                f"{scheduled:g}; clamped to {clamped}"
+            )
+            beat.tension_target = clamped
+    return warnings
 
 
 def arc_pressure_guidance(current_tick: int, config) -> str:
