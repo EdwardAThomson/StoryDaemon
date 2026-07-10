@@ -36,7 +36,7 @@ strategic plan is `docs/EMERGENT_COHERENCE_PLAN.md`.
 ## Next
 
 - [ ] **Loop-aging pressure** (older open loops surface louder for payoff): now twice-evidenced (the descent re-run's resolution ticks opened 8 loops and closed 0; contracts can check `loop_resolved` but nothing pressures the planner to close loops)
-- [ ] **Forced low-tension scenes** (make the writer comply, don't nudge it): when the target band is calm, Python should shape the writer prompt to force the outcome: prune tension-dragging context (menace-laden open loops, hot recent-scene summaries), give band-exclusionary vocabulary rules (words and moves that must NOT appear), possibly a dedicated denouement writing path. A human writer told "write a calm scene" just does it, so persistent overshoot is a prompting problem, not an LLM limitation
+- [ ] **Thread interleaving (tension by scene selection)**: the tension curve becomes a scene-selection policy over a portfolio of story threads; a calm page comes from cutting away to a calmer thread (leaving a cliffhanger), never from becalming a hot event. Design: `docs/THREAD_INTERLEAVING_DESIGN.md`. Replaces the "forced low-tension scenes" idea, which the fork experiment falsified (`progress_report_20260710.md` Addendum 2: pruning 80 percent of the writer prompt moved mean tension by 0.0; the overshoot lives in the assigned event, not the prompt)
 - [ ] Contracts Slice 2: precondition pressure (unmet preconditions become planner setup pressure at beat selection, never a hard raise)
 - [ ] Contracts Slice 3: bounded contract repair (mirror the tension-rewrite pattern) plus an `event_occurs` LLM-judge checker
 - [ ] Scene skeletons (contracts Slice 4, own flag): planner-authored typed sub-block list as writer guidance in the single prompt
