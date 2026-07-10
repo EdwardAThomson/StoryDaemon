@@ -87,6 +87,50 @@ def compute_target_tension(current_tick: int, config) -> Optional[float]:
     return round(target, 1) if target is not None else None
 
 
+def remaining_story_ticks(current_tick: int, config) -> Optional[int]:
+    """Ticks left before the intended story end, or None when no length is configured.
+
+    The runway a beat batch scheduled at ``current_tick + 1 ..`` may still occupy
+    (Phase 3 slot alignment). Returns ``max(0, target_story_length - current_tick)``
+    when ``coherence.target_story_length`` is a positive number; None when the key
+    is absent, None, or non-positive (no intended end, nothing to align to).
+    """
+    length = config.get('coherence.target_story_length', None)
+    try:
+        length = int(length)
+    except (TypeError, ValueError):
+        return None
+    if length <= 0:
+        return None
+    return max(0, length - current_tick)
+
+
+def cap_beat_count(current_tick: int, count: int, config) -> int:
+    """Requested batch size capped to the remaining story runway (Phase 3 slot alignment).
+
+    Beat batches are consumed roughly one per tick starting at ``current_tick + 1``,
+    so a batch longer than the runway strands its tail past the story's end: the
+    arbiter run (docs/progress_report_20260710.md addendum 3) authored the correct
+    target-4 denouement beats at slots 16-17 of a 15-tick story, and the actual
+    final tick got the 7.3-target beat instead. Capping keeps the curve's
+    resolution tail on reachable slots.
+
+    Shares the mandate's gate (``coherence.arc_phase_mandate``, no new knob).
+    Overtime rule: when the story is at or past its intended length (remaining 0),
+    the requested count is KEPT, so open-ended runs keep working; every overtime
+    slot's schedule already clamps to the curve endpoint. Unconfigured length or
+    gate off: requested count unchanged.
+    """
+    if count <= 0:
+        return count
+    if not config.get('coherence.arc_phase_mandate', True):
+        return count
+    remaining = remaining_story_ticks(current_tick, config)
+    if remaining is None or remaining <= 0:
+        return count
+    return min(count, remaining)
+
+
 def beat_target_is_stale(beat_target, current_tick: int, config) -> bool:
     """True when a beat's numeric ``tension_target`` has drifted a transition-step
     or more from the CURRENT curve target: the beat is being consumed far off its
@@ -212,6 +256,12 @@ def arc_phase_mandate(phase: Optional[str]) -> str:
 # generation). Sibling of ARC_PHASE_MANDATES, rephrased for authoring the events future
 # scenes will prescribe, rather than planning the current scene. Single source of truth:
 # prompts.py must not duplicate this prose.
+
+# Shared no-new-threats fragment (Phase 3 slot alignment): the resolution beat
+# directive and the final-slot clause both end the story with it, defined once so
+# the vocabulary cannot drift.
+_NO_NEW_THREATS = "do NOT introduce new threats, complications, or confrontations"
+
 ARC_PHASE_BEAT_DIRECTIVES = {
     "rising": (
         "author beats whose EVENTS escalate: introduce or sharpen a complication, "
@@ -229,9 +279,18 @@ ARC_PHASE_BEAT_DIRECTIVES = {
     "resolution": (
         "author beats whose EVENTS end the story: denouement only, show the aftermath "
         "and the cost of what happened, close the remaining open loops, time-skips "
-        "encouraged; do NOT introduce new threats, complications, or confrontations"
+        f"encouraged; {_NO_NEW_THREATS}"
     ),
 }
+
+# Firm clause for the slot that lands exactly on target_story_length (Phase 3 slot
+# alignment): the arbiter run authored the correct denouement two slots past the
+# story's end, so the boundary slot itself now says the story ends here. Vocabulary
+# is derived from the resolution directive (shared fragment above), not duplicated.
+FINAL_BEAT_DIRECTIVE = (
+    "THIS BEAT IS THE STORY'S FINAL SCENE: it must be a denouement, aftermath, or "
+    f"time-skip event; {_NO_NEW_THREATS}; the story ends here"
+)
 
 
 def beat_tension_schedule(current_tick: int, count: int, config) -> List[Dict[str, Any]]:
@@ -240,7 +299,9 @@ def beat_tension_schedule(current_tick: int, count: int, config) -> List[Dict[st
     Beats are consumed roughly one per tick, so beat ``i`` (1-based) of a batch
     generated at ``current_tick`` is scheduled at tick ``current_tick + i``. Each
     entry carries the interpolated tension target for that position, its band name,
-    and the arc phase (which may be None for a flat curve).
+    the arc phase (which may be None for a flat curve), and ``final``: True for
+    the one slot whose tick lands exactly on ``target_story_length``, the story's
+    final scene (Phase 3 slot alignment).
 
     The whole beat-generation bridge shares the mandate's gate (no new knob): it is
     off when ``coherence.arc_phase_mandate`` is False, and degrades to [] when the
@@ -267,6 +328,7 @@ def beat_tension_schedule(current_tick: int, count: int, config) -> List[Dict[st
             "target": round(target, 1),
             "band": band_for(target).name,
             "phase": derive_arc_phase(progress, curve),
+            "final": (current_tick + i) == length,
         })
     return schedule
 
@@ -299,6 +361,8 @@ def arc_guidance_for_beats(current_tick: int, count: int, config) -> str:
         directive = ARC_PHASE_BEAT_DIRECTIVES.get(entry["phase"] or "")
         if directive:
             line += f", phase {entry['phase'].upper()}: {directive}"
+        if entry.get("final"):
+            line += f". {FINAL_BEAT_DIRECTIVE}"
         lines.append(line)
     return "\n".join(lines) + "\n"
 

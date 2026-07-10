@@ -77,6 +77,7 @@ class PlotOutlineManager:
         # (agent package __init__ imports StoryAgent, which imports this module).
         from ..agent.prompts import format_plot_generation_prompt
 
+        count = self._cap_count_to_runway(count)
         ctx = self._build_generation_context(count)
         prompt = format_plot_generation_prompt(ctx)
         # generation.beat_max_tokens: beat batches carry contract and arc-guidance
@@ -96,6 +97,29 @@ class PlotOutlineManager:
             beats = self._fallback_beats_from_lines(response)
         self._reconcile_beat_tension(beats, ctx.get("current_tick", 0))
         return beats
+
+    def _cap_count_to_runway(self, count: int) -> int:
+        """Cap the batch to the remaining story runway (Phase 3 slot alignment).
+
+        Batches are consumed one beat per tick starting at the next tick, so a
+        batch longer than the runway strands its tail past the story's end: the
+        arbiter run authored the correct target-4 denouement beats at slots 16-17
+        of a 15-tick story and the finale got the 7.3-target raid instead. Gated
+        with the arc-phase mandate; overtime (story at or past its intended
+        length) keeps the requested count. Never raises; on any problem the
+        requested count stands (fallback_to_reactive relies on that).
+        """
+        try:
+            from ..agent.arc_pressure import cap_beat_count
+
+            current_tick = self._load_state().get("current_tick", 0)
+            capped = cap_beat_count(current_tick, count, self.config)
+        except Exception:
+            return count
+        if capped < count:
+            length = self.config.get('coherence.target_story_length')
+            print(f"        Capping batch to {capped} beat(s): story ends at tick {length}")
+        return capped
 
     def _reconcile_beat_tension(self, beats: List[PlotBeat], current_tick: int) -> None:
         """Hold authored tension targets to the arc schedule (Phase 3 bridge).

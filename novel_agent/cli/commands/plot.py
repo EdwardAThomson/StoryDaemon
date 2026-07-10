@@ -9,7 +9,8 @@ from ...memory.plot_outline import PlotOutlineManager
 from ...memory.entities import PlotBeat, PlotOutline
 from ...tools.llm_interface import send_prompt_with_retry
 from ...agent.prompts import format_plot_generation_prompt
-from ...agent.arc_pressure import arc_guidance_for_beats, reconcile_beat_tension_targets
+from ...agent.arc_pressure import (arc_guidance_for_beats, cap_beat_count,
+                                   reconcile_beat_tension_targets)
 from ...contracts.authoring import (contract_authoring_section, contract_schema_example,
                                     sanitize_beat_conditions)
 
@@ -363,6 +364,27 @@ def _sanitize_beat_conditions(project_dir: Path, beats: List[PlotBeat]) -> None:
         print(f"  ⚠️  Beat condition sanitization skipped: {e}")
 
 
+def _capped_beat_count(project_dir: Path, count: int) -> int:
+    """Cap the batch to the remaining story runway (Phase 3 slot alignment).
+
+    Same cap the agent path applies in PlotOutlineManager.generate_next_beats
+    (the two authoring paths must not drift): batches are consumed one beat per
+    tick starting at the next tick, so a batch longer than the runway strands its
+    tail past the story's end. Gated with the arc-phase mandate; overtime keeps
+    the requested count. Never raises; on any problem the requested count stands.
+    """
+    try:
+        current_tick = load_project_state(str(project_dir)).get("current_tick", 0)
+        config = _project_config(project_dir)
+        capped = cap_beat_count(current_tick, count, config)
+    except Exception:
+        return count
+    if capped < count:
+        length = config.get('coherence.target_story_length')
+        print(f"  Capping batch to {capped} beat(s): story ends at tick {length}")
+    return capped
+
+
 def generate_and_append_beats_cli(
     project_dir: Path,
     count: int,
@@ -378,6 +400,7 @@ def generate_and_append_beats_cli(
     """
     if max_tokens is None:
         max_tokens = _project_config(project_dir).get('generation.beat_max_tokens', 2000)
+    count = _capped_beat_count(project_dir, count)
     manager = PlotOutlineManager(project_dir)
     outline = manager.load_outline()
 
@@ -451,6 +474,7 @@ def revise_and_regenerate_beats_cli(
     """
     if max_tokens is None:
         max_tokens = _project_config(project_dir).get('generation.beat_max_tokens', 2000)
+    count = _capped_beat_count(project_dir, count)
     manager = PlotOutlineManager(project_dir)
 
     # 1. Generate first — a failure here raises before we touch the outline.
