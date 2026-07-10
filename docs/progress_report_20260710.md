@@ -249,3 +249,242 @@ In expected-value order:
 - Run log: scratchpad copy (`descent-pf-run.log`), not committed.
 - Prior arms preserved: `work/novels/descent_efa72af8/` (June),
   `work/novels/descent2_36ea1526/` (July).
+
+## Addendum: clean re-run after the fixes (same day)
+
+Next-steps item 4 executed immediately: fresh project `descent-pf2`
+(`work/novels/descent-pf2_ddd9d9de/`), same foundation, goal, and run-start config as
+`descent-pf` (backend `api`, model `openrouter` via `anthropic/claude-haiku-4.5`,
+timeout 120, plot-first + contracts on, `target_story_length: 15`, default curve;
+`generation.beat_max_tokens` deliberately left unset so the new default 2000 from
+b99b67f is what gets exercised). 16 scenes (ticks 0 through 15), ~30.8k words, and
+this time **zero manual interventions**: no CLI beat injections, no hand-unwedging.
+
+Headline: **all three b99b67f fixes held, delivery worked unaided, and a new wedge
+took delivery's place.** The final scene scored **8 against target 4**: equal to
+June's control, worse than both July arms. The cause is entirely new. The peak beat
+(PB012, tension_target 8.8, authored postcondition `tension_at_least 8`) failed its
+contract at ticks 13 and 14 because the scenes scored 7 (the documented peak
+undershoot: the LLM scorer is reluctant to grant 8+), and keep-pending semantics
+pinned it through the whole resolution window. The on-time-authored calm beats
+(PB013 at 7.3, PB014 at 4, PB015 at 4, `tension_at_most` guards on both 4s) were
+never consumed. At tick 15 the scene finally scored 8: the contract passed at the
+exact tick the schedule wanted 4.0, and the run ended on its climax ("The
+Confrontation Protocol", the Grimel/Wynox executive-office confrontation).
+
+### Four-way comparison
+
+| metric | June (control) | July (reactive + mandate) | plot-first, defect-marred | plot-first, clean re-run |
+|---|---|---|---|---|
+| overall drift, all scored ticks | **1.20** | 1.55 | 1.60 | 1.65 |
+| overall bias (signed) | +0.75 | **+0.55** | +1.15 | +1.21 |
+| rising drift (ticks 0-12) | **0.96** | 1.51 | 1.54 | 1.56 |
+| peak drift (tick 13) | 1.8 (7 vs 8.8) | 1.8 (7 vs 8.8) | 1.8 (7 vs 8.8) | 1.8 (7 vs 8.8) |
+| resolution drift (ticks 14-15) | 2.35 | **1.65** | 1.85 | 2.15 |
+| final scene: target 4.0, actual | 8 | **6** | 7 | 8 |
+| final-scene event kind | still the climax | aftermath | the exposure itself | still the climax (stale peak beat) |
+| beats steering scenes | n/a | n/a | ticks 2-10 and 15 | every tick 2-15 |
+| manual interventions | 0 | 0 | 2 | **0** |
+
+Per-tick trace (`memory/metrics.jsonl`; cc = contract conditions checked/failed):
+
+| tick | target | actual | phase | beat | cc |
+|---|---|---|---|---|---|
+| 0 | 3.0 | (not scored) | rising | | |
+| 1 | 3.5 | 7 | rising | | |
+| 2 | 4.1 | 7 | rising | PB001 ✓ | 3/0 |
+| 3 | 4.6 | 7 | rising | PB002 ✓ | 2/0 |
+| 4 | 5.1 | 7 | rising | PB003 ✓ | 4/0 |
+| 5 | 5.3 | 6 (rewrite 8 -> 6) | rising | PB004 ✓ | 2/0 |
+| 6 | 5.6 | 7 | rising | PB005 ✓ | 3/0 |
+| 7 | 5.9 | 7 | rising | PB006 ✓ | 3/0 |
+| 8 | 6.3 | 8 | rising | PB007 ✓ | 2/0 |
+| 9 | 6.8 | 8 | rising | PB008 ✓ | 3/0 |
+| 10 | 7.3 | 8 | rising | PB009 ✓ | 2/0 |
+| 11 | 7.9 | 7 | rising | PB010 ✓ | 3/0 |
+| 12 | 8.3 | 8 | rising | PB011 ✓ | 2/0 |
+| 13 | 8.8 | 7 | peak | PB012 ✗ (`tension_at_least 8`) | 3/1 |
+| 14 | 7.3 | 7 | resolution | PB012 ✗ (again) | 3/1 |
+| 15 | 4.0 | 8 | resolution | PB012 ✓ (third attempt) | 3/0 |
+
+The mid-run tracking is the best measured in any arm: mean drift over ticks 5-14 is
+**1.01**, with the beat targets and the schedule marching together (7.3 -> 8, 7.9 -> 7,
+8.3 -> 8). The overall numbers are dragged by the same hot start as every arm (ticks
+1-4 against gentle targets) plus the tick-15 blowout (+4.0), which is the wedge, not
+the tracking.
+
+### Fix verification, one by one
+
+- **Token budget (fix 1): held.** Three beat batches, all authored in-run at ticks 2,
+  7, and 12, all parsed **first-try** under the 2000-token default: 0 malformed
+  responses, 0 retry firings (the defect run: 10 malformed responses across 6
+  attempts, 5 starved ticks). The critical tick-12 batch delivered the peak and the
+  descent on time and exactly on the slot schedule (targets 8.3 / 8.8 / 7.3 / 4 / 4).
+- **Authoring gate (fix 2): held, without even firing.** All 15 beats carried
+  postconditions drawn exclusively from the permitted vocabulary (`char_in_prose`,
+  `tension_at_least`, `tension_at_most`): zero `char_at_location` or `loop_resolved`
+  authored, zero gate warnings, zero sanitizer drops of any kind. The tightened
+  prompt was sufficient on its own; the gate is now belt-and-braces.
+- **Contract timing at step 11.5 (fix 3): held.** 38 conditions checked, 2 failed,
+  and both failures are honest (PB012's `tension_at_least 8` against scenes fairly
+  scored 7). All 12 completed beats verified with `verification_method: "contract"`.
+  No structurally-unsatisfiable failure occurred anywhere.
+
+### The new wedge: keep-pending vs. the scorer's ceiling
+
+Wedging observed, without intervention: PB012 pending for three ticks (13-15), two
+consecutive contract failures, completed on the third attempt only because the final
+scene escalated to 8. The mechanism is different from the defect run's
+(`char_at_location` was unsatisfiable by construction; `tension_at_least 8` is
+unsatisfiable in practice, because the scorer has never granted above 8 in any of the
+four arms) but the consequence is identical: one beat eats the descent runway. Tick
+14's scene actually landed almost on schedule (7 vs 7.3), yet it "failed" because the
+contract it was graded against belonged to the previous slot. The resolution-phase
+scenes were therefore both written against a stale peak beat, whose `tension_target`
+8.8 also suppresses the writer's resolution-band arc-pressure section: the
+de-escalation machinery was overridden precisely when it was needed.
+
+This is next-steps item 2 (the give-up rule), now measured twice in two different
+costumes. Two additions to its design brief from this run: (a) an attempt counter
+with abandon-or-downgrade semantics remains the core need (N=2 here would have freed
+tick 15 for PB013/PB014); (b) authored `tension_at_least` values should be capped at
+7, or peak beats' tension floors treated as advisory, because demanding 8+ from a
+scorer that almost never grants it manufactures wedges at the worst possible spot.
+
+### Stability
+
+15/15 ticks unaided, `--retries 2` never consumed, `errors/` empty. Per-tick wall
+time 71-114s (mean 82.5s); OpenRouter clean across ~150 calls (no 5xx, no 429, no
+timeouts). Three absorbed JSON parse warnings during context gathering (ticks 9, 10,
+12), all recovered by graceful degradation. Tension rewrite machinery: one downward
+rewrite fired and stuck (tick 5, 8 -> 6, the only rewrite that has ever landed in a
+plot-first arm), two futile-skips (ticks 1 and 15), two revise-but-keep-original
+(ticks 2-3). Loop economy unchanged and still broken: 0 loops closed all run, 64 open
+at the end.
+
+### The forward-looking question (forced low-tension scenes)
+
+Unanswerable from this run, and that is itself the finding: **no calm beat has ever
+reached the writer in two plot-first attempts** (defect run: starved by truncation;
+this run: blocked by the wedge). Scenes 14 and 15 read hot because their assigned
+events were hot (a pursuit crawl through cable conduits, then the executive-office
+confrontation), and the scorer graded them fairly; there is still zero live evidence
+about whether the writer runs hot on a genuinely calm assigned event. The tick-12
+batch's calm beats are also worth noting for that future test: authored at story
+position 80%, PB014/PB015 are falling-action events (an escape handoff, contacting
+federal authorities) rather than the pure aftermath/time-skip denouement the
+defect run's position-100% batch produced. Scoping implication: the "forced
+low-tension scenes" work is blocked behind the give-up rule, not behind writer
+calming; fix the wedge first, then re-ask this question with a consumed
+`tension_at_most 4` beat in hand.
+
+### Addendum artifacts
+
+- Clean re-run (gitignored `work/`): `work/novels/descent-pf2_ddd9d9de/` (scenes,
+  `memory/metrics.jsonl`, `plot_outline.json` with per-beat `contract_results`,
+  planner snapshots in `plans/`).
+- Run log: scratchpad copy (`descent-pf2-run.log`), not committed.
+
+## Addendum 2: fork experiment, calm-scene prompt surgery
+
+Single-scene fork experiment (same day) answering the forced-low-tension question the
+clean re-run left open: does the writer run hot even on a calm assigned event, and
+does pruning the hot momentum context out of the writer prompt fix it?
+
+### Setup
+
+Two fork copies of `descent-pf2_ddd9d9de` (`work/novels/fork-calm-a/`,
+`fork-calm-b/`; the original untouched). In each fork, pending PB013 (target 7.3) was
+marked `abandoned` (reason recorded in the outline) so the calm denouement beat PB014
+became next: target 4, postconditions `char_in_prose C000`, `char_in_prose C007`,
+`tension_at_most 5`. One real tick per fork (backend `api`, `openrouter` via
+`anthropic/claude-haiku-4.5`). The writer prompt was captured from the fork-b tick by
+monkeypatching `SceneWriter._format_writer_prompt` in a scratchpad driver
+(`--save-prompts` dumps planner prompts only).
+
+Real-tick baselines: fork-a scored **7**, fork-b **6**, both against target 4, no
+rewrite fired in either, and in both PB014 verified `trusted_planner` but failed its
+`tension_at_most 5` contract and was kept pending.
+
+A discovery about the hypothesis itself: the captured writer prompt (39.3k chars)
+contains **no open-loops board and no tension-history listing**. Those feed the
+planner, not the writer. The writer's hot momentum context is entirely the
+recent-story region (three climactic scene summaries plus the full text of scenes
+14-15: the conduit pursuit, the executive confrontation, a two-hour containment
+countdown, and the cliffhanger "What about you?"), 31.6k chars, about 80 percent of
+the prompt.
+
+### Variants
+
+Offline, 3 samples each, through the real writer path: `openrouter` at
+`writer_max_tokens` 3000, responses parsed with `SceneWriter._parse_scene_response`,
+scored by the real `TensionEvaluator` LLM scorer with the fork's config.
+
+- (a) AS-IS: the captured prompt, unedited.
+- (b) PRUNED: the whole recent-story body replaced with a neutral aftermath framing
+  ("The confrontation has concluded. The exposure is public. Consequences are
+  settling... No unresolved threats need attention in this scene."). Everything from
+  the plan section onward byte-identical.
+- (c) PRUNED+RULES: (b) plus mandatory exclusionary rules beside the tension target
+  (no new threats, dangers, mysteries, or complications; no countdowns, no deadlines,
+  no cliffhanger ending; let the scene settle, end in stillness), wording aligned
+  with `ARC_PHASE_MANDATES["resolution"]`.
+
+### Results (target 4, contract cap 5)
+
+| variant | s1 | s2 | s3 | mean |
+|---|---|---|---|---|
+| (a) as-is | 6 | 5 | 8 | **6.33** |
+| (b) pruned | 7 | 5 | 7 | **6.33** |
+| (c) pruned + rules | 7 | 7 | 8 | **7.33** |
+| real ticks (fork-a, fork-b) | 7 | 6 | | 6.5 |
+
+### Decision-map verdict: nothing fixed it
+
+No arm landed near 4; per the pre-registered map, the scorer floor for this material
+is ~6 and the curve/beat design should absorb it. The sharper reading: "this
+material" means the assigned event, not the prompt. Removing 80 percent of the
+prompt (all hot momentum context) moved the mean by exactly 0.0, and the
+exclusionary rules trended higher, not lower (7.33, likely noise at n=3, certainly
+no fix). Every scorer rationale grades the situation: escape in motion, imminent
+discovery, trusting a stranger whose motives are uncertain. PB014 ("Nyxiss reaches
+the building exit but encounters security officer Raxath... provides a vehicle for
+escape") is a falling-action escape event, exactly as the first addendum flagged, and
+a mid-escape scene with pursuit implied is a 5-8 in the scorer's rubric no matter how
+quiet the prose register is. The writer even synthesizes urgency the prompt does not
+contain: sample (b)-1 invented an "approximately eight minutes" sweep and (c)-1
+invented a "maybe two hours" deadline, in direct violation of the no-countdown rule
+and with no countdown present anywhere in its prompt. One residual hot cue survived
+the surgery by design (the untouched plan section's tool results include "Tyrox
+security director pursuit threat"), and Tyrox duly appears as off-page menace in most
+pruned samples.
+
+Qualitatively, the pruned and rules scenes are competent prose, not calm-but-garbage:
+they run tighter (950-1300 words vs 1500-2100 as-is), stay on-beat, and their endings
+genuinely settle. The contrast the scores hide, (a) sample 3 (scored 8) versus (c)
+sample 1 (scored 7):
+
+> "Two hours, Wynox had said. Two hours before containment protocols activated. ...
+> She would trigger alerts. She would be detained. She would be placed in
+> institutional containment while Vernmarsh determined what to do with her." (a)
+
+> "It wasn't safety. But it was momentum. It was the moment after the choice, when
+> the thing you've set in motion finally becomes real. Nyxiss kept driving." (c)
+
+The (c) ending is in stillness, as instructed; the scene still scores 7 because the
+event it depicts is an escape under threat. Verdict for the roadmap: the
+forced-low-tension work is not a writer-prompt problem. Prompt pruning and
+exclusionary vocabulary are not worth building as tension controls. A target-4 scene
+requires a target-4 event: pure aftermath or time-skip denouement beats (the defect
+run's PB008 shape, "six months later..."), which is beat authoring and curve/runway
+design, plus the give-up rule so those beats are actually reached.
+
+### Addendum 2 artifacts
+
+- Forks (gitignored `work/`): `work/novels/fork-calm-a/`, `work/novels/fork-calm-b/`
+  (scene_016, metrics.jsonl, outline with PB014 contract_results).
+- Scratchpad (session-local, not committed): captured prompt
+  (`writer_prompt_asis.txt`), variants (`writer_prompt_pruned.txt`,
+  `writer_prompt_pruned_rules.txt`), edit record (`variant_edits.diff`,
+  `build_variants.py`), driver (`gen_and_score.py`, `run_tick_capture.py`), all nine
+  scenes with scores (`samples/`, `results.json`), run log (`gen_and_score.log`).
