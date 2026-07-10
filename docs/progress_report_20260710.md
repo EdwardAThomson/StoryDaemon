@@ -488,3 +488,202 @@ design, plus the give-up rule so those beats are actually reached.
   `writer_prompt_pruned_rules.txt`), edit record (`variant_edits.diff`,
   `build_variants.py`), driver (`gen_and_score.py`, `run_tick_capture.py`), all nine
   scenes with scores (`samples/`, `results.json`), run log (`gen_and_score.log`).
+
+## Addendum 3: descent run 3, the arbiter (cap + staleness live)
+
+The run every prior arm was disqualified from being: nothing broke, nothing was
+touched, and the ending got measured. Fresh project `descent-run3`
+(`work/novels/descent-run3_8e35c9d2/`), same foundation and user goal verbatim,
+run-start config identical to both plot-first arms (backend `api`, model
+`openrouter` via `anthropic/claude-haiku-4.5`, timeout 120, plot-first + contracts
+on, `target_story_length: 15`, default curve, `beat_max_tokens` unset so the
+shipped default 2000 applies), executed at 052e6f0: the first live exercise of the
+two new backstops, `TENSION_FLOOR_CAP` (contracts/authoring.py) and
+`beat_target_is_stale` (agent/arc_pressure.py). 16 scenes (ticks 0 through 15),
+~31.8k words, **zero manual interventions**.
+
+Headline: the final scene ("The Warrant", the arrest watched on monitors) scored
+**6 against target 4**, tying July's reactive arm for the best measured ending,
+and this time through a fully unbroken plot-first pipeline: three 5-beat batches
+authored in-run and parsed first-try (0 malformed responses), 13 of 13 completed
+beats verified `contract`, the peak beat cleared at the peak tick, no wedge, no
+starvation, every beat consumed exactly on its scheduled slot. Per the
+pre-registered decision map, 6 lands in the 6-7 bucket: **the material floor is
+real, target-4 same-thread endings are unreachable without a time-skip or
+cut-away, and thread interleaving plus the resolution-phase time-skip mandate is
+the actual fix, not an enhancement.**
+
+### Predictions, pre-registered
+
+- **P1 (floor cap fires or floors arrive legal): confirmed, first branch, twice.**
+  Both in-run peak beats were authored with `tension_at_least 8` and both were
+  clamped with the cap warning verbatim: PB010 (tick-7 batch) and PB011 (tick-12
+  batch, the actual peak slot). Authoring floors of 8 at the peak is evidently the
+  model's habit (2 for 2 across batches); the cap is doing real work.
+- **P2 (peak beat completes at the peak tick): confirmed.** PB011 (target 8.8,
+  floor clamped 8 to 7) completed at tick 13 on a scene scored 7, exactly the
+  wedge the clean re-run died on. The queue advanced into the resolution window
+  for the first time in any arm.
+- **P3 (calm beats consumed at ticks 14-15 through the unbroken pipeline): half
+  confirmed, and the half that failed is the finding.** Beats WERE consumed at
+  ticks 14-15 with nothing broken (first time ever), but the beats occupying those
+  slots were not the calm ones: tick 14 got PB012 (authored 8.8 against the 7.3
+  slot, within the reconciler's deviation band, scored 9) and tick 15 got PB013
+  (the FBI raid, authored 7.3 against the 4.0 slot, clamped to 6, scored 6). The
+  genuinely calm beats (PB014, PB015) were authored on time and stranded at batch
+  slots 4-5, scheduled ticks 16-17 of a 15-tick story.
+- **P4 (staleness backstop never needed): confirmed.** Every beat was consumed on
+  its scheduled slot; `beat_target_is_stale` never fired. One near-miss worth
+  recording: PB013 as authored (7.3) would have read stale at tick 15 (|7.3 - 4.0|
+  = 3.3 >= step 3) and yielded the writer to the schedule's target-4 guidance, but
+  the schedule reconciler had already clamped its target to 6 (|6 - 4| = 2 < 3),
+  so the beat governed and the writer aimed at 6. The two backstops can shadow
+  each other: the milder number-clamp pre-empted the stronger yield-to-schedule
+  rule at the one tick it might have mattered. The scene then scored exactly 6.
+
+### Five-way comparison
+
+| metric | June (control) | July (reactive + mandate) | plot-first, defect-marred | plot-first, clean re-run | this run (arbiter) |
+|---|---|---|---|---|---|
+| overall drift, all scored ticks | **1.20** | 1.55 | 1.60 | 1.65 | 1.72 |
+| overall bias (signed) | +0.75 | **+0.55** | +1.15 | +1.21 | +1.15 |
+| rising drift (ticks 0-12) | **0.96** | 1.51 | 1.54 | 1.56 | 1.69 |
+| peak drift (tick 13) | 1.8 (7 vs 8.8) | 1.8 (7 vs 8.8) | 1.8 (7 vs 8.8) | 1.8 (7 vs 8.8) | 1.8 (7 vs 8.8) |
+| resolution drift (ticks 14-15) | 2.35 | **1.65** | 1.85 | 2.15 | 1.85 |
+| final scene: target 4.0, actual | 8 | **6** | 7 | 8 | **6** |
+| final-scene event kind | still the climax | aftermath | the exposure itself | still the climax (stale peak beat) | the arrest (warrant execution, watched on monitors) |
+| beats steering scenes | n/a | n/a | ticks 2-10 and 15 | every tick 2-15 | every tick 2-15 |
+| manual interventions | 0 | 0 | 2 | 0 | **0** |
+
+The overall drift (1.72, worst of five) is almost entirely the hot start (ticks
+1-5 mean drift 2.88 against targets 3.5-5.3, same as every arm) plus tick 14's 9,
+the first 9 the scorer has granted in any arm (a small correction to "the scorer
+never grants above 8": rarely, not never; the floor cap's premise, that DEMANDING
+8+ manufactures wedges, is unchanged and was demonstrated twice by the clamps).
+Mid-run tracking (ticks 5-14) is 1.21. The number that matters is the ending: 6,
+through a pipeline that finally did everything it was designed to do.
+
+### Beat-authoring quality in the resolution window: the enforcement gap, precisely
+
+The tick-12 batch's slots were scheduled at ticks 13-17: targets 8.8, 7.3, 4.0,
+4.0, 4.0. Verbatim, the three beats that landed in or nearest the calm slots:
+
+- **PB013** (slot 3, the tick-15 target-4.0 slot; authored tension_target 7.3,
+  clamped to 6): "FBI investigator Taruth arrives at the corporate office with
+  federal agents to execute a warrant for Kaelus's devices, emails, and financial
+  records, effectively moving the investigation from covert to overt."
+  Postconditions: `char_in_prose C008`, `tension_at_most 8`. Creates
+  `kaelus_detained`.
+- **PB014** (slot 4, scheduled tick 16, never consumed; tension_target 4):
+  "Ionaora provides formal testimony to federal investigators about her
+  investigation, Aryn's coordination, and the evidence she gathered, officially
+  establishing her role as a cooperating witness." Postconditions: `char_in_prose
+  C000`, `tension_at_most 5`. Creates none.
+- **PB015** (slot 5, scheduled tick 17, never consumed; tension_target 4): "Six
+  weeks later, Kaelus is formally charged with securities fraud, wire fraud, and
+  conspiracy; Ionaora receives notice of federal witness protection eligibility
+  and begins planning her career transition." Postconditions: `tension_at_most 4`.
+  Resolves 3 loops, creates none.
+
+Characterization: the batch de-escalates in the right ORDER but at the wrong
+OFFSET. PB014 is plausible falling action (procedural aftermath) and PB015 is the
+pure time-skip denouement the resolution directive asks for, so the authoring
+directives work, again. But the target-4.0 slot itself received a warrant raid, a
+hot event, and the only enforcement that exists edited its NUMBER: the reconciler
+clamped 7.3 to 6 and nothing anywhere edits the EVENT. A raid with its target
+clamped to 6 is still a raid, and it duly scored 6. Meanwhile the author treated
+the batch as a serial event sequence (decision, confirmation, raid, testimony,
+time-skip) and needed five events to cool down when the story had three slots
+left. This is exactly the gap the interleaving design's contracts close:
+scene-event integrity plus per-slot assignment honesty ("the target-4 slot may
+only receive an event whose natural tension is 4") instead of post-hoc numeric
+clamping of whatever event happens to be next in the thread.
+
+One more arithmetic observation, because the pipeline is now deterministic enough
+for it to matter: with batches authored at ticks 2, 7, and 12 and one beat
+consumed per tick, the finale's identity was decided by a single early stall.
+PB001 failed its `tension_at_most 7` once at tick 2 (scene scored 8, the hot
+start) and completed at tick 3; without that one-tick slip every beat shifts one
+earlier and PB014, the testimony aftermath with `tension_at_most 5`, becomes the
+final scene. The ending landed on the raid by one tick of batch arithmetic. The
+runway is that tight, which is the same conclusion as the offset problem stated
+temporally: same-thread descent needs more slots than a 15-tick story has after
+its peak.
+
+### Per-tick trace
+
+Per-tick trace (`memory/metrics.jsonl`; cc = contract conditions checked/failed):
+
+| tick | target | actual | phase | beat | cc |
+|---|---|---|---|---|---|
+| 0 | 3.0 | (not scored) | rising | | |
+| 1 | 3.5 | 7 | rising | | |
+| 2 | 4.1 | 8 | rising | PB001 ✗ (`tension_at_most 7`) | 3/1 |
+| 3 | 4.6 | 7 | rising | PB001 ✓ (second attempt) | 3/0 |
+| 4 | 5.1 | 7 | rising | PB002 ✓ | 3/0 |
+| 5 | 5.3 | 8 | rising | PB003 ✓ | 3/0 |
+| 6 | 5.6 | 7 | rising | PB004 ✓ | 2/0 |
+| 7 | 5.9 | 7 | rising | PB005 ✓ | 3/0 |
+| 8 | 6.3 | 7 | rising | PB006 ✓ | 3/0 |
+| 9 | 6.8 | 7 | rising | PB007 ✓ | 3/0 |
+| 10 | 7.3 | 7 | rising | PB008 ✓ | 3/0 |
+| 11 | 7.9 | 7 | rising | PB009 ✓ | 3/0 |
+| 12 | 8.3 | 7 | rising | PB010 ✓ | 3/0 |
+| 13 | 8.8 | 7 | peak | PB011 ✓ (floor clamped 8 to 7) | 2/0 |
+| 14 | 7.3 | 9 | resolution | PB012 ✓ | 3/0 |
+| 15 | 4.0 | 6 | resolution | PB013 ✓ (target clamped 7.3 to 6) | 2/0 |
+
+Contract totals: 39 conditions checked, 1 failed (PB001's ceiling at tick 2,
+cleared next tick: keep-pending cost one tick, the mildest wedge in any arm, and
+it never recurred). All 13 completed beats: `verification_method: "contract"`.
+
+### Fix behavior and stability
+
+- **Cap warnings seen:** 2 (PB010, PB011), both authored `tension_at_least 8`
+  clamped to 7. **Staleness fired:** never (P4). **Schedule-reconciler target
+  clamps:** 1 (PB013, 7.3 to 6). No gated-check drops, no unresolved-ref drops,
+  no condition-count trims.
+- **Prior fixes held:** 3 of 3 batches parsed first-try under the 2000-token
+  default (0 malformed responses); all 15 beats carried postconditions from the
+  permitted vocabulary (zero `char_at_location` / `loop_resolved` authored).
+- **Stability:** 15/15 ticks; ONE tick-level retry consumed (tick 6, the scene
+  evaluator returned passed=False with an empty issues list, `error_006.json`;
+  the retry succeeded), the first `errors/` entry and first retry consumed in any
+  descent arm, absorbed exactly as designed. Three graceful fact-extraction
+  degradations (ticks 9, 12, 15, malformed extractor JSON, continued without
+  updates). Per-tick wall time 66-116s (mean 80.0s); OpenRouter clean otherwise
+  (~150 calls, no 5xx, no 429, no timeouts). Tension rewrites: two futile-skips
+  (ticks 1-2), two revise-but-keep-original (ticks 3, 5), none in the resolution
+  window (tick 15's gap of 2 is not above the threshold 2). Character-detector
+  noise persists ("She", "Something", "Special Agent").
+- **Loop economy (Slice 0 baseline):** 72 loops opened, **0 closed**, 72 open at
+  the end. Beats claim `resolves_loops` (PB013 names OL43) and nothing in the
+  pipeline ever sets a loop's status to resolved; third run confirming the
+  counter.
+
+### Decision-map verdict
+
+Pre-registered: ~4-5 means the pipeline was sufficient and interleaving is an
+enhancement; ~6-7 means the material floor is real and interleaving plus the
+resolution-phase time-skip mandate becomes the actual fix. The arbiter says **6**,
+with the cleanest possible provenance: no truncation, no unsatisfiable condition,
+no wedge, no stale beat, no manual touch. Two independent mechanisms (July's
+reactive mandate and this run's beat-steered pipeline) now converge on the same
+floor of 6, and this run adds the causal detail the reactive arm could not: the
+floor is not in the gauge, the writer, or the delivery, it is in WHICH event the
+serial thread offers the final slot. The true target-4 events existed in the
+outline (PB015, "Six weeks later..."), authored by the bridge exactly as
+directed, two slots out of reach. The elimination chain in
+`docs/THREAD_INTERLEAVING_DESIGN.md` section 1 is complete: gauge fixed, writer
+acquitted, planner mandated, delivery fixed and now proven end-to-end, and the
+ending still cannot reach 4 in the same thread. Scene selection (interleaving,
+with the time-skip as the degenerate cut-away and slot-aware assignment honesty
+in the contracts) is the fix; the cap and the staleness rule are its backstops,
+both now validated live.
+
+### Addendum 3 artifacts
+
+- This run (gitignored `work/`): `work/novels/descent-run3_8e35c9d2/` (scenes,
+  `memory/metrics.jsonl` with contract counters, `plot_outline.json` with per-beat
+  `contract_results`, planner snapshots in `plans/`, `errors/error_006.json`).
+- Run log: scratchpad copy (`descent-run3.log`), not committed.
