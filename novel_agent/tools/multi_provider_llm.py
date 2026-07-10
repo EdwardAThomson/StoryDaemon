@@ -16,6 +16,9 @@ Environment variables expected (if using those providers):
 - CLAUDE_API_KEY – for Anthropic Claude
 - HOSTED_LLM_URL / HOSTED_LLM_PORT / HOSTED_LLM_API_KEY / HOSTED_LLM_MODEL
                    – for a self-hosted, OpenAI-compatible endpoint (model "hosted-llm")
+- OPENROUTER_API_KEY / OPENROUTER_MODEL
+                   – for OpenRouter, a hosted OpenAI-compatible router over many
+                     providers (model "openrouter")
 
 The rest of StoryDaemon can either call send_prompt(model=..., ...) directly
 or use the MultiProviderInterface wrapper, which exposes generate/
@@ -44,6 +47,7 @@ except ImportError:  # pragma: no cover - optional, only needed for Claude
 
 _openai_client: Optional["OpenAI"] = None
 _hosted_llm_client: Optional["OpenAI"] = None
+_openrouter_client: Optional["OpenAI"] = None
 _anthropic_client: Optional["anthropic.Anthropic"] = None
 _gemini_configured: bool = False
 
@@ -79,6 +83,33 @@ def _get_hosted_llm_client() -> "OpenAI":
         _hosted_llm_client = OpenAI(base_url=f"http://{url}:{port}/v1", api_key=api_key)
 
     return _hosted_llm_client
+
+
+def _get_openrouter_client() -> "OpenAI":
+    """Return a shared OpenAI client pointed at OpenRouter (https://openrouter.ai).
+
+    OpenRouter is a hosted, OpenAI-compatible router over many upstream models.
+    Configured from OPENROUTER_API_KEY. Kept separate from the other clients so
+    the backends can coexist in one process.
+    """
+    global _openrouter_client
+
+    if OpenAI is None:
+        raise RuntimeError(
+            "openai package is not installed. Install it with 'pip install openai' "
+            "or switch llm.backend to 'codex'."
+        )
+
+    if _openrouter_client is None:
+        api_key = os.environ.get("OPENROUTER_API_KEY")
+        if not api_key:
+            raise RuntimeError(
+                "Environment variable 'OPENROUTER_API_KEY' is not set. "
+                "Set your OpenRouter API key or use a different backend (e.g. Codex)."
+            )
+        _openrouter_client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=api_key)
+
+    return _openrouter_client
 
 
 def _get_openai_client() -> "OpenAI":
@@ -183,6 +214,39 @@ def send_prompt_hosted_llm(
     return response.choices[0].message.content
 
 
+def send_prompt_openrouter(
+    prompt: str,
+    model: str = "",
+    max_tokens: int = 2000,
+    temperature: float = 0.7,
+    role_description: str = (
+        "You are a helpful fiction writing assistant. You will create original text only."
+    ),
+) -> str:
+    """Send a prompt to OpenRouter, a hosted OpenAI-compatible router over many models."""
+    if model == "":
+        model = os.environ.get("OPENROUTER_MODEL", None)
+    if not model:
+        raise ValueError(
+            "Model name must be specified either as a parameter or via OPENROUTER_MODEL environment variable."
+        )
+    client = _get_openrouter_client()
+    response = client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": role_description},
+            {"role": "user", "content": prompt},
+        ],
+        max_tokens=max_tokens,
+        temperature=temperature,
+        # Note: unlike hosted-llm, no provider-specific extra_body is set here.
+        # OpenRouter fans out to many different upstream backends, so a hack tuned
+        # for one of them (e.g. vLLM/Qwen's enable_thinking flag) would be silently
+        # ignored by most others and would be misleading to carry as a default.
+    )
+    return response.choices[0].message.content
+
+
 def send_prompt_openai(
     prompt: str,
     model: str = "gpt-5.5",
@@ -259,6 +323,10 @@ ModelFn = Callable[[str, int], str]
 _model_config: Dict[str, ModelFn] = {
     # Self-hosted, OpenAI-compatible endpoint (configured via HOSTED_LLM_* env vars)
     "hosted-llm": lambda prompt, max_tokens: send_prompt_hosted_llm(
+        prompt=prompt, max_tokens=max_tokens,
+    ),
+    # OpenRouter, a hosted OpenAI-compatible router over many models (configured via OPENROUTER_* env vars)
+    "openrouter": lambda prompt, max_tokens: send_prompt_openrouter(
         prompt=prompt, max_tokens=max_tokens,
     ),
     # OpenAI GPT-5 family (kept in sync with LLM-Remote-Runner)
