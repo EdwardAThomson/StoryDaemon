@@ -229,6 +229,9 @@ def _tension_at_most(params: Dict[str, Any], ctx: CheckContext) -> bool:
 @register_checker("loop_resolved")
 def _loop_resolved(params: Dict[str, Any], ctx: CheckContext) -> bool:
     """{"check": "loop_resolved", "loop": "OL3"} — loop status is 'resolved'."""
+    # "expired" (left open at story end, Phase 3, Slice 0 follow-ups) is
+    # terminal but NOT resolved: an expired loop was never answered on the
+    # page, so it must not satisfy this check.
     loop_id = params["loop"]
     for loop in ctx.memory.load_open_loops():
         if loop.id == loop_id:

@@ -424,7 +424,9 @@ class OpenLoop:
     type: str = "open_loop"
     created_at: str = ""
     created_in_scene: str = ""
-    status: str = "open"  # open, resolved, abandoned
+    # "expired" (Phase 3, Slice 0 follow-ups) is terminal-but-distinct from
+    # "resolved": the loop was left open at story end, never answered on the page.
+    status: str = "open"  # open, resolved, abandoned, expired
     category: str = ""  # mystery, relationship, goal, threat, etc.
     description: str = ""
     importance: str = "medium"  # low, medium, high, critical
@@ -589,6 +591,11 @@ class PlotBeat:
     # Metadata for validation / analysis
     advances_character_arcs: List[str] = field(default_factory=list)
     resolves_loops: List[str] = field(default_factory=list)
+    # Loops the beat moves forward WITHOUT answering on the page (Phase 3,
+    # Slice 0 follow-ups: the resolves-vs-advances reframe); mirrors
+    # novel_agent/plot/entities.py for the same cls(**data) reason. Defaults
+    # empty so legacy outlines load unchanged.
+    advances_loops: List[str] = field(default_factory=list)
     creates_loops: List[str] = field(default_factory=list)
 
     def __post_init__(self):

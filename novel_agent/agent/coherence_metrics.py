@@ -101,11 +101,18 @@ class CoherenceMetrics:
         finale_result: Optional[Dict[str, Any]] = None,
         loops_closed_by_beat: Optional[int] = None,
         loops_deduped: Optional[int] = None,
+        loops_capped: Optional[int] = None,
+        loops_expired: Optional[int] = None,
+        dangling_threads: Optional[int] = None,
     ) -> Dict[str, Any]:
         """Compute one coherence record, append it to the JSONL log, and return it."""
         loops = self.memory.load_open_loops()
         loops_opened = sum(1 for l in loops if scene_id and l.created_in_scene == scene_id)
-        loops_closed = sum(1 for l in loops if scene_id and l.resolved_in_scene == scene_id)
+        # "closed" means resolved: an expired loop (left open at story end) also
+        # carries resolved_in_scene for the audit trail, but it was never answered
+        # on the page and must not count as a closure (Phase 3, Slice 0 follow-ups).
+        loops_closed = sum(1 for l in loops if scene_id and l.resolved_in_scene == scene_id
+                           and l.status == "resolved")
         open_loops_total = sum(1 for l in loops if l.status == "open")
 
         all_lore = self.memory.load_all_lore()
@@ -182,6 +189,18 @@ class CoherenceMetrics:
             # matching the contract-counter convention.
             "loops_closed_by_beat": loops_closed_by_beat,
             "loops_deduped": loops_deduped,
+            # loops_capped completes the creation-hygiene picture (Phase 3, Slice 0
+            # follow-ups; the 2026-07-11 validation flagged log-only cap counts):
+            # how many over-cap creations were dropped this tick, None when the
+            # hygiene machinery did not run.
+            "loops_capped": loops_capped,
+            # Finale expiry (Phase 3, Slice 0 follow-ups): on the finale tick, how
+            # many still-open loops were marked expired ("left open at story end")
+            # and how many of those were high/critical importance (dangling
+            # threads, the story's honest unanswered-questions number). Both None
+            # on every other tick, and on finale ticks with the gate off.
+            "loops_expired": loops_expired,
+            "dangling_threads": dangling_threads,
             "recorded_at": datetime.utcnow().isoformat() + "Z",
         }
         self._append(record)

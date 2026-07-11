@@ -406,6 +406,7 @@ Return your answer as JSON only, with no explanations, no markdown fences, and n
       "prerequisites": [],
       "advances_character_arcs": [],
       "resolves_loops": [],
+      "advances_loops": [],
       "creates_loops": []{contract_schema_example}
     }}
   ]
@@ -453,7 +454,8 @@ Each beat must follow these constraints:
 - Favor concrete external actions and observable changes over vague summaries or internal monologue.
 - The "plot_threads" field should list at most 3 concise thread names per beat; pick only the most relevant threads.
 - For "characters_involved" and "location", use ONLY the exact IDs listed in the Characters and Locations sections above (for example C000, L000). Never invent new IDs or abbreviate them; omit the field or use an empty list if no existing entity fits.
-- For "resolves_loops", use ONLY the bare loop IDs from the Open loops section (for example ["OL4"]). Do not append the loop's description or invent new loop IDs.
+- For "resolves_loops" and "advances_loops", use ONLY the bare loop IDs from the Open loops section (for example ["OL4"]). Do not append the loop's description or invent new loop IDs.
+- Put a loop ID in "resolves_loops" ONLY if this beat's scene will ANSWER that loop ON THE PAGE: the reader learns the answer, or the matter concludes. If the beat merely moves a loop forward (engages it, raises its stakes, works toward it) without answering it, put its ID in "advances_loops" instead.
 
 # Your task
 

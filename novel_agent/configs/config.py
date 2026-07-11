@@ -133,15 +133,23 @@ DEFAULT_CONFIG = {
         # beat completes verification and claims resolves_loops, each claimed loop
         # gets one focused LLM check (that loop's description against the scene) and
         # is closed only on a confirmed yes, with an auditable resolution summary.
-        # Default False for its first validation run; the descent runs opened 70-83
-        # loops and closed 0-2 without it, so the effect must be measured before it
-        # defaults on.
-        'loop_closure': False,
+        # Default True: its validation run passed (docs/progress_report_20260711.md:
+        # 13 claims judged, 3 honest scene-grounded closures, 10 correct refusals,
+        # 0 parse failures, zero tick impact). The same gate covers the judged
+        # extractor-resolution path and the finale loop expiry (Phase 3, Slice 0
+        # follow-ups), so False restores the pre-Slice-0 behavior exactly for A/B.
+        'loop_closure': True,
         'loop_closure_max_tokens': 200,   # Token budget per judge call (verdict JSON only)
         # Scene-prose cap per judge call: generous, because the resolving moment is
         # often the scene's ENDING, which the 3000-char caps used elsewhere would cut
         # off; 12000 chars covers a full typical scene (~2000-2500 words).
         'loop_closure_scene_chars': 12000,
+        # Max extractor-claimed loop resolutions judged per tick (Phase 3, Slice 0
+        # follow-ups): the finale sweep reported 47 resolutions in one tick
+        # (docs/progress_report_20260711.md section 4), and judging all of them
+        # would turn one tick into a judge marathon. Claims beyond the cap are
+        # ignored with a warning naming them. None or 0 disables the cap.
+        'extractor_resolutions_judged_cap': 5,
         # Creation hygiene (Slice 0): dedup new open loops against existing OPEN loops
         # at creation (difflib SequenceMatcher on case-insensitive descriptions,
         # deterministic, no LLM) and cap creations per tick so one scene cannot flood

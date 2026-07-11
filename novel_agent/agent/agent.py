@@ -369,6 +369,18 @@ class StoryAgent:
             if facts and finale_info is not None:
                 facts = self._quarantine_finale_loops(facts, finale_info)
 
+            # Step 9.6: Judged extractor resolutions (Phase 3, Slice 0 follow-ups):
+            # the extractor's open_loops_resolved claims face the same one-loop,
+            # one-scene judge as beat claims before anything closes (the 2026-07-11
+            # run's finale sweep closed 47 loops unaudited). Gated by
+            # coherence.loop_closure; when off, the facts pass through untouched and
+            # EntityUpdater keeps the old unjudged behavior exactly.
+            extractor_closure_result = None
+            if facts:
+                facts, extractor_closure_result = self._judge_extractor_resolutions(
+                    facts, scene_id, scene_data["text"]
+                )
+
             # Step 10: Update entities (Phase 5)
             print("   10. Updating entities...")
             update_stats = {}
@@ -407,6 +419,14 @@ class StoryAgent:
                     current_beat, scene_id, scene_data["text"]
                 )
 
+            # Step 11.7: Finale loop expiry (Phase 3, Slice 0 follow-ups): on the
+            # finale tick, AFTER the scene's own judged closures (steps 9.6 and
+            # 11.6), every still-open loop is marked expired ("left open at story
+            # end") so end-of-run accounting stays honest instead of mass-swept.
+            expiry_result = None
+            if self._sacred_finale_applies(tick):
+                expiry_result = self._expire_finale_loops(scene_id)
+
             # Step 12: Extract lore (Phase 7A.4)
             print("   12. Extracting lore...")
             lore_items = self._extract_lore_with_retry(
@@ -431,6 +451,8 @@ class StoryAgent:
                 tick, scene_id, scene_data, tension_result, contract_result, finale_info,
                 loop_closure_result=loop_closure_result,
                 loops_deduped=self._loops_deduped_metric(facts, update_stats),
+                loops_capped=self._loops_capped_metric(facts, update_stats),
+                expiry_result=expiry_result,
             )
 
             result = {
@@ -456,6 +478,12 @@ class StoryAgent:
 
             if loop_closure_result:
                 result["loop_closure"] = loop_closure_result
+
+            if extractor_closure_result:
+                result["extractor_closure"] = extractor_closure_result
+
+            if expiry_result:
+                result["loop_expiry"] = expiry_result
 
             if finale_info:
                 result["finale"] = finale_info
@@ -1162,13 +1190,15 @@ class StoryAgent:
         resolves_loops claims, and loop_closure.close_claimed_loops has a
         focused judge confirm each before memory.resolve_open_loop runs.
         Returns the closure payload for the tick result and the rubric, or
-        None when the coherence.loop_closure gate is off (default False), the
-        beat did not complete, or the beat claims nothing. Never raises.
+        None when the coherence.loop_closure gate is off (default True since
+        the 2026-07-11 validation run), the beat did not complete, or the
+        beat claims nothing. Refusal reasons are printed at the tick console
+        level (they also persist in the result dict). Never raises.
         """
         try:
             from .loop_closure import close_claimed_loops
 
-            if not self.config.get('coherence.loop_closure', False):
+            if not self.config.get('coherence.loop_closure', True):
                 return None
             if not (getattr(current_beat, "resolves_loops", None) or []):
                 return None
@@ -1185,6 +1215,9 @@ class StoryAgent:
                 elif result.get("judged"):
                     print(f"        Loop claims not confirmed by the judge "
                           f"({result['judged']} checked); leaving open")
+                for entry in result.get("refused") or []:
+                    print(f"        ✗ Loop {entry['loop']} claim refused: "
+                          f"{entry['reason']}")
             return result
         except Exception as e:
             logging.getLogger(__name__).warning(
@@ -1209,6 +1242,73 @@ class StoryAgent:
             pass
         return False
 
+    def _judge_extractor_resolutions(self, facts, scene_id, scene_text):
+        """Phase 3 (Slice 0 follow-ups): judge extractor loop-resolution claims (step 9.6).
+
+        With coherence.loop_closure on, the extractor's open_loops_resolved
+        claims are removed from the facts (so EntityUpdater's unjudged path
+        never sees them) and each is confirmed by the same focused judge as
+        beat claims before memory.resolve_open_loop runs, bounded per tick by
+        coherence.extractor_resolutions_judged_cap. With the gate off the
+        facts pass through untouched: the old unjudged behavior, kept exactly
+        so A/B stays possible. Returns (facts, result-or-None). Never raises.
+        """
+        try:
+            if not self.config.get('coherence.loop_closure', True):
+                return facts, None
+            claims = (facts or {}).get("open_loops_resolved") or []
+            if not claims:
+                return facts, None
+            # Strip the claims first: even if judging fails below, the unjudged
+            # mass-sweep must not silently come back (the honest-accounting rule).
+            facts = dict(facts)
+            facts["open_loops_resolved"] = []
+
+            from .loop_closure import judge_extractor_resolutions
+            result = judge_extractor_resolutions(
+                self.llm, self.memory, claims, scene_id, scene_text, self.config
+            )
+            if result:
+                closed = result.get("closed") or []
+                if closed:
+                    print(f"        ✓ Closed {len(closed)} loop(s) via judged extractor "
+                          f"claims: {', '.join(closed)}")
+                for entry in result.get("refused") or []:
+                    print(f"        ✗ Extractor claim on {entry['loop']} refused: "
+                          f"{entry['reason']}")
+                capped = result.get("capped") or []
+                if capped:
+                    print(f"        ⚠️  Extractor resolution claims over the judged cap "
+                          f"ignored: {', '.join(capped)}")
+            return facts, result
+        except Exception as e:
+            logging.getLogger(__name__).warning(f"Judged extractor resolutions failed: {e}")
+            return facts, None
+
+    def _expire_finale_loops(self, scene_id):
+        """Phase 3 (Slice 0 follow-ups): expire still-open loops at the finale (step 11.7).
+
+        Gated by the same coherence.loop_closure flag as the judged closures,
+        so an A/B run with the gate off keeps the old end-of-story behavior
+        exactly. Returns the expiry payload for the tick result and the
+        rubric, or None (gate off, nothing to expire is still a payload).
+        Never raises.
+        """
+        try:
+            from .loop_closure import expire_open_loops_at_finale
+
+            if not self.config.get('coherence.loop_closure', True):
+                return None
+            result = expire_open_loops_at_finale(self.memory, scene_id)
+            if result and result.get("expired"):
+                print(f"        Expired {len(result['expired'])} still-open loop(s) at "
+                      f"story end ({result['dangling_threads']} dangling high/critical "
+                      f"thread(s))")
+            return result
+        except Exception as e:
+            logging.getLogger(__name__).warning(f"Finale loop expiry failed: {e}")
+            return None
+
     def _loops_deduped_metric(self, facts, update_stats):
         """The rubric's loops_deduped value (Phase 3, Slice 0 creation hygiene).
 
@@ -1226,9 +1326,27 @@ class StoryAgent:
         except Exception:
             return None
 
+    def _loops_capped_metric(self, facts, update_stats):
+        """The rubric's loops_capped value (Phase 3, Slice 0 follow-ups).
+
+        Same conventions as _loops_deduped_metric: None (not 0) when the
+        coherence.loop_dedup gate is off or no loop creations were attempted
+        this tick (the 2026-07-11 validation flagged log-only cap counts as an
+        observability gap). Never raises.
+        """
+        try:
+            if not self.config.get('coherence.loop_dedup', True):
+                return None
+            if not facts or not (facts.get("open_loops_created") or []):
+                return None
+            return int((update_stats or {}).get("loops_capped", 0) or 0)
+        except Exception:
+            return None
+
     def _record_coherence_metrics(self, tick, scene_id, scene_data, tension_result,
                                   contract_result=None, finale_result=None,
-                                  loop_closure_result=None, loops_deduped=None):
+                                  loop_closure_result=None, loops_deduped=None,
+                                  loops_capped=None, expiry_result=None):
         """Phase 3 coherence instrumentation. Never raises (graceful degradation).
 
         Returns the per-tick metric record, or None if disabled/failed. A failure here
@@ -1253,6 +1371,17 @@ class StoryAgent:
                     if loop_closure_result else None
                 ),
                 loops_deduped=loops_deduped,
+                loops_capped=loops_capped,
+                # Finale expiry (Phase 3, Slice 0 follow-ups): counts only on the
+                # finale tick with the loop_closure gate on; None otherwise.
+                loops_expired=(
+                    len(expiry_result.get("expired") or [])
+                    if expiry_result else None
+                ),
+                dangling_threads=(
+                    expiry_result.get("dangling_threads")
+                    if expiry_result else None
+                ),
             )
         except Exception as e:
             logging.getLogger(__name__).warning(f"Coherence metrics failed (tick {tick}): {e}")

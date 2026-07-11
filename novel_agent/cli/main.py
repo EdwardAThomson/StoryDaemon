@@ -88,7 +88,14 @@ def _show_story_stats(project_dir: Path, state: dict):
     typer.echo(f"   Characters: {len(all_chars)}")
     typer.echo(f"   Locations: {len(all_locs)}")
     typer.echo(f"   Factions: {len(all_factions)}")
-    typer.echo(f"   Open Loops: {len(all_loops)}")
+    # Count truly open loops only; expired ones (left open at story end,
+    # Phase 3, Slice 0 follow-ups) are terminal-but-distinct and shown apart.
+    open_count = sum(1 for l in all_loops if getattr(l, "status", "open") == "open")
+    expired_count = sum(1 for l in all_loops if getattr(l, "status", "") == "expired")
+    loops_line = f"   Open Loops: {open_count}"
+    if expired_count:
+        loops_line += f" ({expired_count} expired at story end)"
+    typer.echo(loops_line)
     typer.echo(f"   Lore Items: {len(all_lore)}")
     if tensions:
         typer.echo(f"   Avg Tension: {avg_tension:.1f}/10")

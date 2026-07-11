@@ -322,13 +322,23 @@ def display_loops(loops: List[Dict[str, Any]], verbose: bool = False):
     
     if verbose:
         for loop in loops:
-            status_icon = "✓" if loop['status'] == 'resolved' else "○"
+            if loop['status'] == 'resolved':
+                status_icon = "✓"
+            elif loop['status'] == 'expired':
+                # Terminal-but-distinct from resolved (the disputed-lore pattern):
+                # the loop was left open at story end, never answered on the page.
+                status_icon = "⊘"
+            else:
+                status_icon = "○"
             print(f"  {status_icon} {loop['id']}  Priority: {loop['priority']}")
             print(f"      {loop['description']}")
             if loop.get('created_in_scene'):
                 print(f"      Created: {loop['created_in_scene']}")
             if loop.get('resolved_in_scene'):
-                print(f"      Resolved: {loop['resolved_in_scene']}")
+                if loop['status'] == 'expired':
+                    print(f"      Expired: left open at story end ({loop['resolved_in_scene']})")
+                else:
+                    print(f"      Resolved: {loop['resolved_in_scene']}")
             print()
     else:
         headers = ['id', 'description', 'priority', 'status']

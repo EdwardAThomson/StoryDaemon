@@ -287,7 +287,7 @@ class MultiStagePlanner:
             context['relevant_scenes'] = []
         
         # Get open loops (filter by relevance)
-        all_loops = self.memory.load_open_loops()
+        all_loops = self._open_loops()
         context['relevant_loops'] = self._filter_relevant_loops(
             scene_intention,
             all_loops,
@@ -583,6 +583,16 @@ Generate your plan now:"""
         # Use the existing method from ToolRegistry
         return self.tools.get_tools_description()
     
+    def _open_loops(self) -> List[Any]:
+        """Loops that still feed planning: status "open" only.
+
+        Terminal loops never reach the planner (Phase 3, Slice 0 follow-ups):
+        resolved ones are answered, and expired ones ("left open at story end")
+        are terminal-but-distinct, not story fuel. The sibling of _active_lore.
+        """
+        return [l for l in self.memory.load_open_loops()
+                if getattr(l, "status", "open") == "open"]
+
     def _filter_relevant_loops(
         self,
         query: str,

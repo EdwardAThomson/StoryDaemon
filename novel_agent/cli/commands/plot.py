@@ -203,6 +203,7 @@ def _assign_new_beat_ids(outline: PlotOutline, beat_dicts: List[Dict[str, Any]])
                 execution_notes="",
                 advances_character_arcs=b.get("advances_character_arcs", []) or [],
                 resolves_loops=b.get("resolves_loops", []) or [],
+                advances_loops=b.get("advances_loops", []) or [],
                 creates_loops=b.get("creates_loops", []) or [],
                 preconditions=b.get("preconditions", []) or [],
                 postconditions=b.get("postconditions", []) or [],
@@ -366,7 +367,7 @@ def _sanitize_beat_conditions(project_dir: Path, beats: List[PlotBeat]) -> None:
 
 
 def _sanitize_loop_claims(project_dir: Path, beats: List[PlotBeat]) -> None:
-    """Drop resolves_loops claims that reference no existing loop ID.
+    """Drop resolves_loops/advances_loops claims that reference no existing loop ID.
 
     Same sanitize-not-trust pass the agent path runs in
     PlotOutlineManager._sanitize_loop_claims, via the shared helper (Phase 3,

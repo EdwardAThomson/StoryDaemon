@@ -36,9 +36,15 @@ _TENSION_CHECKS = ("tension_at_least", "tension_at_most")
 # gate per check when the pipeline actually writes the state it reads (loop
 # resolution is part of the planned loop-aging work). For loop_resolved the
 # judged closure path (Phase 3, Slice 0 of the interleaving design:
-# agent/loop_closure.py, gated by coherence.loop_closure) is what will actually
-# write loop status at step 11.6; it is the prerequisite for un-gating this
-# check, once validated on a measured run. Deliberately NOT un-gated in Slice 0.
+# agent/loop_closure.py, gated by coherence.loop_closure) is what actually
+# writes loop status at step 11.6; its validation run passed
+# (docs/progress_report_20260711.md), but the planner's claims did not: the
+# judge refused 10 of 13, every refusal a beat that merely ADVANCED its claimed
+# loop, so un-gating today would convert honest refusals into contract failures
+# and churn the beat queue. The resolves-vs-advances claim reframe (Phase 3,
+# Slice 0 follow-ups: resolves_loops means answered on the page, advances_loops
+# takes the rest) has now shipped; re-measuring the judge's grant rate under it
+# is the remaining prerequisite before un-gating loop_resolved.
 GATED_AUTHORING_CHECKS = {"char_at_location", "loop_resolved"}
 
 # The LLM tension scorer's practical ceiling (Phase 3; measured across all four

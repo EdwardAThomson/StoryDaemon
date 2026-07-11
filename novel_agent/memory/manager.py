@@ -565,8 +565,10 @@ class MemoryManager:
         """Get loops by status.
         
         Args:
-            status: Status filter (open, resolved, abandoned)
-        
+            status: Status filter (open, resolved, abandoned, expired). Expired
+                loops (left open at story end) never match "open": the status
+                is terminal-but-distinct from resolved.
+
         Returns:
             List of matching loops
         """

@@ -21,6 +21,11 @@ class PlotBeat:
     execution_notes: str = ""
     advances_character_arcs: List[str] = field(default_factory=list)
     resolves_loops: List[str] = field(default_factory=list)
+    # Loops the beat moves forward WITHOUT answering on the page (Phase 3,
+    # Slice 0 follow-ups: the resolves-vs-advances reframe). Stored and
+    # sanitized only for now (future loop-aging fuel); the closure judge sees
+    # resolves_loops alone. Defaults empty so legacy outlines load unchanged.
+    advances_loops: List[str] = field(default_factory=list)
     creates_loops: List[str] = field(default_factory=list)
     # Verification + rolling-horizon (Phase 2) bookkeeping
     verification_score: Optional[float] = None

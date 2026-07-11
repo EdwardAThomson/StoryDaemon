@@ -180,7 +180,7 @@ class PlotOutlineManager:
             print(f"        ⚠️  Beat condition sanitization skipped: {e}")
 
     def _sanitize_loop_claims(self, beats: List[PlotBeat]) -> None:
-        """Drop resolves_loops claims that reference no existing loop ID.
+        """Drop resolves_loops/advances_loops claims that reference no existing loop ID.
 
         Sibling of _resolve_beat_references and _resolve_beat_conditions
         (Phase 3, Slice 0 of the interleaving design): authored claims
@@ -392,6 +392,7 @@ class PlotOutlineManager:
                     prerequisites=b.get("prerequisites", []) or [],
                     advances_character_arcs=b.get("advances_character_arcs", []) or [],
                     resolves_loops=b.get("resolves_loops", []) or [],
+                    advances_loops=b.get("advances_loops", []) or [],
                     creates_loops=b.get("creates_loops", []) or [],
                     preconditions=b.get("preconditions", []) or [],
                     postconditions=b.get("postconditions", []) or [],
