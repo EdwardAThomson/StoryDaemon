@@ -983,3 +983,208 @@ re-rolls convert a 75 percent pass rate to near certainty); ending-mode loop
 suppression is mandatory, not optional (the hook pivots share one shape:
 incoming information or persons, and they survive explicit instruction).
 Artifacts: work/novels/sunshine-{master,a,b,c,d,e}.
+
+## Addendum 6: descent run 5, sacred finale live
+
+The decisive validation arm, and the first run in which every layer built this
+week was live at once: the sacred finale (45c52d7, its first live exercise),
+names-not-IDs on contract and beat surfaces (c76ad7d, the wedge-species-3 kill),
+slot alignment (cbf921d, invoked live for the first time), plus the floor cap,
+staleness rule, beat token budget, and authoring gates from the earlier arms.
+Fresh project `descent-run5` (`work/novels/descent-run5_aba39b4f/`), same
+foundation and user goal verbatim, same run-start config as the arbiter and
+run-4 arms with exactly ONE difference: `generation.rolling_horizon: true` (the
+relief valve for wedged beats, off in every prior arm). Executed at 45c52d7:
+16 scenes (ticks 0 through 15), ~32.3k words, **zero manual interventions**.
+The number to beat was 6; the sunshine test said 4-5 was reachable.
+
+Headline: the final scene ("Six Months After", Aris at a writing desk in a new
+city, a succulent on the windowsill) scored **4 against target 4**, the first
+on-target ending in seven arms and two full points under the previous best. The
+sacred finale took the least invasive path in its chain (a pending beat passed
+the screen), needed exactly one of its two budgeted re-rolls (first render 6,
+re-roll 4), and quarantined 8 smuggled hook loops. Resolution-phase drift is
+0.15 against a prior-best 1.65. Per the pre-registered decision map, at or
+below 5 with a settled ending means **the ending problem is CLOSED**.
+
+### Predictions, pre-registered
+
+- **P1 (no wedge; no beat pins the queue more than 2 consecutive ticks):
+  confirmed, maximally.** Zero contract failures all run (32 conditions
+  checked, 0 failed); every beat completed on its first verification attempt,
+  including every `char_in_prose` condition (18 across 14 beats, four of them
+  secondary characters, the exact condition type that pinned run 4 for seven
+  ticks). With names now rendered on the contract surface, the writer was
+  finally told who the check wanted. The rolling horizon, armed for the first
+  time, never had a divergence to fire on.
+- **P2 (finale tick takes the sacred path, calm ask): confirmed, chain step
+  (a).** Metrics record `finale_ask_source: "pending_beat"`: PB014 passed the
+  tension precheck (target 4 at or under cap 5) and the LLM denouement screen,
+  whose verdict reads: "The central conflict is settled (Aris has made her
+  choice and accepted consequences), nothing remains at stake, and the scene
+  depicts aftermath and adjustment in a new status quo." The ask was calm by
+  construction: target 4, postcondition `tension_at_most 4`.
+- **P3 (finale scores at most 5, within the 2-re-roll budget): confirmed.**
+  First render scored 6 (above the cap 5), re-roll 1 scored 4 and was kept:
+  `finale_retries_used: 1`. The sunshine coin-flip model held exactly (hot
+  flip, then calm flip, refereed by the cap), and the re-roll is what converted
+  a would-be 6 into a 4.
+- **P4 (settled ending holds, loops quarantined): confirmed.**
+  `finale_loops_suppressed: 8`; the extractor duly reported eight hook-shaped
+  loops ("Will Aris eventually violate the NDA...", "How extensively is Aris
+  being monitored...") and none were applied (tick-15 `loops_opened: 0`). The
+  last quarter of the scene stays on the page: reflection, the private
+  document, the succulent, no arrival, no incoming message, no pivot. Closing
+  lines, verbatim: "It was not freedom. But it was not complete imprisonment
+  either. It was something in between, something that allowed her to continue
+  existing, to continue moving forward, to" (the file ends mid-clause: the
+  kept re-roll ran to the writer's 3000-token budget, a cosmetic truncation
+  also present in this run's scenes 5, 10, and 13, not a finale artifact).
+
+### Seven-way comparison
+
+| metric | June (control) | July (reactive) | plot-first, marred | plot-first, clean | arbiter | run 4 (slot align) | this run (sacred finale) |
+|---|---|---|---|---|---|---|---|
+| overall drift, all scored ticks | 1.20 | 1.55 | 1.60 | 1.65 | 1.72 | 1.73 | **1.39** (2nd best, best plot-first) |
+| overall bias (signed) | +0.75 | **+0.55** | +1.15 | +1.21 | +1.15 | +0.95 | +0.81 |
+| rising drift (ticks 0-12) | **0.96** | 1.51 | 1.54 | 1.56 | 1.69 | 1.66 | 1.56 |
+| peak drift (tick 13) | 1.8 (7 vs 8.8) | 1.8 | 1.8 | 1.8 | 1.8 | 1.8 | 1.8 (7 vs 8.8), 7 of 7 arms |
+| resolution drift (ticks 14-15) | 2.35 | 1.65 | 1.85 | 2.15 | 1.85 | 2.15 | **0.15** |
+| final scene: target 4.0, actual | 8 | 6 | 7 | 8 | 6 | 8 | **4** |
+| final-scene event kind | still the climax | aftermath | the exposure itself | still the climax | the arrest | 7th re-run of a wedged beat | six-months-later time-skip denouement |
+| beats steering scenes | n/a | n/a | 2-10, 15 | every tick 2-15 | every tick 2-15 | 2-15, but 9-15 one beat | every tick 2-15, one beat per tick |
+| manual interventions | 0 | 0 | 2 | 0 | 0 | 0 | **0** |
+
+The hot start persists but is the mildest yet (ticks 1-5 mean drift 2.48,
+against 2.68-2.88 in prior arms), and mid-run tracking (ticks 5-14) is the best
+of any arm at 1.01. For the first time both bracketing spikes did not decide
+the overall number: the ending contributed 0.0 drift.
+
+### The sacred-path trace
+
+The chain never needed its deeper steps. At tick 11 the slot-alignment code,
+invoked live for the first time ("Capping batch to 4 beat(s): story ends at
+tick 15"), authored PB011-PB014 onto slots 12-15 with targets 8.3 / 8.8 / 7.3 /
+4.0, exactly the schedule, and the final slot's beat came back as a genuine
+time-skip denouement, verbatim: "Six months later, Aris lives in a new city
+under surveillance constraints, watching news reports of Ashridge Financial's
+expansion while maintaining her silence." (tension_target 4, postconditions
+`char_in_prose C000`, `tension_at_most 4`, resolves 3 loops, creates none). So
+run 4's unexercised predictions P1 and P2 are retroactively confirmed here: the
+runway cap fired, and haiku obeys the final-scene clause. At tick 15 the sacred
+finale found that beat pending, prechecked its target against the cap, screened
+it (verdict quoted under P2), and let it flow through: ask source
+`pending_beat`, the (b) authored and (c) template steps left untested live
+(unit-tested only). The writer's first render staged it hot (6/10, the sunshine
+D-sample failure mode), the bounded re-roll re-flipped the coin, 4/10, kept,
+and PB014 verified `contract` (score 0.36, the low semantic score is the usual
+time-skip vocabulary gap; the contract is what verified it). Eight extracted
+hook loops were quarantined at step 9.5. The bypass path was never needed
+(the pending beat WAS the calm ask, so nothing was superseded).
+
+### Rolling-horizon behavior
+
+Armed all run, fired zero times: no beat ever failed its contract, so no
+divergence ever routed to `_revise_horizon`. No churn, no over-regeneration, no
+pathology, and also no evidence: the relief valve remains validated only by
+unit tests. The honest statement is that names-not-IDs removed the wedge
+species this valve was armed against before the valve could ever see one.
+Batch cadence was the deterministic ideal: three batches (tick 2: PB001-005,
+tick 6: PB006-010, tick 11: PB011-014 capped to runway), every beat consumed
+exactly one tick, 14 of 14 completed `verification_method: "contract"`.
+
+### Per-tick trace
+
+Per-tick trace (`memory/metrics.jsonl`; cc = contract conditions checked/failed):
+
+| tick | target | actual | phase | beat | cc |
+|---|---|---|---|---|---|
+| 0 | 3.0 | (not scored) | rising | | |
+| 1 | 3.5 | 8 | rising | | |
+| 2 | 4.1 | 6 | rising | PB001 ✓ (rewrite 7 to 6, kept) | 2/0 |
+| 3 | 4.6 | 7 | rising | PB002 ✓ (revision not closer, original kept) | 2/0 |
+| 4 | 5.1 | 7 | rising | PB003 ✓ | 2/0 |
+| 5 | 5.3 | 7 | rising | PB004 ✓ | 3/0 |
+| 6 | 5.6 | 7 | rising | PB005 ✓ | 2/0 |
+| 7 | 5.9 | 7 | rising | PB006 ✓ | 3/0 |
+| 8 | 6.3 | 7 | rising | PB007 ✓ | 2/0 |
+| 9 | 6.8 | 7 | rising | PB008 ✓ | 2/0 |
+| 10 | 7.3 | 8 | rising | PB009 ✓ | 3/0 |
+| 11 | 7.9 | 7 | rising | PB010 ✓ (tick retried once: evaluator flake) | 2/0 |
+| 12 | 8.3 | 7 | rising | PB011 ✓ (floor clamped 8 to 7) | 3/0 |
+| 13 | 8.8 | 7 | peak | PB012 ✓ (floor clamped 8 to 7) | 2/0 |
+| 14 | 7.3 | 7 | resolution | PB013 ✓ | 2/0 |
+| 15 | 4.0 | 4 | resolution | PB014 ✓ (sacred finale: re-roll 1, 6 then 4) | 2/0 |
+
+Contract totals: 32 conditions checked, 0 failed, the first zero-failure run.
+(The finale's hot first render never reached the contract: the re-roll at step
+7.6 precedes verification at 11.5, by design.)
+
+### Fix behavior and stability
+
+- **Floor cap:** 2 clamps (PB011, PB012, both authored `tension_at_least 8`,
+  clamped to 7), the same author habit as the arbiter arm (authoring floors of
+  8 near the peak, now 4 clamps across 2 of 3 runs). **Slot alignment:** first
+  live invocation, worked (see the trace). **Staleness:** dormant, and this
+  time legitimately: every beat sat on its exact schedule slot. **Schedule
+  reconciler clamps:** 0.
+- **Prior fixes held:** 3 of 3 batches parsed first-try under the 2000-token
+  default; all 14 beats carried permitted-vocabulary postconditions; the
+  finale-window batch used `tension_at_most` on both resolution slots
+  unprompted by any clamp.
+- **Stability:** 15/15 ticks; one run-level retry consumed of 2 (tick 11, the
+  scene evaluator returned passed=False with an empty issues list,
+  `errors/error_011.json`, the second occurrence of the arbiter run's tick-6
+  flake; the retry succeeded). One graceful fact-extraction degradation
+  (tick-11 retry, malformed extractor JSON). OpenRouter clean (~150 calls, no
+  5xx, no 429, no timeouts). Inter-scene gaps 64-121s (mean 78s, fastest arm;
+  the two slow ticks are the retried tick 11 at 121s and the double-rendered
+  finale at 107s). Tension rewrites: one futile-skip (tick 1), one kept
+  rewrite (tick 2, 7 to 6), one revise-but-keep (tick 3), none needed after.
+  Character-detector noise persists ("It", "That", "He", "She", "Let",
+  "Ashridge Financial" as a character).
+- **Loop economy (Slice 0 baseline): best closure count of any arm.** 78
+  opened, **4 closed**, 74 open at the end, and 3 of the 4 closures happened
+  at the finale itself (OL28, OL65, OL76, all variants of "will Aris stay
+  silent", resolved on the page by the acceptance denouement). Plus 8 finale
+  loops suppressed before application. Against 0 / 0 / 0 / 1 closures in prior
+  runs, the settled ending is also the first scene that measurably closes
+  loops, though 74 open remains the roadmap's next number.
+- **One honest thematic note:** the primary goal ("Expose the corporate data
+  heist before the merger closes") FAILS on the page: the merger closed, the
+  evidence was buried, and Aris chose silence (goal_relevance fell from 8-9 to
+  4 across the resolution window). A settled tragedy of complicity is a
+  legitimate ending, and nothing in the descent experiments' scope grades goal
+  satisfaction, but the throughline gate steered scenes toward a goal the
+  story ultimately abandoned. That tension belongs to the loop-closure and
+  interleaving work, not to arc-pressure.
+
+### Decision-map verdict
+
+Pre-registered: at or below 5 with a settled ending closes the ending problem
+after seven arms; above 5 requires naming the failed sacred component. The
+answer is **4, with a settled ending: CLOSED.** Every layer of the elimination
+chain now has a live confirmation: the gauge (LLM scorer), the writer
+(sunshine), the planner (arc-phase mandates), delivery (arbiter), identity on
+the contract surface (this run's 0 contract failures), slot assignment (this
+run's capped batch with a real denouement on the final slot), and the ending
+itself (sacred finale: screen passed, one re-roll, hooks quarantined, 4/4).
+Two components of the sacred chain (authored fallback, template fallback)
+remain live-untested because the pipeline upstream of them finally worked;
+they are insurance, and unit-tested. The known residuals, none of them
+ending-shaped: the hot start (seven arms, unaddressed by design), the peak
+ceiling at 7 (the scorer grants 8+ rarely; the 8.8 peak ask drifts 1.8 in
+every arm), scene truncation at the writer token budget, character-detector
+noise, and 74 open loops. Per the map, the roadmap moves to **loop closure and
+thread interleaving**.
+
+### Addendum 6 artifacts
+
+- This run (gitignored `work/`): `work/novels/descent-run5_aba39b4f/` (scenes,
+  `memory/metrics.jsonl` with the finale fields populated at tick 15,
+  `plot_outline.json` with PB014's contract results, planner snapshots,
+  `errors/error_011.json`).
+- Run log: scratchpad copy (`descent-run5.log`), not committed.
+- Executed at 45c52d7 with `generation.rolling_horizon: true` as the single
+  config difference from prior arms (armed, never fired); no code changes, no
+  commits.
