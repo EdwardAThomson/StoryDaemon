@@ -3,7 +3,7 @@
 from .entities import (
     Character, Location, Scene, OpenLoop, RelationshipGraph,
     PhysicalTraits, Personality, CurrentState, HistoryEntry,
-    SensoryDetails, LocationState, RelationshipHistoryEntry
+    SensoryDetails, LocationState, RelationshipHistoryEntry, Thread
 )
 from .manager import MemoryManager
 from .vector_store import VectorStore
@@ -12,6 +12,6 @@ from .summarizer import SceneSummarizer
 __all__ = [
     'Character', 'Location', 'Scene', 'OpenLoop', 'RelationshipGraph',
     'PhysicalTraits', 'Personality', 'CurrentState', 'HistoryEntry',
-    'SensoryDetails', 'LocationState', 'RelationshipHistoryEntry',
+    'SensoryDetails', 'LocationState', 'RelationshipHistoryEntry', 'Thread',
     'MemoryManager', 'VectorStore', 'SceneSummarizer'
 ]

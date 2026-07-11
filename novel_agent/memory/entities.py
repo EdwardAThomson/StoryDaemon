@@ -457,6 +457,51 @@ class OpenLoop:
 
 
 @dataclass
+class Thread:
+    """Story thread (Phase 3, interleaving Slice T1): a first-class strand of story.
+
+    Seeded from the free-text ``plot_threads`` labels beats already carry
+    (docs/THREAD_INTERLEAVING_DESIGN.md section 6). Pure instrumentation in
+    Slice T1: nothing reads the registry for decisions yet. ``name`` is the
+    NORMALIZED form of the first label seen for the thread; ``labels`` keeps
+    the raw variants that mapped to it, for the audit trail.
+    """
+    id: str
+    type: str = "thread"
+    created_at: str = ""
+    name: str = ""  # normalized first-seen label (or "main" for the implicit thread)
+    labels: List[str] = field(default_factory=list)  # raw label variants seen
+    # The fallback thread scenes with no beat or no labels attribute to, so
+    # the per-tick trace stays total.
+    implicit: bool = False
+    member_characters: List[str] = field(default_factory=list)
+    home_locations: List[str] = field(default_factory=list)
+    # Local tension trajectory: [tick, tension] pairs (tension may be null on
+    # ticks with no tension signal, e.g. the first tick).
+    tension_trace: List[List[Any]] = field(default_factory=list)
+    # Consecutive scenes on this thread as of its last activity (the
+    # whiplash-guard signal the design's run-length minimum will read).
+    run_count: int = 0
+    last_active_tick: Optional[int] = None
+    beats_served: List[str] = field(default_factory=list)
+    scene_ids: List[str] = field(default_factory=list)
+
+    def __post_init__(self):
+        """Set timestamp if not provided."""
+        if not self.created_at:
+            self.created_at = datetime.utcnow().isoformat() + "Z"
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "Thread":
+        """Create from dictionary."""
+        return cls(**data)
+
+
+@dataclass
 class RelationshipGraph:
     """Relationship between two characters (bidirectional)."""
     id: str
