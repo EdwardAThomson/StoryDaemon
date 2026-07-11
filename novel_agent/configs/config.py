@@ -129,6 +129,33 @@ DEFAULT_CONFIG = {
         # Ending mode: False = settled (firm no-hook writer instruction plus the loop
         # quarantine); True = end on ONE deliberate hook and let its loops through.
         'ending_hook': False,
+        # Judged loop closure (Phase 3, Slice 0 of the interleaving design): when a
+        # beat completes verification and claims resolves_loops, each claimed loop
+        # gets one focused LLM check (that loop's description against the scene) and
+        # is closed only on a confirmed yes, with an auditable resolution summary.
+        # Default False for its first validation run; the descent runs opened 70-83
+        # loops and closed 0-2 without it, so the effect must be measured before it
+        # defaults on.
+        'loop_closure': False,
+        'loop_closure_max_tokens': 200,   # Token budget per judge call (verdict JSON only)
+        # Scene-prose cap per judge call: generous, because the resolving moment is
+        # often the scene's ENDING, which the 3000-char caps used elsewhere would cut
+        # off; 12000 chars covers a full typical scene (~2000-2500 words).
+        'loop_closure_scene_chars': 12000,
+        # Creation hygiene (Slice 0): dedup new open loops against existing OPEN loops
+        # at creation (difflib SequenceMatcher on case-insensitive descriptions,
+        # deterministic, no LLM) and cap creations per tick so one scene cannot flood
+        # the ledger. Pure hygiene, so it defaults on.
+        'loop_dedup': True,
+        # Ratio at or above which a new loop is a duplicate. 0.8 splits the observed
+        # failure modes: real duplicates are light rewordings of the same question
+        # (ratio well above 0.85), while distinct loops that share sentence scaffolding
+        # ("Will X do Y" vs "Will X do Z") can reach the mid-0.7s, so 0.75 would
+        # swallow genuinely different questions.
+        'loop_dedup_threshold': 0.8,
+        # Max new loops per tick; entries beyond the cap are dropped lowest-importance
+        # first. None or 0 disables the cap.
+        'loop_creation_cap': 4,
     },
     'plot': {
         # Beat integration mode: controls how strongly the agent treats plot beats.

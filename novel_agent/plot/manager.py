@@ -141,6 +141,7 @@ class PlotOutlineManager:
         beats_assigned = self._assign_ids(outline, beats)
         self._resolve_beat_references(beats_assigned)
         self._resolve_beat_conditions(beats_assigned)
+        self._sanitize_loop_claims(beats_assigned)
         outline.beats.extend(beats_assigned)
         self.save_outline(outline)
         return beats_assigned
@@ -177,6 +178,25 @@ class PlotOutlineManager:
                 print(f"        ⚠️  {warning}")
         except Exception as e:
             print(f"        ⚠️  Beat condition sanitization skipped: {e}")
+
+    def _sanitize_loop_claims(self, beats: List[PlotBeat]) -> None:
+        """Drop resolves_loops claims that reference no existing loop ID.
+
+        Sibling of _resolve_beat_references and _resolve_beat_conditions
+        (Phase 3, Slice 0 of the interleaving design): authored claims
+        sometimes reference phantom loop IDs, and a phantom claim can never be
+        confirmed by the closure judge. Shared helper with the CLI authoring
+        path (cli/commands/plot.py) so the two cannot drift. Never raises; a
+        bad claim must not break beat generation (fallback_to_reactive relies
+        on that).
+        """
+        try:
+            from ..agent.loop_closure import sanitize_beat_loop_claims
+
+            for warning in sanitize_beat_loop_claims(beats, self.memory):
+                print(f"        ⚠️  {warning}")
+        except Exception as e:
+            print(f"        ⚠️  Beat loop-claim sanitization skipped: {e}")
 
     def get_next_beat(self) -> Optional[PlotBeat]:
         outline = self.load_outline()

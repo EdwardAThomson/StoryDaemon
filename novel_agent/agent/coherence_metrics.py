@@ -99,6 +99,8 @@ class CoherenceMetrics:
         goal_description: Optional[str] = None,
         contract_result: Optional[Dict[str, Any]] = None,
         finale_result: Optional[Dict[str, Any]] = None,
+        loops_closed_by_beat: Optional[int] = None,
+        loops_deduped: Optional[int] = None,
     ) -> Dict[str, Any]:
         """Compute one coherence record, append it to the JSONL log, and return it."""
         loops = self.memory.load_open_loops()
@@ -170,6 +172,16 @@ class CoherenceMetrics:
             "finale_ask_source": (finale_result or {}).get("ask_source"),
             "finale_retries_used": (finale_result or {}).get("retries_used"),
             "finale_loops_suppressed": (finale_result or {}).get("loops_suppressed"),
+            # Judged loop closure and creation hygiene (Phase 3, Slice 0 of the
+            # interleaving design). Complements the loops_opened/loops_closed churn
+            # counts above: loops_closed_by_beat is how many of a completed beat's
+            # resolves_loops claims the judge confirmed and closed this tick;
+            # loops_deduped is how many near-duplicate creations the hygiene pass
+            # skipped. Both None (not 0) when the machinery did not run this tick
+            # (gate off, no completed beat with claims, no creations attempted),
+            # matching the contract-counter convention.
+            "loops_closed_by_beat": loops_closed_by_beat,
+            "loops_deduped": loops_deduped,
             "recorded_at": datetime.utcnow().isoformat() + "Z",
         }
         self._append(record)

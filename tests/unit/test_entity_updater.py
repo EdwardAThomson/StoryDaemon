@@ -145,9 +145,9 @@ def test_create_open_loop(entity_updater, mock_memory):
     }
     
     result = entity_updater._create_open_loop(loop_data, tick=1, scene_id="S001")
-    
+
     # Verify
-    assert result is True
+    assert result == "created"
     mock_memory.add_open_loop.assert_called_once()
     
     # Check the loop that was created
@@ -272,6 +272,189 @@ def test_pov_switch_detection_same_character_updates_normally(entity_updater, mo
     assert existing_character.current_state.emotional_state == "happy"
     mock_memory.save_character.assert_called_once_with(existing_character)
     mock_memory.set_active_character.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Loop creation hygiene (Phase 3, Slice 0 of the interleaving design):
+# deterministic dedup against existing open loops, plus the per-tick cap.
+# ---------------------------------------------------------------------------
+
+from difflib import SequenceMatcher
+
+from novel_agent.configs.config import Config
+
+
+def _hygiene_updater(mock_memory, **overrides):
+    """EntityUpdater over a real Config so the dedup gates actually read."""
+    config = Config()
+    for key, value in overrides.items():
+        config.set(key, value)
+    return EntityUpdater(mock_memory, config)
+
+
+_EXISTING_DESC = "Will Aris stay silent about the data heist after the merger closes?"
+
+
+def _open_loop(loop_id="OL001", description=_EXISTING_DESC, status="open"):
+    return OpenLoop(id=loop_id, description=description, status=status)
+
+
+def test_near_duplicate_loop_skipped_with_count(mock_memory):
+    """A light rewording of an existing open loop is skipped, not created."""
+    updater = _hygiene_updater(mock_memory)
+    mock_memory.load_open_loops.return_value = [_open_loop()]
+
+    result = updater._create_open_loop(
+        {"description": "Will Aris stay silent about the data heist after the merger closes"},
+        tick=3, scene_id="S003")
+
+    assert result == "duplicate"
+    mock_memory.add_open_loop.assert_not_called()
+
+
+def test_dedup_is_case_insensitive(mock_memory):
+    updater = _hygiene_updater(mock_memory)
+    mock_memory.load_open_loops.return_value = [_open_loop()]
+
+    result = updater._create_open_loop(
+        {"description": _EXISTING_DESC.upper()}, tick=3, scene_id="S003")
+
+    assert result == "duplicate"
+
+
+def test_distinct_loop_kept(mock_memory):
+    updater = _hygiene_updater(mock_memory)
+    mock_memory.load_open_loops.return_value = [_open_loop()]
+    mock_memory.generate_id.return_value = "OL002"
+
+    result = updater._create_open_loop(
+        {"description": "Who is funding the Meridian Initiative shell companies?"},
+        tick=3, scene_id="S003")
+
+    assert result == "created"
+    mock_memory.add_open_loop.assert_called_once()
+
+
+def test_resolved_loops_do_not_block_creation(mock_memory):
+    """Only OPEN loops participate: a resolved question may legitimately reopen."""
+    updater = _hygiene_updater(mock_memory)
+    mock_memory.load_open_loops.return_value = [_open_loop(status="resolved")]
+    mock_memory.generate_id.return_value = "OL002"
+
+    result = updater._create_open_loop(
+        {"description": _EXISTING_DESC}, tick=3, scene_id="S003")
+
+    assert result == "created"
+
+
+def test_dedup_threshold_boundary(mock_memory):
+    """The threshold is inclusive: ratio == threshold dedups, just above it keeps."""
+    new_desc = "Will Aris stay quiet about the data heist after the merger closes?"
+    ratio = SequenceMatcher(
+        None, new_desc.strip().lower(), _EXISTING_DESC.strip().lower()).ratio()
+
+    mock_memory.load_open_loops.return_value = [_open_loop()]
+
+    at_threshold = _hygiene_updater(
+        mock_memory, **{"coherence.loop_dedup_threshold": ratio})
+    assert at_threshold._create_open_loop(
+        {"description": new_desc}, tick=3, scene_id="S003") == "duplicate"
+
+    mock_memory.generate_id.return_value = "OL002"
+    above_threshold = _hygiene_updater(
+        mock_memory, **{"coherence.loop_dedup_threshold": ratio + 0.0001})
+    assert above_threshold._create_open_loop(
+        {"description": new_desc}, tick=3, scene_id="S003") == "created"
+
+
+def test_dedup_gate_off_restores_old_behavior(mock_memory):
+    updater = _hygiene_updater(mock_memory, **{"coherence.loop_dedup": False})
+    mock_memory.load_open_loops.return_value = [_open_loop()]
+    mock_memory.generate_id.return_value = "OL002"
+
+    result = updater._create_open_loop(
+        {"description": _EXISTING_DESC}, tick=3, scene_id="S003")
+
+    assert result == "created"
+    mock_memory.add_open_loop.assert_called_once()
+
+
+def test_dedup_never_raises_on_ledger_failure(mock_memory):
+    """An unreadable ledger means no dedup, never a failed creation."""
+    updater = _hygiene_updater(mock_memory)
+    mock_memory.load_open_loops.side_effect = RuntimeError("ledger unreadable")
+    mock_memory.generate_id.return_value = "OL002"
+
+    result = updater._create_open_loop(
+        {"description": _EXISTING_DESC}, tick=3, scene_id="S003")
+
+    assert result == "created"
+
+
+def test_creation_cap_drops_lowest_importance_first(mock_memory):
+    updater = _hygiene_updater(mock_memory)
+    loops = [
+        {"description": "a", "importance": "low"},
+        {"description": "b", "importance": "high"},
+        {"description": "c", "importance": "medium"},
+        {"description": "d", "importance": "low"},
+        {"description": "e", "importance": "critical"},
+        {"description": "f", "importance": "medium"},
+    ]
+
+    kept, dropped = updater._cap_new_loops(loops)
+
+    assert dropped == 2
+    # The two lows go; the survivors keep their original order.
+    assert [d["description"] for d in kept] == ["b", "c", "e", "f"]
+
+
+def test_creation_cap_ties_keep_earlier_entries(mock_memory):
+    updater = _hygiene_updater(mock_memory, **{"coherence.loop_creation_cap": 2})
+    loops = [{"description": str(i), "importance": "medium"} for i in range(4)]
+
+    kept, dropped = updater._cap_new_loops(loops)
+
+    assert dropped == 2
+    assert [d["description"] for d in kept] == ["0", "1"]
+
+
+def test_creation_cap_noop_under_cap(mock_memory):
+    updater = _hygiene_updater(mock_memory)
+    loops = [{"description": "a"}, {"description": "b"}]
+    assert updater._cap_new_loops(loops) == (loops, 0)
+
+
+def test_creation_cap_gate_off_keeps_everything(mock_memory):
+    updater = _hygiene_updater(mock_memory, **{"coherence.loop_dedup": False})
+    loops = [{"description": str(i)} for i in range(9)]
+    assert updater._cap_new_loops(loops) == (loops, 0)
+
+
+def test_creation_cap_disabled_by_none(mock_memory):
+    updater = _hygiene_updater(mock_memory, **{"coherence.loop_creation_cap": None})
+    loops = [{"description": str(i)} for i in range(9)]
+    assert updater._cap_new_loops(loops) == (loops, 0)
+
+
+def test_apply_updates_counts_dedup_and_cap(mock_memory):
+    """The stats surface both hygiene counters for the rubric."""
+    updater = _hygiene_updater(mock_memory, **{"coherence.loop_creation_cap": 2})
+    mock_memory.load_open_loops.return_value = [_open_loop()]
+    mock_memory.generate_id.return_value = "OL002"
+
+    facts = {
+        "open_loops_created": [
+            {"description": _EXISTING_DESC, "importance": "high"},     # duplicate
+            {"description": "Who tipped off the regulator?", "importance": "high"},
+            {"description": "dropped by the cap", "importance": "low"},
+        ],
+    }
+    stats = updater.apply_updates(facts, tick=3, scene_id="S003")
+
+    assert stats["loops_capped"] == 1
+    assert stats["loops_deduped"] == 1
+    assert stats["loops_created"] == 1
 
 
 def test_relationship_validation_both_characters_exist(entity_updater, mock_memory):

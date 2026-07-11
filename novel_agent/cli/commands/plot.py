@@ -11,6 +11,7 @@ from ...tools.llm_interface import send_prompt_with_retry
 from ...agent.prompts import format_plot_generation_prompt
 from ...agent.arc_pressure import (arc_guidance_for_beats, cap_beat_count,
                                    reconcile_beat_tension_targets)
+from ...agent.loop_closure import sanitize_beat_loop_claims
 from ...contracts.authoring import (contract_authoring_section, contract_schema_example,
                                     sanitize_beat_conditions)
 
@@ -364,6 +365,23 @@ def _sanitize_beat_conditions(project_dir: Path, beats: List[PlotBeat]) -> None:
         print(f"  ⚠️  Beat condition sanitization skipped: {e}")
 
 
+def _sanitize_loop_claims(project_dir: Path, beats: List[PlotBeat]) -> None:
+    """Drop resolves_loops claims that reference no existing loop ID.
+
+    Same sanitize-not-trust pass the agent path runs in
+    PlotOutlineManager._sanitize_loop_claims, via the shared helper (Phase 3,
+    Slice 0 of the interleaving design): a phantom claim can never be confirmed
+    by the closure judge. Never raises; a bad claim must not break beat
+    generation.
+    """
+    try:
+        memory = MemoryManager(project_dir)
+        for warning in sanitize_beat_loop_claims(beats, memory):
+            print(f"  ⚠️  {warning}")
+    except Exception as e:
+        print(f"  ⚠️  Beat loop-claim sanitization skipped: {e}")
+
+
 def _capped_beat_count(project_dir: Path, count: int) -> int:
     """Cap the batch to the remaining story runway (Phase 3 slot alignment).
 
@@ -415,6 +433,7 @@ def generate_and_append_beats_cli(
     new_beats = _assign_new_beat_ids(outline, beat_dicts)
     _reconcile_generated_beats(project_dir, new_beats)
     _sanitize_beat_conditions(project_dir, new_beats)
+    _sanitize_loop_claims(project_dir, new_beats)
     updated_outline = manager.add_beats(new_beats)
     issues = manager.validate_outline(updated_outline)
 
@@ -504,6 +523,7 @@ def revise_and_regenerate_beats_cli(
     new_beats = _assign_new_beat_ids(outline, beat_dicts)
     _reconcile_generated_beats(project_dir, new_beats)
     _sanitize_beat_conditions(project_dir, new_beats)
+    _sanitize_loop_claims(project_dir, new_beats)
     updated_outline = manager.add_beats(new_beats)
     issues = manager.validate_outline(updated_outline)
 

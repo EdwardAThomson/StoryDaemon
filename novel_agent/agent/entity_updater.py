@@ -1,7 +1,8 @@
 """Entity updater for applying extracted facts to memory."""
 
 import logging
-from typing import Dict, Any, List
+from difflib import SequenceMatcher
+from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime
 
 from novel_agent.memory.entities import OpenLoop, RelationshipGraph, HistoryEntry, RelationshipHistoryEntry
@@ -38,6 +39,8 @@ class EntityUpdater:
                 "characters_updated": int,
                 "locations_updated": int,
                 "loops_created": int,
+                "loops_deduped": int,
+                "loops_capped": int,
                 "loops_resolved": int,
                 "relationships_updated": int,
                 "characters_created": int
@@ -47,6 +50,8 @@ class EntityUpdater:
             "characters_updated": 0,
             "locations_updated": 0,
             "loops_created": 0,
+            "loops_deduped": 0,
+            "loops_capped": 0,
             "loops_resolved": 0,
             "relationships_updated": 0,
             "characters_created": 0
@@ -66,10 +71,18 @@ class EntityUpdater:
                 if self._update_location(loc_update, tick, scene_id):
                     stats["locations_updated"] += 1
             
-            # 3. Create open loops
-            for loop_data in facts.get("open_loops_created", []):
-                if self._create_open_loop(loop_data, tick, scene_id):
+            # 3. Create open loops (Phase 3, Slice 0 of the interleaving design:
+            # creation hygiene, gated by coherence.loop_dedup). The per-tick cap
+            # runs first, then each survivor is fuzzy-deduped against existing
+            # open loops inside _create_open_loop.
+            new_loops, capped = self._cap_new_loops(facts.get("open_loops_created", []))
+            stats["loops_capped"] = capped
+            for loop_data in new_loops:
+                result = self._create_open_loop(loop_data, tick, scene_id)
+                if result == "created":
                     stats["loops_created"] += 1
+                elif result == "duplicate":
+                    stats["loops_deduped"] += 1
             
             # 4. Resolve open loops
             for loop_id in facts.get("open_loops_resolved", []):
@@ -300,18 +313,31 @@ class EntityUpdater:
             logger.error(f"Error updating location: {e}")
             return False
     
-    def _create_open_loop(self, loop_data: dict, tick: int, scene_id: str) -> bool:
-        """Create new open loop.
-        
+    def _create_open_loop(self, loop_data: dict, tick: int, scene_id: str) -> str:
+        """Create new open loop, deduplicating against existing open loops.
+
+        Phase 3 (Slice 0 of the interleaving design): before adding, the new
+        description is fuzzy-matched against every existing OPEN loop (see
+        _find_duplicate_loop); a match skips creation so near-identical
+        questions stop piling up (live runs re-minted "will Aris stay silent"
+        three times over). Gated by coherence.loop_dedup.
+
         Args:
             loop_data: Loop data dict
             tick: Current tick
             scene_id: Current scene ID
-        
+
         Returns:
-            True if created successfully
+            "created" on success, "duplicate" when dedup skipped creation,
+            "" on error
         """
         try:
+            duplicate_of = self._find_duplicate_loop(loop_data.get("description", ""))
+            if duplicate_of:
+                logger.info(f"Skipping open loop (duplicate of {duplicate_of}): "
+                            f"{loop_data.get('description', '')}")
+                return "duplicate"
+
             loop_id = self.memory.generate_id("open_loop")
             
             open_loop = OpenLoop(
@@ -330,12 +356,84 @@ class EntityUpdater:
             
             self.memory.add_open_loop(open_loop)
             logger.info(f"Created open loop {loop_id}: {loop_data['description']}")
-            return True
-            
+            return "created"
+
         except Exception as e:
             logger.error(f"Error creating open loop: {e}")
-            return False
-    
+            return ""
+
+    def _find_duplicate_loop(self, description: str) -> Optional[str]:
+        """The ID of an existing OPEN loop this description duplicates, or None.
+
+        Phase 3 (Slice 0 of the interleaving design): purely deterministic, no
+        LLM. difflib.SequenceMatcher ratio on case-insensitive descriptions,
+        against open loops only (a resolved loop's question may legitimately
+        reopen). Threshold from coherence.loop_dedup_threshold (default 0.8:
+        light rewordings of the same question land well above it, distinct
+        questions sharing sentence scaffolding land below it). Returns the
+        best match at or above the threshold. Never raises; any problem means
+        "no duplicate" so creation proceeds (graceful degradation).
+        """
+        try:
+            if not self.config.get('coherence.loop_dedup', True):
+                return None
+            threshold = float(self.config.get('coherence.loop_dedup_threshold', 0.8))
+            text = (description or "").strip().lower()
+            if not text:
+                return None
+
+            best_id, best_ratio = None, 0.0
+            for loop in self.memory.load_open_loops():
+                if getattr(loop, "status", "open") != "open":
+                    continue
+                existing = (getattr(loop, "description", "") or "").strip().lower()
+                if not existing:
+                    continue
+                ratio = SequenceMatcher(None, text, existing).ratio()
+                if ratio >= threshold and ratio > best_ratio:
+                    best_id, best_ratio = loop.id, ratio
+            return best_id
+        except Exception as e:
+            logger.warning(f"Loop dedup check failed; creating without dedup: {e}")
+            return None
+
+    def _cap_new_loops(self, loop_datas: List[dict]) -> Tuple[List[dict], int]:
+        """Cap the per-tick loop creations, dropping lowest-importance first.
+
+        Phase 3 (Slice 0 of the interleaving design): one scene must not flood
+        the ledger (denouement samples minted 3-5 hook loops each). Cap from
+        coherence.loop_creation_cap (default 4; None or 0 disables). Kept
+        entries preserve their original order; ties on importance keep the
+        earlier entry. Returns (kept, dropped_count). Never raises; any
+        problem keeps the full list (graceful degradation).
+        """
+        try:
+            if not self.config.get('coherence.loop_dedup', True):
+                return loop_datas, 0
+            cap = int(self.config.get('coherence.loop_creation_cap', 4) or 0)
+            if cap <= 0 or len(loop_datas) <= cap:
+                return loop_datas, 0
+
+            rank = {"critical": 4, "high": 3, "medium": 2, "low": 1}
+
+            def importance_rank(data) -> int:
+                value = data.get("importance", "medium") if isinstance(data, dict) else ""
+                return rank.get(str(value).lower(), 2)
+
+            indexed = list(enumerate(loop_datas))
+            keep = sorted(indexed, key=lambda p: (-importance_rank(p[1]), p[0]))[:cap]
+            keep_indices = {i for i, _ in keep}
+            kept = [data for i, data in indexed if i in keep_indices]
+            for i, data in indexed:
+                if i not in keep_indices:
+                    desc = data.get("description", "") if isinstance(data, dict) else str(data)
+                    logger.info(f"Dropping over-cap open loop (cap {cap}, lowest "
+                                f"importance first): {desc}")
+            return kept, len(loop_datas) - len(kept)
+        except Exception as e:
+            logger.warning(f"Loop creation cap skipped: {e}")
+            return loop_datas, 0
+
     def _resolve_open_loop(self, loop_id: str, tick: int, scene_id: str) -> bool:
         """Mark open loop as resolved.
         

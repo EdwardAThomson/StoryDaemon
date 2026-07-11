@@ -34,7 +34,11 @@ _TENSION_CHECKS = ("tension_at_least", "tension_at_most")
 # indefinitely. Both checkers stay registered in conditions.py and BeatContract
 # evaluation still supports them (a hand-written outline may use them); lift the
 # gate per check when the pipeline actually writes the state it reads (loop
-# resolution is part of the planned loop-aging work).
+# resolution is part of the planned loop-aging work). For loop_resolved the
+# judged closure path (Phase 3, Slice 0 of the interleaving design:
+# agent/loop_closure.py, gated by coherence.loop_closure) is what will actually
+# write loop status at step 11.6; it is the prerequisite for un-gating this
+# check, once validated on a measured run. Deliberately NOT un-gated in Slice 0.
 GATED_AUTHORING_CHECKS = {"char_at_location", "loop_resolved"}
 
 # The LLM tension scorer's practical ceiling (Phase 3; measured across all four

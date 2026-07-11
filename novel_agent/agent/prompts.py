@@ -598,6 +598,34 @@ Respond with JSON only.
 """
 
 
+# Phase 3 (Slice 0 of the interleaving design): the focused loop-closure judge.
+# Beat completion NOMINATES the loops the beat's author claimed it resolves; this
+# one-loop, one-scene check CONFIRMS each claim. Deliberately the inverse of the
+# fact extractor's open_loops_resolved task (scan 70+ loops and cite exact IDs
+# unprompted), which near-never fires; one loop against one scene is the easy
+# discriminative direction.
+LOOP_CLOSURE_JUDGE_PROMPT = """You are checking whether ONE open story question has been resolved by a scene.
+
+Open question: {loop_description}
+
+Scene:
+\"\"\"
+{scene_text}
+\"\"\"
+
+The question is resolved only if the scene ANSWERS or SETTLES it on the page: the reader now knows the answer, or the matter is concluded. A mere mention, partial progress, or a promise to address it later is NOT resolution.
+
+Respond with JSON only, no other text:
+{{"resolved": true or false, "reason": "<one short sentence>"}}"""
+
+
+def format_loop_closure_prompt(loop_description: str, scene_text: str) -> str:
+    """Format the loop-closure judge prompt (Phase 3, Slice 0 of the interleaving design)."""
+    return LOOP_CLOSURE_JUDGE_PROMPT.format(
+        loop_description=loop_description, scene_text=scene_text
+    )
+
+
 def format_finale_beat_prompt(context: dict) -> str:
     """Format the sacred-finale beat-authoring prompt (Phase 3).
 

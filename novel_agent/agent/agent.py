@@ -396,6 +396,17 @@ class StoryAgent:
                     tick,
                 )
 
+            # Step 11.6: Judged loop closure (Phase 3, Slice 0 of the interleaving
+            # design): a beat that just completed verification and claims
+            # resolves_loops gets each claim confirmed by a focused one-loop,
+            # one-scene judge before any loop is closed. Gated by
+            # coherence.loop_closure; a failure here never breaks the tick.
+            loop_closure_result = None
+            if use_plot_first and current_beat:
+                loop_closure_result = self._close_claimed_loops(
+                    current_beat, scene_id, scene_data["text"]
+                )
+
             # Step 12: Extract lore (Phase 7A.4)
             print("   12. Extracting lore...")
             lore_items = self._extract_lore_with_retry(
@@ -417,7 +428,9 @@ class StoryAgent:
 
             # Phase 3: record per-tick coherence metrics (instrumentation only)
             coherence_record = self._record_coherence_metrics(
-                tick, scene_id, scene_data, tension_result, contract_result, finale_info
+                tick, scene_id, scene_data, tension_result, contract_result, finale_info,
+                loop_closure_result=loop_closure_result,
+                loops_deduped=self._loops_deduped_metric(facts, update_stats),
             )
 
             result = {
@@ -440,6 +453,9 @@ class StoryAgent:
 
             if contract_result:
                 result["contract"] = contract_result
+
+            if loop_closure_result:
+                result["loop_closure"] = loop_closure_result
 
             if finale_info:
                 result["finale"] = finale_info
@@ -1138,8 +1154,81 @@ class StoryAgent:
             logging.getLogger(__name__).warning(f"Finale loop quarantine failed: {e}")
             return facts
 
+    def _close_claimed_loops(self, current_beat, scene_id, scene_text):
+        """Phase 3 (Slice 0 of the interleaving design): judged loop closure (step 11.6).
+
+        Runs only when the beat actually completed verification against THIS
+        scene (step 11.5 marked it completed): completion nominates the beat's
+        resolves_loops claims, and loop_closure.close_claimed_loops has a
+        focused judge confirm each before memory.resolve_open_loop runs.
+        Returns the closure payload for the tick result and the rubric, or
+        None when the coherence.loop_closure gate is off (default False), the
+        beat did not complete, or the beat claims nothing. Never raises.
+        """
+        try:
+            from .loop_closure import close_claimed_loops
+
+            if not self.config.get('coherence.loop_closure', False):
+                return None
+            if not (getattr(current_beat, "resolves_loops", None) or []):
+                return None
+            if not self._beat_completed_in_scene(current_beat, scene_id):
+                return None
+            result = close_claimed_loops(
+                self.llm, self.memory, current_beat, scene_id, scene_text, self.config
+            )
+            if result:
+                closed = result.get("closed") or []
+                if closed:
+                    print(f"        ✓ Closed {len(closed)} loop(s) via beat "
+                          f"{current_beat.id}: {', '.join(closed)}")
+                elif result.get("judged"):
+                    print(f"        Loop claims not confirmed by the judge "
+                          f"({result['judged']} checked); leaving open")
+            return result
+        except Exception as e:
+            logging.getLogger(__name__).warning(
+                f"Judged loop closure failed (beat {getattr(current_beat, 'id', '?')}): {e}"
+            )
+            return None
+
+    def _beat_completed_in_scene(self, beat, scene_id) -> bool:
+        """True when the beat completed verification against this scene.
+
+        Reads the persisted outline (step 11.5 writes status and
+        executed_in_scene there via _mark_beat_complete), so a beat kept
+        pending by a semantic miss or a contract failure never nominates its
+        loop claims. Never raises; unreadable outline means False.
+        """
+        try:
+            outline = self.plot_manager.load_outline()
+            for b in outline.beats:
+                if b.id == beat.id:
+                    return b.status == "completed" and b.executed_in_scene == scene_id
+        except Exception:
+            pass
+        return False
+
+    def _loops_deduped_metric(self, facts, update_stats):
+        """The rubric's loops_deduped value (Phase 3, Slice 0 creation hygiene).
+
+        None (not 0) when the coherence.loop_dedup gate is off or no loop
+        creations were attempted this tick, so "checked nothing" and "checked
+        and deduped none" stay distinguishable (the contract-counter
+        convention). Never raises.
+        """
+        try:
+            if not self.config.get('coherence.loop_dedup', True):
+                return None
+            if not facts or not (facts.get("open_loops_created") or []):
+                return None
+            return int((update_stats or {}).get("loops_deduped", 0) or 0)
+        except Exception:
+            return None
+
     def _record_coherence_metrics(self, tick, scene_id, scene_data, tension_result,
-                                  contract_result=None, finale_result=None):
+                                  contract_result=None, finale_result=None,
+                                  loop_closure_result=None, loops_deduped=None):
         """Phase 3 coherence instrumentation. Never raises (graceful degradation).
 
         Returns the per-tick metric record, or None if disabled/failed. A failure here
@@ -1159,6 +1248,11 @@ class StoryAgent:
                 goal_description=primary.get("description"),
                 contract_result=contract_result,
                 finale_result=finale_result,
+                loops_closed_by_beat=(
+                    len(loop_closure_result.get("closed") or [])
+                    if loop_closure_result else None
+                ),
+                loops_deduped=loops_deduped,
             )
         except Exception as e:
             logging.getLogger(__name__).warning(f"Coherence metrics failed (tick {tick}): {e}")
