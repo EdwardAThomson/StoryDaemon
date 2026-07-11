@@ -112,7 +112,14 @@ class CoherenceMetrics:
         tension_category = None
         rewritten = False
         tension_pre_rewrite = None
-        if tension_result and tension_result.get("enabled"):
+        # The rubric is the instrument panel: record the scored tension whenever a
+        # result exists, regardless of whether the rewrite path ran (Phase 3). Only
+        # an evaluator that explicitly reports enabled=False (tension tracking off)
+        # yields null; a result that never set the flag still carries the scored
+        # level and must not be dropped. Rewrite-produced fields keep their
+        # no-rewrite convention: rewritten stays False and tension_pre_rewrite
+        # stays null unless a kept rewrite set them.
+        if tension_result and tension_result.get("enabled", True):
             tension_level = tension_result.get("tension_level")
             tension_category = tension_result.get("tension_category")
             rewritten = bool(tension_result.get("rewritten", False))

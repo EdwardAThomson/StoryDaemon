@@ -27,6 +27,7 @@ from .authoring import (
     contract_schema_example,
     sanitize_beat_conditions,
     describe_condition,
+    entity_label,
 )
 
 __all__ = [
@@ -44,4 +45,5 @@ __all__ = [
     "contract_schema_example",
     "sanitize_beat_conditions",
     "describe_condition",
+    "entity_label",
 ]

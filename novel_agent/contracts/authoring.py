@@ -13,6 +13,7 @@ arc-pressure tension reconciliation bridge.
 
 from __future__ import annotations
 
+import re
 from typing import Any, Dict, List, Optional
 
 from .conditions import list_checkers
@@ -334,12 +335,49 @@ def _reconcile_tension_conditions(beat, config) -> List[str]:
 # Plain-language rendering (writer prompt)
 # ---------------------------------------------------------------------------
 
-def describe_condition(cond) -> str:
+_ENTITY_ID_RE = re.compile(r"^[CL]\d+$")
+
+
+def entity_label(entity_id, memory) -> Optional[str]:
+    """``"Name (ID)"`` for a canonical character/location id, or None when unresolvable.
+
+    Phase 1 grounded identity on the contract surface: the writer can only be
+    steered by names it has seen. "character C003 appears in the scene" is
+    unactionable when the writer was never told C003 is Grimax Texyx (the
+    descent-run4 wedge: seven consecutive contract failures while the writer
+    staffed the role with freshly invented characters). Character names assemble
+    from first_name + family_name; locations use their ``name``. Best-effort by
+    design: no memory, a non-id string, an unknown id, an empty name, or a read
+    error all return None so the caller keeps its bare-id phrasing.
+    """
+    if memory is None or not isinstance(entity_id, str) or not _ENTITY_ID_RE.match(entity_id):
+        return None
+    try:
+        if entity_id.startswith("C"):
+            entity = memory.load_character(entity_id)
+            name = " ".join(
+                part for part in (
+                    (getattr(entity, "first_name", "") or "").strip(),
+                    (getattr(entity, "family_name", "") or "").strip(),
+                ) if part
+            ) if entity else ""
+        else:
+            entity = memory.load_location(entity_id)
+            name = (getattr(entity, "name", "") or "").strip() if entity else ""
+    except Exception:
+        return None
+    return f"{name} ({entity_id})" if name else None
+
+
+def describe_condition(cond, memory=None) -> str:
     """One plain-language line for a condition dict, for the writer prompt.
 
     The writer must aim at exactly what the checker grades (the tension_scale
     lesson), so each checker gets a faithful, non-technical phrasing. An authored
-    ``description`` wins when present.
+    ``description`` wins when present. When ``memory`` is given, character and
+    location ids render with their canonical names ("Grimax Texyx (C003) appears
+    in the scene"); without it, or when a lookup fails, the bare-id phrasing is
+    kept (see ``entity_label``).
     """
     if not isinstance(cond, dict):
         return str(cond)
@@ -348,10 +386,18 @@ def describe_condition(cond) -> str:
         return str(description)
     check = cond.get("check")
     if check == "entity_exists":
+        label = entity_label(cond.get("id"), memory)
+        if label:
+            return f"{label} is established in the story"
         return f"entity {cond.get('id')} is established in the story"
     if check == "char_at_location":
-        return f"character {cond.get('char')} is at location {cond.get('location')}"
+        char = entity_label(cond.get("char"), memory) or f"character {cond.get('char')}"
+        loc = entity_label(cond.get("location"), memory) or f"location {cond.get('location')}"
+        return f"{char} is at {loc}"
     if check == "char_in_prose":
+        label = entity_label(cond.get("char"), memory)
+        if label:
+            return f"{label} appears in the scene"
         return f"character {cond.get('char')} appears in the scene"
     if check == "loop_resolved":
         return f"open loop {cond.get('loop')} has been resolved"

@@ -404,15 +404,23 @@ class WriterContextBuilder:
             return ""
         
         section = f"\n**🎯 PLOT BEAT TO EXECUTE:** {description}\n"
-        
+
+        # Phase 3 (descent-run4 wedge): the beat's cast and contract reach the
+        # writer as canonical NAMES, not bare ids the writer cannot bind to
+        # anyone (grounded identity on the contract surface). getattr, not
+        # self.memory: callers without a memory fall back to bare ids.
+        from ..contracts.authoring import describe_condition, entity_label
+        memory = getattr(self, "memory", None)
+
         # Add additional beat constraints if present
         characters = plot_beat.get("characters_involved", [])
         if characters:
-            section += f"**Required Characters:** {', '.join(characters)}\n"
-        
+            cast = ", ".join(entity_label(char_id, memory) or char_id for char_id in characters)
+            section += f"**Characters who must appear:** {cast}\n"
+
         location = plot_beat.get("location")
         if location:
-            section += f"**Required Location:** {location}\n"
+            section += f"**Required Location:** {entity_label(location, memory) or location}\n"
         
         tension_target = plot_beat.get("tension_target")
         if tension_target:
@@ -426,10 +434,9 @@ class WriterContextBuilder:
         # what the postcondition checker will grade (the tension_scale lesson).
         postconditions = plot_beat.get("postconditions") or []
         if postconditions:
-            from ..contracts.authoring import describe_condition
             section += "**This scene must leave the story in a state where:**\n"
             for cond in postconditions:
-                section += f"- {describe_condition(cond)}\n"
+                section += f"- {describe_condition(cond, memory)}\n"
 
         section += "\n**THIS BEAT MUST BE ACCOMPLISHED IN THIS SCENE.**\n"
 

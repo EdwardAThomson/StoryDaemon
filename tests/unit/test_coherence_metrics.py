@@ -134,6 +134,42 @@ def test_tension_passthrough(project):
     assert disabled["tension_level"] is None
 
 
+def test_tension_recorded_when_rewrite_disabled(project):
+    # Regression (2026-07 sunshine test): with coherence.tension_rewrite off,
+    # _maybe_rewrite_for_tension returns the scored result untouched, and the
+    # rubric must still record it. The rewrite-produced fields keep the same
+    # convention as an enabled-but-not-fired tick: rewritten False,
+    # tension_pre_rewrite null.
+    from novel_agent.agent.agent import StoryAgent
+
+    cfg = Config()
+    cfg.set("coherence.tension_rewrite", False)
+    agent = StoryAgent.__new__(StoryAgent)  # the gate-off path reads only agent.config
+    agent.config = cfg
+
+    scored = {"enabled": True, "tension_level": 4, "tension_category": "rising"}
+    _, tension_result = agent._maybe_rewrite_for_tension(
+        {"text": "calm prose", "word_count": 2}, scored, 16, {}
+    )
+
+    rec = _metrics(project).record_tick(tick=16, scene_id="S016", tension_result=tension_result)
+    assert rec["tension_level"] == 4
+    assert rec["tension_category"] == "rising"
+    assert rec["tension_rewritten"] is False
+    assert rec["tension_pre_rewrite"] is None
+
+
+def test_tension_recorded_without_enabled_flag(project):
+    # A tension result that never set the 'enabled' flag still carries the scored
+    # level; the recorder must not drop it. Only an explicit enabled=False
+    # (tension tracking off) means null, per test_tension_passthrough.
+    cm = _metrics(project)
+    rec = cm.record_tick(tick=3, scene_id="S003",
+                         tension_result={"tension_level": 6, "tension_category": "rising"})
+    assert rec["tension_level"] == 6
+    assert rec["tension_category"] == "rising"
+
+
 def test_append_and_last_wins(project):
     cm = _metrics(project)
     cm.record_tick(tick=0, scene_id="S000", word_count=100, tension_result=None)

@@ -17,8 +17,10 @@ from novel_agent.contracts.authoring import (
     GATED_AUTHORING_CHECKS,
     contract_authoring_section,
     describe_condition,
+    entity_label,
     sanitize_beat_conditions,
 )
+from novel_agent.memory.entities import Character, Location
 from novel_agent.plot.entities import PlotBeat, PlotOutline
 
 
@@ -107,10 +109,41 @@ def test_memory_entities_beat_round_trips_conditions():
 # Writer prompt rendering
 # ---------------------------------------------------------------------------
 
-def _plot_beat_section(plan):
+class FakeMemory:
+    """Just enough MemoryManager surface for entity name resolution."""
+
+    def __init__(self, characters=None, locations=None, raises=False):
+        self.characters = characters or {}
+        self.locations = locations or {}
+        self.raises = raises
+
+    def load_character(self, char_id):
+        if self.raises:
+            raise RuntimeError("disk error")
+        return self.characters.get(char_id)
+
+    def load_location(self, loc_id):
+        if self.raises:
+            raise RuntimeError("disk error")
+        return self.locations.get(loc_id)
+
+
+def _named_memory():
+    return FakeMemory(
+        characters={
+            "C000": Character(id="C000", first_name="Vela", family_name="Starkord"),
+            "C003": Character(id="C003", first_name="Grimax", family_name="Texyx"),
+        },
+        locations={"L002": Location(id="L002", name="Ashhearth Bar")},
+    )
+
+
+def _plot_beat_section(plan, memory=None):
     from novel_agent.agent.writer_context import WriterContextBuilder
 
     builder = WriterContextBuilder.__new__(WriterContextBuilder)
+    if memory is not None:
+        builder.memory = memory
     return builder._format_plot_beat_section(plan)
 
 
@@ -138,11 +171,92 @@ def test_writer_section_without_postconditions_unchanged():
     assert "THIS BEAT MUST BE ACCOMPLISHED" in section
 
 
+def test_writer_section_renders_named_cast_and_contract():
+    # Deterministic cast injection: the beat's characters_involved and its
+    # char_in_prose postconditions reach the writer as names, not bare ids
+    # (descent-run4: "character C003" produced seven ticks of freelance casting).
+    plan = {"plot_beat": {
+        "description": "Galen is approached by Holtwick security",
+        "characters_involved": ["C000", "C003", "C007"],
+        "location": "L002",
+        "postconditions": [
+            {"check": "char_in_prose", "char": "C003"},
+            {"check": "tension_at_least", "value": 6},
+        ],
+    }}
+    section = _plot_beat_section(plan, _named_memory())
+    # C007 is unknown to memory and stays a bare id inside the named list.
+    assert "**Characters who must appear:** Vela Starkord (C000), Grimax Texyx (C003), C007" in section
+    assert "**Required Location:** Ashhearth Bar (L002)" in section
+    assert "Grimax Texyx (C003) appears in the scene" in section
+    assert "dramatic tension is at least 6/10" in section
+
+
+def test_writer_section_cast_falls_back_to_ids_without_memory():
+    plan = {"plot_beat": {
+        "description": "Galen is approached by Holtwick security",
+        "characters_involved": ["C000", "C003"],
+        "location": "L002",
+    }}
+    section = _plot_beat_section(plan)  # builder has no memory attribute at all
+    assert "**Characters who must appear:** C000, C003" in section
+    assert "**Required Location:** L002" in section
+
+
 def test_describe_condition_prefers_authored_description():
     cond = {"check": "prose_contains", "any": ["Skyvault"],
             "description": "the Skyvault Accord is named"}
     assert describe_condition(cond) == "the Skyvault Accord is named"
     assert "Skyvault" in describe_condition({"check": "prose_contains", "any": ["Skyvault"]})
+
+
+# ---------------------------------------------------------------------------
+# Grounded identity on the contract surface (the descent-run4 wedge: a bare
+# "character C003" is unactionable when the writer never sees the name)
+# ---------------------------------------------------------------------------
+
+def test_describe_condition_renders_names_with_memory():
+    memory = _named_memory()
+    assert describe_condition({"check": "char_in_prose", "char": "C003"}, memory) == \
+        "Grimax Texyx (C003) appears in the scene"
+    assert describe_condition(
+        {"check": "char_at_location", "char": "C000", "location": "L002"}, memory
+    ) == "Vela Starkord (C000) is at Ashhearth Bar (L002)"
+    assert describe_condition({"check": "entity_exists", "id": "C000"}, memory) == \
+        "Vela Starkord (C000) is established in the story"
+    assert describe_condition({"check": "entity_exists", "id": "L002"}, memory) == \
+        "Ashhearth Bar (L002) is established in the story"
+
+
+def test_describe_condition_without_memory_keeps_bare_ids():
+    assert describe_condition({"check": "char_in_prose", "char": "C003"}) == \
+        "character C003 appears in the scene"
+    assert describe_condition({"check": "char_at_location", "char": "C000", "location": "L002"}) == \
+        "character C000 is at location L002"
+    assert describe_condition({"check": "entity_exists", "id": "C000"}) == \
+        "entity C000 is established in the story"
+
+
+def test_describe_condition_lookup_failure_stays_graceful():
+    # A raising memory, an unknown id, and a nameless entity all fall back to
+    # the bare-id phrasing instead of failing the prompt build.
+    raising = FakeMemory(raises=True)
+    assert describe_condition({"check": "char_in_prose", "char": "C003"}, raising) == \
+        "character C003 appears in the scene"
+    assert describe_condition({"check": "char_in_prose", "char": "C099"}, _named_memory()) == \
+        "character C099 appears in the scene"
+    unnamed = FakeMemory(characters={"C005": Character(id="C005")})
+    assert describe_condition({"check": "char_in_prose", "char": "C005"}, unnamed) == \
+        "character C005 appears in the scene"
+
+
+def test_entity_label_only_resolves_canonical_ids():
+    memory = _named_memory()
+    assert entity_label("C003", memory) == "Grimax Texyx (C003)"
+    assert entity_label("L002", memory) == "Ashhearth Bar (L002)"
+    assert entity_label("the docks", memory) is None  # free-text location, not an id
+    assert entity_label(None, memory) is None
+    assert entity_label("C003", None) is None
 
 
 # ---------------------------------------------------------------------------
