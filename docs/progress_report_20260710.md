@@ -939,3 +939,47 @@ honesty first). The arbiter's 6 stands as the number to beat.
 - Run log: scratchpad copy (`descent-run4.log`), not committed.
 - Executed at cbf921d (slot alignment in tree, unexercised); no code changes
   made during or after the run.
+
+## Addendum 5: the sunshine direct test (hand-forced calm finale)
+
+The question underneath all six arms: given a genuinely calm ask, delivered
+intact, does the machine obey? Method: fork the finished descent-run4 canon at
+tick 16, hand-write the finale beat directly into plot_outline.json (Vela
+tending herb boxes on a quiet Sunday, six weeks later, "nothing is at stake",
+tension_target 4, one reporting contract tension_at_most 5), skip all pending
+beats, disable beat regeneration and the tension rewrite in the fork config,
+run exactly one tick per sample. No pipeline stage authored, scheduled, or
+reconciled the ask. Five samples: A-D at target 4, E a floor probe at target 2
+with a softened description.
+
+| sample | target | scored | contract | loops created | hook pivot |
+|---|---|---|---|---|---|
+| A | 4 | 4 | pass | 4 | yes ("opened a new message interface and began typing") |
+| B | 4 | 4 | pass | 3 | no (settled reflection; a revelatory message mid-scene) |
+| C | 4 | 2 | pass | 5 | yes (a stranger delivers a dossier about Galen) |
+| D | 4 | 7 | FAIL | 4 | yes (the morning reframed around betrayal, "Except everything.") |
+| E | 2 | 7 | FAIL | 5 | yes (Galen physically returns to the apartment) |
+
+Target-4 cluster: 4, 4, 2, 7 (mean 4.25, median 4, 3 of 4 pass the contract).
+
+Findings:
+1. The ask is deliverable: the material floor is retired. Three of four
+   target-4 samples landed at or under target through the full unmodified
+   pipeline. Every prior "floor" reading was delivery logistics.
+2. The failure mode is not wording, it is STAGING: the identical beat text
+   yields 2 or 7 depending on whether the model renders leftover story
+   material (Galen) as quiet reflection (A, B, C) or as a staged event (D's
+   dramatized betrayal, E's in-person return). A finale is a coin flip per
+   single sample; the contract correctly catches the hot flips.
+3. The hook compulsion is near universal: 4 of 5 scenes pivot to unfinished
+   business (incoming message, dossier, arrival) despite "nothing is at
+   stake", and every sample minted 3-5 new loops in a denouement. Telling
+   does not work; enforcement must be structural.
+
+Design consequences (feeds the sacred-finale build): Python owns the finale
+ask (proven deliverable); the finale gets bounded retry-on-contract-failure
+(variance is a coin flip and the contract is a reliable referee, so one or two
+re-rolls convert a 75 percent pass rate to near certainty); ending-mode loop
+suppression is mandatory, not optional (the hook pivots share one shape:
+incoming information or persons, and they survive explicit instruction).
+Artifacts: work/novels/sunshine-{master,a,b,c,d,e}.
