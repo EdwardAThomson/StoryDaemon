@@ -83,6 +83,17 @@ class WriterContextBuilder:
         # a stale beat target yields to the schedule (see _build_arc_pressure_section).
         arc_pressure_section = self._build_arc_pressure_section(plan, current_tick)
 
+        # Sacred finale (Phase 3): the ending-mode instruction rides the same prompt
+        # slot as arc pressure (no new template placeholder, so hand-built writer
+        # contexts elsewhere keep working). Present only when the agent marked the
+        # plan with finale_mode on the finale tick.
+        finale_section = self._build_finale_section(plan)
+        if finale_section:
+            arc_pressure_section = (
+                f"{arc_pressure_section}\n\n{finale_section}"
+                if arc_pressure_section else finale_section
+            )
+
         # Cast roster + a pool of pre-minted names for any new character (Phase 1 grounding)
         existing_characters, approved_new_names = self._build_cast_and_name_pool(
             project_state, pov_character_id
@@ -134,6 +145,22 @@ class WriterContextBuilder:
         ):
             return ""
         return arc_pressure_guidance_for_writer(current_tick, self.config)
+
+    def _build_finale_section(self, plan: Dict[str, Any]) -> str:
+        """Ending-mode instruction for the story's final scene (Phase 3 sacred finale).
+
+        The agent sets ``plan["finale_mode"]`` ("settled" or "hook") only on the
+        finale tick; every other plan renders "". Never raises: a failure here
+        must not cost the scene, it just loses the instruction.
+        """
+        mode = plan.get("finale_mode")
+        if not mode:
+            return ""
+        try:
+            from .finale import ending_instruction
+            return ending_instruction(mode)
+        except Exception:
+            return ""
 
     def _build_cast_and_name_pool(self, project_state: Dict[str, Any],
                                   pov_character_id: str) -> tuple[str, str]:

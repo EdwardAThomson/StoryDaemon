@@ -114,6 +114,21 @@ DEFAULT_CONFIG = {
         # Throughline gate: inject the primary goal into the planner so scenes serve it.
         # Dormant until a primary goal exists; goal_relevance in the rubric measures adherence.
         'throughline_pressure': True,
+        # Sacred finale (Phase 3): Python owns the story's final scene. On the finale
+        # tick (current_tick == target_story_length, plot-first active) the beat ask is
+        # guaranteed (pending-beat screen, then an authored finale beat, then a
+        # deterministic template), the written scene gets bounded fresh re-rolls against
+        # the finale tension cap (curve endpoint + 1) in place of the prose rewrite, and
+        # settled endings quarantine the finale's freshly minted open loops. False
+        # restores existing behavior exactly.
+        'sacred_finale': True,
+        # Max fresh writer re-rolls when the finale scene scores above the cap (the
+        # sunshine test showed the hot flips are staging choices a rewrite cannot
+        # unstage; one or two re-rolls turn a coin flip into near certainty).
+        'finale_retries': 2,
+        # Ending mode: False = settled (firm no-hook writer instruction plus the loop
+        # quarantine); True = end on ONE deliberate hook and let its loops through.
+        'ending_hook': False,
     },
     'plot': {
         # Beat integration mode: controls how strongly the agent treats plot beats.

@@ -98,6 +98,7 @@ class CoherenceMetrics:
         tension_result: Optional[Dict[str, Any]] = None,
         goal_description: Optional[str] = None,
         contract_result: Optional[Dict[str, Any]] = None,
+        finale_result: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Compute one coherence record, append it to the JSONL log, and return it."""
         loops = self.memory.load_open_loops()
@@ -162,6 +163,13 @@ class CoherenceMetrics:
             # nothing" and "checked and all passed" stay distinguishable.
             "contract_conditions_checked": (contract_result or {}).get("checked"),
             "contract_conditions_failed": (contract_result or {}).get("failed"),
+            # Sacred finale (Phase 3): which ask-chain step produced the finale beat
+            # (pending_beat | authored | template), how many fresh re-rolls were spent,
+            # and how many settled-ending loops were quarantined. All None on
+            # non-finale ticks, so finale ticks stay identifiable in the series.
+            "finale_ask_source": (finale_result or {}).get("ask_source"),
+            "finale_retries_used": (finale_result or {}).get("retries_used"),
+            "finale_loops_suppressed": (finale_result or {}).get("loops_suppressed"),
             "recorded_at": datetime.utcnow().isoformat() + "Z",
         }
         self._append(record)

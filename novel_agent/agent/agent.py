@@ -169,28 +169,45 @@ class StoryAgent:
             use_plot_first = self.config.get('generation.use_plot_first', False)
             plot_first_start_tick = self.config.get('generation.plot_first_start_tick', 2)
             current_beat = None
-            
+            finale_info = None
+
             if use_plot_first and tick >= plot_first_start_tick:
-                # Check if we need to regenerate beats
-                if self._needs_beat_regeneration():
-                    print("   📖 Generating plot beats...")
-                    beats_ahead = self.config.get('generation.plot_beats_ahead', 5)
-                    try:
-                        new_beats = self.plot_manager.generate_next_beats(count=beats_ahead)
-                        self.plot_manager.add_beats(new_beats)
-                        print(f"        Generated {len(new_beats)} new plot beats")
-                    except Exception as e:
-                        print(f"        ⚠️  Beat generation failed: {e}")
-                        # Fallback to reactive mode if configured
-                        if not self.config.get('generation.fallback_to_reactive', True):
-                            raise
-                
-                # Get next beat to execute
-                current_beat = self.plot_manager.get_next_beat()
-                if current_beat:
-                    print(f"   🎯 Executing beat: {current_beat.description}")
-                elif not self.config.get('generation.fallback_to_reactive', True):
-                    raise RuntimeError("No plot beats available and fallback disabled")
+                # Phase 3 sacred finale: on the finale tick Python owns the ask. The
+                # three-step chain (pending-beat screen, authored finale beat,
+                # deterministic template) replaces normal beat selection; a total
+                # failure falls through to the normal path below, so the worst case
+                # is exactly today's behavior.
+                if self._sacred_finale_applies(tick):
+                    current_beat, ask_source = self._sacred_finale_beat(tick)
+                    if current_beat is not None:
+                        finale_info = {
+                            "ask_source": ask_source,
+                            "retries_used": 0,
+                            "loops_suppressed": 0,
+                        }
+                        print(f"   🎬 Sacred finale ({ask_source}): {current_beat.description}")
+
+                if current_beat is None:
+                    # Check if we need to regenerate beats
+                    if self._needs_beat_regeneration():
+                        print("   📖 Generating plot beats...")
+                        beats_ahead = self.config.get('generation.plot_beats_ahead', 5)
+                        try:
+                            new_beats = self.plot_manager.generate_next_beats(count=beats_ahead)
+                            self.plot_manager.add_beats(new_beats)
+                            print(f"        Generated {len(new_beats)} new plot beats")
+                        except Exception as e:
+                            print(f"        ⚠️  Beat generation failed: {e}")
+                            # Fallback to reactive mode if configured
+                            if not self.config.get('generation.fallback_to_reactive', True):
+                                raise
+
+                    # Get next beat to execute
+                    current_beat = self.plot_manager.get_next_beat()
+                    if current_beat:
+                        print(f"   🎯 Executing beat: {current_beat.description}")
+                    elif not self.config.get('generation.fallback_to_reactive', True):
+                        raise RuntimeError("No plot beats available and fallback disabled")
             
             # Step 1: Gather context
             print("   1. Gathering context...")
@@ -250,7 +267,14 @@ class StoryAgent:
                 if (self.config.get('generation.use_contracts', False)
                         and getattr(current_beat, "postconditions", None)):
                     plan["plot_beat"]["postconditions"] = current_beat.postconditions
-            
+
+            # Phase 3 sacred finale: ending-mode writer instruction (settled by
+            # default; ONE deliberate hook when coherence.ending_hook is set).
+            if finale_info is not None:
+                plan["finale_mode"] = (
+                    "hook" if self.config.get('coherence.ending_hook', False) else "settled"
+                )
+
             writer_context = self.writer_context_builder.build_writer_context(
                 plan,
                 execution_results,
@@ -281,9 +305,11 @@ class StoryAgent:
                 writer_context
             )
 
-            # Step 7.6: Phase 3 #2 — one bounded revision pass toward the arc-pressure target.
-            scene_data, tension_result = self._maybe_rewrite_for_tension(
-                scene_data, tension_result, tick, writer_context
+            # Step 7.6: Phase 3 #2, one bounded revision pass toward the arc-pressure
+            # target. On the sacred finale tick the bounded re-roll supersedes it
+            # (staging, not wording, sets the tension floor; one LLM budget, not two).
+            scene_data, tension_result = self._control_scene_tension(
+                scene_data, tension_result, tick, writer_context, finale_info
             )
 
             print("   8. Committing scene...")
@@ -337,7 +363,12 @@ class StoryAgent:
                 scene_data["text"],
                 writer_context
             )
-            
+
+            # Step 9.5: Sacred finale loop discipline (Phase 3): a settled ending
+            # quarantines the finale's freshly minted loops before they are applied.
+            if facts and finale_info is not None:
+                facts = self._quarantine_finale_loops(facts, finale_info)
+
             # Step 10: Update entities (Phase 5)
             print("   10. Updating entities...")
             update_stats = {}
@@ -386,7 +417,7 @@ class StoryAgent:
 
             # Phase 3: record per-tick coherence metrics (instrumentation only)
             coherence_record = self._record_coherence_metrics(
-                tick, scene_id, scene_data, tension_result, contract_result
+                tick, scene_id, scene_data, tension_result, contract_result, finale_info
             )
 
             result = {
@@ -409,6 +440,9 @@ class StoryAgent:
 
             if contract_result:
                 result["contract"] = contract_result
+
+            if finale_info:
+                result["finale"] = finale_info
 
             if tension_result.get('enabled'):
                 result["tension"] = {
@@ -947,8 +981,165 @@ class StoryAgent:
             logging.getLogger(__name__).warning(f"Tension rewrite failed (tick {tick}): {e}")
             return scene_data, tension_result
 
+    def _sacred_finale_applies(self, tick) -> bool:
+        """Phase 3 sacred finale gate. Never raises; False means today's behavior."""
+        try:
+            from .finale import is_finale_tick
+            return is_finale_tick(tick, self.config)
+        except Exception:
+            return False
+
+    def _sacred_finale_beat(self, tick):
+        """Phase 3 sacred finale: the guaranteed finale ask, run in place of normal
+        beat selection at the top of the finale tick.
+
+        Three-step fallback chain (addendum 5 design consequences):
+        (a) the next pending beat, when its tension_target sits at or under the
+            finale cap AND a one-call LLM screen judges it a genuine denouement;
+        (b) otherwise a dedicated finale beat authored with the strict prompt
+            (retried once on a malformed response);
+        (c) otherwise a deterministic template beat built from canon, so the
+            guarantee is unconditional.
+        A bypassed pending beat is not deleted: it stays pending with an
+        execution note. Authored/template beats are persisted to the outline via
+        add_beats (with sanitization) so step 11.5 beat verification and contract
+        bookkeeping work on a real beat. Returns (beat, ask_source), or
+        (None, None) on total failure (the tick proceeds exactly as today).
+        """
+        try:
+            from .finale import (author_finale_beat, beat_satisfies_finale_tension,
+                                 screen_beat_for_finale, template_finale_beat)
+
+            pending = self.plot_manager.get_next_beat()
+            if pending is not None and beat_satisfies_finale_tension(pending, self.config):
+                screen = screen_beat_for_finale(self.llm, pending, self.config)
+                if screen and screen.get("denouement"):
+                    reason = screen.get("reason", "")
+                    print(f"        ✓ Pending beat {pending.id} passes the finale screen"
+                          + (f": {reason}" if reason else ""))
+                    return pending, "pending_beat"
+            if pending is not None:
+                self._note_finale_bypass(pending, tick)
+
+            beat = author_finale_beat(
+                self.llm, self.plot_manager, self.memory, self.state, self.config
+            )
+            source = "authored"
+            if beat is None:
+                print("        Finale beat authoring failed; using the deterministic template")
+                beat = template_finale_beat(self.memory, self.state, self.config)
+                source = "template"
+            persisted = self.plot_manager.add_beats([beat])
+            return (persisted[0] if persisted else beat), source
+        except Exception as e:
+            logging.getLogger(__name__).warning(f"Sacred finale ask failed (tick {tick}): {e}")
+            return None, None
+
+    def _note_finale_bypass(self, beat, tick) -> None:
+        """Record on a bypassed pending beat that the sacred finale superseded it.
+
+        The beat is NOT deleted or abandoned: it stays pending (overtime ticks can
+        still consume it), it just carries the note. Never raises.
+        """
+        try:
+            outline = self.plot_manager.load_outline()
+            for b in outline.beats:
+                if b.id == beat.id:
+                    note = f"Superseded by the sacred finale at tick {tick}; left pending"
+                    notes = (b.execution_notes or "").rstrip()
+                    b.execution_notes = f"{notes} {note}".strip()
+                    break
+            self.plot_manager.save_outline(outline)
+        except Exception as e:
+            logging.getLogger(__name__).warning(
+                f"Failed to note finale bypass on beat {getattr(beat, 'id', '?')}: {e}"
+            )
+
+    def _control_scene_tension(self, scene_data, tension_result, tick, writer_context,
+                               finale_info=None):
+        """Step 7.6 dispatch: normal ticks get the bounded prose rewrite; the sacred
+        finale tick gets the bounded full re-roll instead (never both)."""
+        if finale_info is not None:
+            return self._finale_reroll_for_tension(
+                scene_data, tension_result, writer_context, finale_info
+            )
+        return self._maybe_rewrite_for_tension(scene_data, tension_result, tick, writer_context)
+
+    def _finale_reroll_for_tension(self, scene_data, tension_result, writer_context,
+                                   finale_info):
+        """Phase 3 sacred finale: bounded fresh re-rolls toward the finale tension cap.
+
+        Addendum 5 (sunshine test): the hot finale flips are STAGING choices (the
+        same beat text renders as quiet reflection or as a staged event), which a
+        prose rewrite cannot unstage; only a fresh render re-flips the coin, and
+        the cap referees the flips reliably. Up to coherence.finale_retries full
+        writer re-rolls: the first render at or under the cap wins; if none pass,
+        the lowest-scoring render is kept. Never raises; with the scorer
+        unavailable the first render stands.
+        """
+        try:
+            from .finale import finale_tension_cap
+
+            cap = finale_tension_cap(self.config)
+            retries = int(self.config.get('coherence.finale_retries', 2))
+            enabled = bool(tension_result and tension_result.get('enabled'))
+            level = tension_result.get('tension_level') if enabled else None
+            if level is None or level <= cap or retries <= 0:
+                return scene_data, tension_result
+
+            print(f"   7.6. Finale tension {level}/10 above cap {cap:g}: re-rolling the "
+                  f"scene (up to {retries} fresh render(s))...")
+            candidates = [(scene_data, tension_result, level)]
+            for attempt in range(1, retries + 1):
+                finale_info["retries_used"] = attempt
+                new_scene = self.writer.write_scene(writer_context)
+                new_result = self.tension_evaluator.evaluate_tension(
+                    new_scene["text"], writer_context
+                )
+                new_level = (new_result.get('tension_level')
+                             if new_result.get('enabled') else None)
+                if new_level is None:
+                    print("        scorer unavailable mid-retry; keeping the best render so far")
+                    break
+                print(f"        re-roll {attempt}: tension {new_level}/10 (cap {cap:g})")
+                candidates.append((new_scene, new_result, new_level))
+                if new_level <= cap:
+                    return new_scene, new_result
+
+            best_scene, best_result, best_level = min(candidates, key=lambda c: c[2])
+            if best_level > cap:
+                print(f"        no render passed the cap; keeping the lowest ({best_level}/10)")
+            return best_scene, best_result
+        except Exception as e:
+            logging.getLogger(__name__).warning(f"Finale re-roll failed: {e}")
+            return scene_data, tension_result
+
+    def _quarantine_finale_loops(self, facts, finale_info):
+        """Phase 3 sacred finale: settled-ending loop discipline (step 9.5).
+
+        The sunshine test minted 3-5 new loops per denouement despite "nothing is
+        at stake" (4 of 5 scenes pivoted to a hook), so telling does not work: on
+        a settled finale the extracted open_loops_created are quarantined here,
+        at the agent level, before entity_updater.apply_updates sees them, so
+        extraction itself stays honest. Hook mode (coherence.ending_hook) lets
+        them through untouched. Never raises.
+        """
+        try:
+            if self.config.get('coherence.ending_hook', False):
+                return facts
+            from .finale import suppress_finale_loops
+            facts, suppressed = suppress_finale_loops(facts)
+            finale_info["loops_suppressed"] = len(suppressed)
+            if suppressed:
+                print(f"        suppressed {len(suppressed)} finale loop(s): "
+                      + "; ".join(suppressed))
+            return facts
+        except Exception as e:
+            logging.getLogger(__name__).warning(f"Finale loop quarantine failed: {e}")
+            return facts
+
     def _record_coherence_metrics(self, tick, scene_id, scene_data, tension_result,
-                                  contract_result=None):
+                                  contract_result=None, finale_result=None):
         """Phase 3 coherence instrumentation. Never raises (graceful degradation).
 
         Returns the per-tick metric record, or None if disabled/failed. A failure here
@@ -967,6 +1158,7 @@ class StoryAgent:
                 tension_result=tension_result,
                 goal_description=primary.get("description"),
                 contract_result=contract_result,
+                finale_result=finale_result,
             )
         except Exception as e:
             logging.getLogger(__name__).warning(f"Coherence metrics failed (tick {tick}): {e}")

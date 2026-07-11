@@ -528,3 +528,85 @@ Output ONLY the revised scene prose — no preamble, no commentary, no title."""
 def format_tension_revision_prompt(context: dict) -> str:
     """Format the tension-revision prompt with context variables."""
     return TENSION_REVISION_PROMPT.format(**context)
+
+
+# Phase 3 sacred finale: one-call screen deciding whether a pending beat may govern
+# the story's final scene. An LLM judge on purpose, never a keyword heuristic: this
+# repo has twice proven surface-vocabulary checks blind (the keyword tension scorer
+# and the embedding goal-relevance gauge), and a hot event can be worded calmly.
+FINALE_SCREEN_PROMPT = """You are screening one plot beat for the FINAL scene of a story.
+
+A finale beat must be a genuine denouement, aftermath, or time-skip event: the central matter is settled, nothing is at stake, and the scene winds the story down. A beat that stages a confrontation, an ultimatum, an escalation, a revelation, an arrival, or any unfinished business is NOT a finale beat, no matter how calmly it is worded. Judge the EVENT the beat describes, not its vocabulary.
+
+Beat: {beat_description}
+
+Respond with JSON only, no other text:
+{{"denouement": true or false, "reason": "<one short sentence>"}}"""
+
+
+def format_finale_screen_prompt(beat_description: str) -> str:
+    """Format the sacred-finale pending-beat screen prompt (Phase 3)."""
+    return FINALE_SCREEN_PROMPT.format(beat_description=beat_description)
+
+
+# Phase 3 sacred finale: strict prompt for authoring a dedicated finale beat when no
+# pending beat passes the screen. Same JSON shape as PLOT_GENERATION_PROMPT_TEMPLATE
+# so the existing beat-JSON machinery parses it; tension_target and the tension cap
+# postcondition are stamped in Python afterward regardless of what the LLM emits.
+FINALE_BEAT_PROMPT_TEMPLATE = """You are authoring the single FINAL plot beat of a story: its denouement.
+
+Return your answer as JSON only, with no explanations, no markdown fences, and no extra text. The JSON must have this shape:
+
+{{
+  "beats": [
+    {{
+      "description": "...",
+      "characters_involved": ["{protagonist_id}"],
+      "location": "L000",
+      "plot_threads": [],
+      "tension_target": {tension_target}
+    }}
+  ]
+}}
+
+Author exactly ONE beat. Do not include the fields id, status, postconditions, created_at, executed_in_scene, or execution_notes; the system sets those.
+
+# Story context
+
+Novel: {novel_name}
+Genre: {genre}
+Premise: {premise}
+
+Protagonist: {protagonist_name} ({protagonist_id})
+
+## Locations (choose ONE existing ID as the calm setting)
+{locations}
+
+## Recent scenes (most recent last)
+{recent_scenes}
+
+# Rules for this beat
+
+- {final_beat_directive}.
+- The beat's EVENT must be a denouement or aftermath only; a time-skip (days or weeks later) is encouraged.
+- Place {protagonist_name} in a calm setting chosen from the locations above.
+- The central matter is settled: nothing is at stake, no one arrives, no message lands, nothing is revealed.
+- The "description" is a single short sentence (roughly 10-20 words).
+- Set "tension_target" to {tension_target}.
+
+Respond with JSON only.
+"""
+
+
+def format_finale_beat_prompt(context: dict) -> str:
+    """Format the sacred-finale beat-authoring prompt (Phase 3).
+
+    The final-scene directive is the shared FINAL_BEAT_DIRECTIVE from
+    arc_pressure (single source of truth, imported lazily so this module stays
+    import-free at load time, matching format_plot_generation_prompt).
+    """
+    from .arc_pressure import FINAL_BEAT_DIRECTIVE
+
+    context = dict(context)
+    context.setdefault("final_beat_directive", FINAL_BEAT_DIRECTIVE)
+    return FINALE_BEAT_PROMPT_TEMPLATE.format(**context)
