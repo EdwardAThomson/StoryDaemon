@@ -210,6 +210,13 @@ class CoherenceMetrics:
             "active_thread": (thread_result or {}).get("thread_name"),
             "thread_count": (thread_result or {}).get("thread_count"),
             "thread_run_length": (thread_result or {}).get("run_length"),
+            # Thread identity grounding (Phase 3, interleaving Slice T1.5): how
+            # this scene's thread attribution was decided (selected = the
+            # beat's sanitized thread_id, label_fallback = the T1 first-label
+            # path, main = the implicit fallback). None when attribution did
+            # not run this tick or coherence.thread_identity is off, so
+            # selection adoption is measurable per run.
+            "thread_selection_source": (thread_result or {}).get("source"),
             "recorded_at": datetime.utcnow().isoformat() + "Z",
         }
         self._append(record)
