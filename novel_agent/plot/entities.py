@@ -13,6 +13,14 @@ class PlotBeat:
     characters_involved: List[str] = field(default_factory=list)
     location: Optional[str] = None
     plot_threads: List[str] = field(default_factory=list)
+    # The ONE registry thread this beat serves (Phase 3, interleaving Slice
+    # T1.5: thread identity grounding). Authored by selection from the prompt's
+    # thread roster (an exact TH id, or "new: <name>" which the sanitizer
+    # mints), never free-typed; mirrors novel_agent/memory/entities.py since
+    # both managers read/write the same plot_outline.json via cls(**data).
+    # None on legacy outlines and when coherence.thread_identity is off.
+    # plot_threads stays as free-text color.
+    thread_id: Optional[str] = None
     tension_target: Optional[int] = None
     prerequisites: List[str] = field(default_factory=list)
     status: str = "pending"  # pending, in_progress, completed, skipped, abandoned

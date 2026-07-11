@@ -173,6 +173,18 @@ DEFAULT_CONFIG = {
         # nothing reads the registry for decisions in this slice, so there is no
         # on/off gate beyond coherence.enabled for the metric fields.
         'thread_match_threshold': 0.8,
+        # Thread identity grounding (Phase 3, interleaving Slice T1.5): the
+        # "select, don't invent" move applied to threads. The T1 backfill over
+        # three finished novels showed authored plot_threads labels are per-beat
+        # episode titles, not persistent threads (34 executed beats yielded 30
+        # distinct primary labels; the reliable identity signal was the cast),
+        # so Python mints thread identity and the LLM selects it: the beat
+        # prompt carries a thread roster with exact TH ids, each beat names the
+        # ONE thread it serves via thread_id ("new: <name>" mints a strand), a
+        # sanitizer holds authored ids to the roster, and per-tick attribution
+        # prefers the selected id over the T1 first-label fallback. False
+        # restores exact T1 behavior (label normalization only).
+        'thread_identity': True,
     },
     'plot': {
         # Beat integration mode: controls how strongly the agent treats plot beats.
