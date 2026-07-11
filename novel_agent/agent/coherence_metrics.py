@@ -104,6 +104,7 @@ class CoherenceMetrics:
         loops_capped: Optional[int] = None,
         loops_expired: Optional[int] = None,
         dangling_threads: Optional[int] = None,
+        thread_result: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Compute one coherence record, append it to the JSONL log, and return it."""
         loops = self.memory.load_open_loops()
@@ -201,6 +202,14 @@ class CoherenceMetrics:
             # on every other tick, and on finale ticks with the gate off.
             "loops_expired": loops_expired,
             "dangling_threads": dangling_threads,
+            # Thread registry (Phase 3, interleaving Slice T1): which thread this
+            # scene served (normalized name), how many threads the registry
+            # tracks, and the current consecutive same-thread run. All None
+            # when attribution did not run this tick (registry failure), the
+            # None-when-unavailable convention.
+            "active_thread": (thread_result or {}).get("thread_name"),
+            "thread_count": (thread_result or {}).get("thread_count"),
+            "thread_run_length": (thread_result or {}).get("run_length"),
             "recorded_at": datetime.utcnow().isoformat() + "Z",
         }
         self._append(record)
