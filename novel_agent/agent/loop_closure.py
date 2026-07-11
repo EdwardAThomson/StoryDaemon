@@ -25,6 +25,7 @@ prerequisite for un-gating it later, once validated.
 
 import json
 import logging
+import re
 from typing import Any, Dict, List, Optional
 
 from .prompts import format_loop_closure_prompt
@@ -215,12 +216,41 @@ def sanitize_beat_loop_claims(beats, memory) -> List[str]:
         claims = getattr(beat, "resolves_loops", None) or []
         if not claims:
             continue
-        kept = [c for c in claims if c in known]
-        dropped = [c for c in claims if c not in known]
-        if dropped:
+        kept: List[str] = []
+        dropped: List[str] = []
+        for claim in claims:
+            normalized = _normalize_loop_claim(claim, known)
+            if normalized is not None:
+                if normalized not in kept:
+                    kept.append(normalized)
+            else:
+                dropped.append(claim)
+        if dropped or kept != claims:
             label = getattr(beat, "id", "") or "?"
-            warnings.append(
-                f"beat {label}: dropped resolves_loops {dropped}: no such loop ID(s)"
-            )
+            if dropped:
+                warnings.append(
+                    f"beat {label}: dropped resolves_loops {dropped}: no such loop ID(s)"
+                )
             beat.resolves_loops = kept
     return warnings
+
+
+def _normalize_loop_claim(claim, known) -> Optional[str]:
+    """The known loop ID a claim refers to, or None for a true phantom.
+
+    Models copy the prompt's rendered loop line ("OL4: What is Kessler-Vex...")
+    instead of the bare ID, which the 2026-07-11 Slice 0 validation run showed
+    silently disarms judged closure (two valid claims stripped as phantoms).
+    Accept the exact ID, or a leading ID token followed by a non-word boundary
+    (so "OL4: description" normalizes to "OL4" while an invented label like
+    "OL39_corul_meeting_setup" stays a phantom and is dropped).
+    """
+    if not isinstance(claim, str):
+        return None
+    text = claim.strip()
+    if text in known:
+        return text
+    match = re.match(r"(OL\d+)\b", text)
+    if match and match.group(1) in known:
+        return match.group(1)
+    return None

@@ -334,8 +334,10 @@ class EntityUpdater:
         try:
             duplicate_of = self._find_duplicate_loop(loop_data.get("description", ""))
             if duplicate_of:
-                logger.info(f"Skipping open loop (duplicate of {duplicate_of}): "
-                            f"{loop_data.get('description', '')}")
+                # Warning level so dedup skips are visible in run artifacts (the
+                # 2026-07-11 validation flagged info-level drops as unobservable).
+                logger.warning(f"Skipping open loop (duplicate of {duplicate_of}): "
+                               f"{loop_data.get('description', '')}")
                 return "duplicate"
 
             loop_id = self.memory.generate_id("open_loop")
@@ -427,8 +429,10 @@ class EntityUpdater:
             for i, data in indexed:
                 if i not in keep_indices:
                     desc = data.get("description", "") if isinstance(data, dict) else str(data)
-                    logger.info(f"Dropping over-cap open loop (cap {cap}, lowest "
-                                f"importance first): {desc}")
+                    # Warning level so cap drops are visible in run artifacts (the
+                    # 2026-07-11 validation flagged info-level drops as unobservable).
+                    logger.warning(f"Dropping over-cap open loop (cap {cap}, lowest "
+                                   f"importance first): {desc}")
             return kept, len(loop_datas) - len(kept)
         except Exception as e:
             logger.warning(f"Loop creation cap skipped: {e}")

@@ -453,6 +453,7 @@ Each beat must follow these constraints:
 - Favor concrete external actions and observable changes over vague summaries or internal monologue.
 - The "plot_threads" field should list at most 3 concise thread names per beat; pick only the most relevant threads.
 - For "characters_involved" and "location", use ONLY the exact IDs listed in the Characters and Locations sections above (for example C000, L000). Never invent new IDs or abbreviate them; omit the field or use an empty list if no existing entity fits.
+- For "resolves_loops", use ONLY the bare loop IDs from the Open loops section (for example ["OL4"]). Do not append the loop's description or invent new loop IDs.
 
 # Your task
 

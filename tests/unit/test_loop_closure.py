@@ -395,6 +395,36 @@ def test_sanitize_drops_phantom_claims_keeps_real(project):
     assert "no such loop ID" in warnings[0]
 
 
+def test_sanitize_normalizes_colon_suffixed_claims(project):
+    # Live finding (2026-07-11 validation, chunk 1): the model copies the
+    # prompt's rendered loop line ("OL4: description") instead of the bare ID,
+    # which stripped valid claims and silently disarmed judged closure.
+    memory = MemoryManager(project)
+    beat = _beat(resolves_loops=["OL001: What is Kessler-Vex Holdings really doing?"])
+
+    warnings = sanitize_beat_loop_claims([beat], memory)
+
+    assert beat.resolves_loops == ["OL001"]
+    assert warnings == []  # normalization is not a drop
+
+
+def test_sanitize_normalization_dedups_and_still_drops_phantoms(project):
+    memory = MemoryManager(project)
+    beat = _beat(resolves_loops=[
+        "OL001",
+        "OL001: the same loop with its description appended",
+        "OL39_corul_meeting_setup",  # invented label, no word boundary: phantom
+        "OL999: description of a loop that does not exist",
+    ])
+
+    warnings = sanitize_beat_loop_claims([beat], memory)
+
+    assert beat.resolves_loops == ["OL001"]
+    assert len(warnings) == 1
+    assert "OL39_corul_meeting_setup" in warnings[0]
+    assert "OL999" in warnings[0]
+
+
 def test_sanitize_leaves_creates_loops_alone(project):
     memory = MemoryManager(project)
     beat = _beat(resolves_loops=["OL001"], creates_loops=["kaelus_detained"])
