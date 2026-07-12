@@ -347,3 +347,139 @@ sweep (route through the judge or tag as unaudited), and semantic dedup (the
 - Executed at d406e45 with `coherence.loop_closure: true` as the single config
   difference from run 5; no code changes during the runs, no commits, no manual
   interventions.
+
+## Addendum: grant-rate re-measurement (12th July 2026, at 6575bb1)
+
+The re-measurement run this report's section 8 asked for: same protocol, same
+premise, first live exercise of the honest-accounting batch (6575bb1). One
+question: under the resolves-vs-advances reframe, does beat claim precision
+rise from 3/13 (23 percent)? **Answer: yes, roughly doubled, 6/12 (50 percent),
+and the refusal species transformed from systematic advance-claiming to genuine
+edge cases. Recommendation: one more cheap iteration before un-gating
+`loop_resolved`** (details below; two mechanical depressors identified, both
+fixable outside the claim pipeline).
+
+**Method.** Fresh project `work/novels/grantrate-run_39a993f0/`, foundation and
+user goal copied verbatim from slice0-run2, config identical except the
+`loop_closure: true` line is now absent (it defaults True at 6575bb1; the
+defaults are the measurement, diff verified). Backend api / openrouter
+(`anthropic/claude-haiku-4.5`), timeout 120, plot-first, contracts, rolling
+horizon, `target_story_length: 15`. 16 scenes (ticks 0-15), 31,153 words, three
+gated chunks, zero manual interventions, zero tick retries, `errors/` empty all
+run.
+
+**Beat claims, all 12, in order** (a claim counts as honest when the judge
+confirmed the loop resolved in the claimed scene, through either judge path):
+
+| tick | beat | claimed loop | verdict |
+|---|---|---|---|
+| 3 | PB002 (Haler privately meets Celira) | OL3 does Haler already know | **YES** (beat judge) |
+| 10 | PB009 (forensics finds the money trail) | OL5 purpose/recipient of the data | **YES** (beat judge) |
+| 12 | PB011 (formal forensic interview) | OL37 what the specialists found | no: "cuts off before presenting the specific forensic details" (scene truncation, see below) |
+| 13 | PB012 (Liros implicates Zephas) | OL14 will Zephas manipulate Liros | **YES** (beat judge) |
+| 13 | PB012 | OL33 how Zephas responds to Liros | no: "contains no response from Zephas to this action" (a true advance-claim, the only one) |
+| 14 | PB013 (board reports to law enforcement) | OL31 will the board escalate | **YES** (same-scene extractor grant; beat claim preempted) |
+| 14 | PB013 | OL39 charges filed by end of day | no: "does not reveal whether criminal charges will actually be filed" |
+| 15 | PB014 (six-weeks-later finale) | OL36 consequences for Zephas | **YES** (same-scene extractor grant) |
+| 15 | PB014 | OL6 criminal charges outcome | **YES** (same-scene extractor grant) |
+| 15 | PB014 | OL28 will Vernholt discover the exports | no: specifics not depicted |
+| 15 | PB014 | OL22 Vernholt forensics response | no: same family |
+| 15 | PB014 | OL27 what data, sold to whom, how long | no: "provides no specific details" |
+
+Totals: 12 claims, 6 honest (50 percent) vs baseline 3/13 (23 percent); through
+the beat-judge path alone 3 of 9 (extractor judging runs first in the tick and
+granted 3 loops the beat had also claimed). 0 parse failures, 0 sanitizer
+strips. The OL10-style discriminative evidence recurred: **OL39 was refused at
+tick 14 (complaint filed, charges pending) and granted at tick 15** when the
+arraignment landed on the page.
+
+**The refusal composition is the real result.** Baseline: 10 of 10 refusals
+were the planner claiming loops its beat merely advanced. This run: 1 clear
+advance-claim (OL33), 1 refusal caused by scene truncation (OL37, the judge's
+reason literally says the scene cut off), 1 timing edge granted the next tick
+(OL39), and 3 finale wrap-up over-claims of specifics (OL28/OL22/OL27, all on
+the single 5-claim finale beat). Non-finale beat claims ran 4 of 7 honest (57
+percent), and 4 of 6 (67 percent) setting aside the truncation casualty.
+
+**advances_loops adoption: complete.** 13 of 14 authored beats carried
+advances_loops (2-3 real IDs each, no phantom references); the only empty one
+is the finale wrap-up, where advances would be wrong anyway. The enthusiasm
+that produced the baseline's refusals now has its home, and resolves stayed
+scarce and mostly honest.
+
+**Un-gating recommendation: not yet, but the systematic failure mode is gone.**
+50 percent overall sits under the 60-70 bar, and each refusal would have been a
+contract failure firing the rolling horizon (ticks 12, 13, 14 and the finale
+would all have churned). But the two depressors are mechanical, not
+claim-pipeline: (1) the finale beat over-claims by nature (5 claims, 3
+refusals; exempt it from `loop_resolved` or judge-prescreen its claims), and
+(2) 8 of 16 scenes hit the 3000-token writer ceiling and end mid-sentence,
+which directly caused OL37's refusal and plausibly OL28/OL22/OL27's. Fix those
+two (finale exemption plus a larger or end-aware writer budget) and the
+measured non-finale precision (57-67 percent) says the next run clears the bar.
+
+**Extractor claims facing the judge (first live exercise): 8 judged, 6 granted,
+2 refused, cap 5 never reached** (max 3 in one tick). Grants all carry real
+audit trails (OL16 Liros chooses cooperation, OL25 Celira refuses the
+settlement, OL31 board files the complaint, OL6/OL39/OL36 charges and
+arraignment at the finale). The tick-8 refusal is exactly the designed
+skepticism: "the scene does not depict him forming or executing any defense
+strategy during the meeting itself." The unaccountable side door is closed: the
+same path that swept 47 loops in the validation run produced 6 audited closures
+here.
+
+**Finale accounting (first live expiry): the mass-sweep is gone.** At tick 15,
+3 loops closed via judged extractor claims, and the remaining **46 open loops
+expired** with status `expired` and summary "left open at story end", never
+counted as closures (`loops_closed: 3`, `loops_expired: 46`). `dangling_threads:
+45` (23 critical, 22 high), an honest editorial signal the baseline's sweep
+fabricated away. 4 fresh hook loops suppressed, `loops_opened: 0`.
+
+**Ending.** Sacred path: pending beat PB014 passed the finale screen (ask
+source `pending_beat`; the authored fallback was not needed this time), tension
+precheck passed, first render scored 6 over the cap, **one re-roll landed the
+final scene at 4 against target 4.0, the second exact-hit ending across arms**
+(run 5: 4/4; slice0-run2: 2/4). Regression check passed (at or under 5,
+settled aftermath content, six-weeks-later frame, goal succeeds on the page
+with charges filed and the merger proceeding with full disclosure). One page
+flaw: the scene is truncated mid-sentence by the writer token ceiling, so there
+is no clean final line or end marker; settled in substance, clipped on paper.
+Drift over 15 scored ticks: 1.23 (best in the historical 1.20-1.73 band), bias
++0.61, resolution drift 0.15 (ties run 5's best). Also a run first worth
+recording: **the first successful tension rewrite in any arm** (tick 5, 8 down
+to 6 against target 5.3; every prior attempt across arms failed to get
+closer), and the new transition guard fired correctly at tick 1 ("drop too big
+for a prose rewrite; events set the floor").
+
+**Ledger accounting** (vs slice0-run2 and run 5):
+
+| quantity | this run | slice0-run2 | run 5 |
+|---|---|---|---|
+| loops opened (applied) | 55 | 50 | 78 |
+| capped at creation | 9 | 16 | (no cap) |
+| deduped at creation | 2 | 1 | (no dedup) |
+| suppressed at finale | 4 | 5 | 8 |
+| judged closures (beat + extractor) | **9** (3 + 6) | 3 (3 + 0) | (feature off) |
+| unaudited extractor closures | **0** | 47 (the sweep) | 4 |
+| expired at story end | 46 | 0 (swept instead) | 0 (left open) |
+| open at tick 14 | 49 | 47 | 77 |
+| open at end | 0 (honest statuses) | 0 (sweep-dominated) | 74 |
+
+**Stability and observability.** 16 of 16 ticks first try, no timeouts or rate
+limits, inter-scene gaps 60-112s (mean 81s). 36 contract conditions checked, 0
+failed, no horizon firing, no wedge. Zero fact-extraction failures (baseline
+had 2 data gaps). 17 judge calls total, 17 parsed first try. Refusal reasons
+now surface in console output as designed; `loops_capped` is live in metrics
+(null only on the tick-0 first-tick path, a cosmetic gap). Known noise
+persists: character detector ("He", "She", "East Norholt"), one extractor batch
+with invented prefixed entity IDs (skipped gracefully). One new watch item:
+near-duplicate beats across batches (PB005/PB006 both narrate the merger
+acceleration; beat-level dedup does not exist and loop-level dedup cannot see
+it).
+
+**Verdict.** The reframe works: precision doubled, advance-claiming as a
+systematic species is extinct, and every closure in the run (9 of 9) carries an
+auditable scene-grounded reason while 46 unanswered questions are now honestly
+labeled as such instead of swept. Hold `loop_resolved` gated for one more
+iteration: exempt the finale beat and lift the writer token ceiling, then
+re-measure; the non-finale numbers say that run clears the 60-70 bar.
