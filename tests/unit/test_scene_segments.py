@@ -8,7 +8,9 @@ trim-to-last-sentence fallback.
 from novel_agent.agent.segments import (
     CONTINUATION_WORD_TARGET,
     DEFAULT_WORD_TARGETS,
+    END_MARKER,
     continuation_token_budget,
+    ensure_end_marker,
     scene_incomplete,
     token_budget_for,
     trim_to_last_sentence,
@@ -139,6 +141,58 @@ def test_empty_text_is_not_incomplete():
 def test_trailing_whitespace_ignored():
     assert scene_incomplete("It was over.\n\n") is False
     assert scene_incomplete("It was almost\n\n") is True
+
+
+# ---- finale end-marker guarantee ---------------------------------------------
+
+def test_end_marker_appended_when_missing():
+    text = "She packed her things and left the facility for the last time."
+    updated, appended = ensure_end_marker(text)
+    assert appended is True
+    assert updated.rstrip().splitlines()[-1] == END_MARKER
+    # Appended as its own final line, prose untouched.
+    assert updated.startswith(text)
+
+
+def test_end_marker_append_is_idempotent():
+    text = "The findings stayed on the screen behind her."
+    once, appended_once = ensure_end_marker(text)
+    twice, appended_twice = ensure_end_marker(once)
+    assert appended_once is True
+    assert appended_twice is False
+    assert twice == once
+
+
+def test_existing_markers_respected():
+    # Any marker the completion heuristic recognizes suppresses the append,
+    # not just the canonical THE END.
+    for marker in ("THE END", "*END OF NOVEL*", "FIN", "# THE END"):
+        text = f"The story wound down at last.\n\n{marker}"
+        updated, appended = ensure_end_marker(text)
+        assert appended is False, marker
+        assert updated == text
+
+
+def test_end_marker_empty_text_unchanged():
+    for text in ("", "   \n  "):
+        updated, appended = ensure_end_marker(text)
+        assert appended is False
+        assert updated == text
+
+
+def test_end_marker_agrees_with_completion_heuristic():
+    # The two sides of the guarantee: whatever ensure_end_marker appends must
+    # read as a complete ending to scene_incomplete, even over a scene that
+    # would otherwise be flagged mid-sentence.
+    mid_sentence = "She reached for the drive and"
+    assert scene_incomplete(mid_sentence) is True
+    updated, appended = ensure_end_marker(mid_sentence)
+    assert appended is True
+    assert scene_incomplete(updated) is False
+
+
+def test_end_marker_contains_no_em_dash():
+    assert "\u2014" not in END_MARKER  # the house style bans the character outright
 
 
 # ---- trim-to-last-sentence fallback ------------------------------------------

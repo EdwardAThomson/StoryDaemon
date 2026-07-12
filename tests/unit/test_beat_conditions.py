@@ -270,7 +270,7 @@ def test_contract_section_empty_when_gate_off():
 def test_contract_section_documents_vocabulary_when_gate_on():
     section = contract_authoring_section(_config(**{"generation.use_contracts": True}))
     for checker in ("entity_exists", "char_in_prose", "prose_contains",
-                    "tension_at_least", "tension_at_most"):
+                    "tension_at_least", "tension_at_most", "loop_resolved"):
         assert checker in section
     # Structurally unsatisfiable today (2026-07-10 run): gated out of authoring
     # entirely, so the prompt must not steer the LLM toward them.
@@ -278,6 +278,18 @@ def test_contract_section_documents_vocabulary_when_gate_on():
         assert gated not in section
     # Section 5 of the landing sketch: steer away from surface-vocabulary checks.
     assert "AVOID prose_contains" in section
+
+
+def test_contract_section_loop_resolved_bullet_and_preference():
+    # Un-gated 2026-07-12: the restored bullet must carry the resolves-vs-
+    # advances standard (claim only when the scene answers the loop on the
+    # page), and loop_resolved rejoins the preferred state checks.
+    section = contract_authoring_section(_config(**{"generation.use_contracts": True}))
+    assert '{"check": "loop_resolved", "loop": "OL004"}' in section
+    flattened = " ".join(section.split())
+    assert "answers the loop's question on the page" in flattened
+    assert "a scene that merely advances the loop must not claim it" in flattened
+    assert "Prefer entity_exists, char_in_prose, loop_resolved, and the tension checks." in flattened
 
 
 def test_plot_prompt_renders_with_and_without_contract_section():
@@ -376,21 +388,24 @@ def test_authored_char_at_location_dropped_by_gate():
     assert not any("unknown check" in w for w in warnings)
 
 
-def test_authored_loop_resolved_dropped_by_gate():
+def test_authored_loop_resolved_kept_after_ungating():
+    # Un-gated 2026-07-12 (docs/progress_report_20260712.md section 4): with the
+    # judged closure path writing loop status and claim precision at 77.8
+    # percent, an authored loop_resolved with a resolvable ref now rides
+    # through the sanitizer.
     beat = PlotBeat(id="PB001", description="x", postconditions=[
         {"check": "loop_resolved", "loop": "OL001"},
     ])
     warnings = sanitize_beat_conditions([beat], _GateMemory(), _contracts_on())
-    assert beat.postconditions == []
-    assert any("gated from authoring" in w and "loop_resolved" in w
-               for w in warnings)
+    assert beat.postconditions == [{"check": "loop_resolved", "loop": "OL001"}]
+    assert not any("gated from authoring" in w for w in warnings)
 
 
 def test_gate_does_not_block_derived_tension_conditions():
     # The gate is authoring-only: system-derived tension conditions (from the
     # beat's own tension_target) still land after gated conditions are dropped.
     beat = PlotBeat(id="PB001", description="x", tension_target=8, postconditions=[
-        {"check": "loop_resolved", "loop": "OL001"},
+        {"check": "char_at_location", "char": "C000", "location": "L000"},
     ])
     sanitize_beat_conditions([beat], _GateMemory(), _contracts_on())
     assert beat.postconditions == [{"check": "tension_at_least", "value": 6}]

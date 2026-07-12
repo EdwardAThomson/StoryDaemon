@@ -554,12 +554,169 @@ def test_metrics_record_finale_fields(project):
     record = metrics.record_tick(
         tick=15, scene_id="S015",
         finale_result={"ask_source": "template", "retries_used": 1,
-                       "loops_suppressed": 3})
+                       "loops_suppressed": 3,
+                       "screen_refusal": "an active courtroom event"})
     assert record["finale_ask_source"] == "template"
     assert record["finale_retries_used"] == 1
     assert record["finale_loops_suppressed"] == 3
+    assert record["finale_screen_refusal"] == "an active courtroom event"
 
     record = metrics.record_tick(tick=8, scene_id="S008")
     assert record["finale_ask_source"] is None
     assert record["finale_retries_used"] is None
     assert record["finale_loops_suppressed"] is None
+    assert record["finale_screen_refusal"] is None
+
+
+# ---------------------------------------------------------------------------
+# Screen-refusal observability (Phase 3 hardening, 2026-07-12 section 8.4: the
+# screen's negative reason used to vanish)
+# ---------------------------------------------------------------------------
+
+def test_screen_refusal_reason_persisted_and_printed(project, capsys):
+    llm = _ScriptedLLM(['{"denouement": false, "reason": "an ultimatum"}', _AUTHORED])
+    config = _config()
+    _seed_pending(project, config, tension_target=4)
+    shim = _AskShim(project, config, llm)
+
+    beat, source = shim._sacred_finale_beat(15)
+
+    assert source == "authored"
+    # The reason rides the supersession note on the bypassed beat...
+    notes = _outline_beats(shim)["PB001"].execution_notes
+    assert "Superseded by the sacred finale at tick 15" in notes
+    assert "finale screen refusal: an ultimatum" in notes
+    # ...is printed at tick level...
+    assert "fails the finale screen: an ultimatum" in capsys.readouterr().out
+    # ...and is staged for the finale result dict / metrics trail.
+    assert shim._finale_screen_refusal == "an ultimatum"
+
+
+def test_screen_refusal_without_reason_gets_placeholder(project):
+    llm = _ScriptedLLM(['{"denouement": false}', _AUTHORED])
+    config = _config()
+    _seed_pending(project, config, tension_target=4)
+    shim = _AskShim(project, config, llm)
+
+    shim._sacred_finale_beat(15)
+
+    assert shim._finale_screen_refusal == "(no reason given)"
+    assert "finale screen refusal: (no reason given)" in \
+        _outline_beats(shim)["PB001"].execution_notes
+
+
+def test_precheck_bypass_carries_no_refusal(project):
+    # tension_target 7 fails the precheck, so the screen never ran: there is
+    # no refusal to persist, only the plain supersession note.
+    llm = _ScriptedLLM([_AUTHORED])
+    config = _config()
+    _seed_pending(project, config, tension_target=7)
+    shim = _AskShim(project, config, llm)
+
+    shim._sacred_finale_beat(15)
+
+    assert shim._finale_screen_refusal is None
+    notes = _outline_beats(shim)["PB001"].execution_notes
+    assert "Superseded" in notes
+    assert "finale screen refusal" not in notes
+
+
+def test_screen_double_failure_is_not_a_refusal(project):
+    # An unavailable screen (double parse failure returns None) is a fallback,
+    # not a "no": nothing to persist.
+    llm = _ScriptedLLM(["garbage", "garbage", _AUTHORED])
+    config = _config()
+    _seed_pending(project, config, tension_target=4)
+    shim = _AskShim(project, config, llm)
+
+    shim._sacred_finale_beat(15)
+
+    assert shim._finale_screen_refusal is None
+    assert "finale screen refusal" not in \
+        _outline_beats(shim)["PB001"].execution_notes
+
+
+def test_screen_pass_leaves_refusal_unset(project):
+    llm = _ScriptedLLM(['{"denouement": true, "reason": "aftermath"}'])
+    config = _config()
+    _seed_pending(project, config, description="Vela tends her herb boxes weeks later",
+                  tension_target=4)
+    shim = _AskShim(project, config, llm)
+
+    beat, source = shim._sacred_finale_beat(15)
+
+    assert source == "pending_beat"
+    assert shim._finale_screen_refusal is None
+
+
+# ---------------------------------------------------------------------------
+# End-marker guarantee (Phase 3 hardening, 2026-07-12 section 5: the settled
+# finale was complete but markerless; the marker was luck, now a guarantee)
+# ---------------------------------------------------------------------------
+
+class _MarkerShim:
+    _ensure_finale_end_marker = StoryAgent._ensure_finale_end_marker
+
+    def __init__(self, project_dir):
+        self.project_path = Path(project_dir)
+
+
+def _write_scene(project_dir, tick, body):
+    scenes = Path(project_dir) / "scenes"
+    scenes.mkdir(parents=True, exist_ok=True)
+    path = scenes / f"scene_{tick:03d}.md"
+    path.write_text(body, encoding="utf-8")
+    return path
+
+
+def test_end_marker_appended_to_committed_finale(project, capsys):
+    body = ("# The Last Day\n\n*Scene ID: S015*\n*Tick: 15*\n\n---\n\n"
+            "Everything except what it would cost.\n")
+    path = _write_scene(project, 15, body)
+    shim = _MarkerShim(project)
+    info = {}
+
+    shim._ensure_finale_end_marker(15, info)
+
+    content = path.read_text(encoding="utf-8")
+    assert content.rstrip().splitlines()[-1] == "THE END"
+    assert content.startswith(body.rstrip())
+    assert info["end_marker_appended"] is True
+    assert "Appended the end marker" in capsys.readouterr().out
+
+    # The completion heuristic agrees the marked file is a detected ending.
+    from novel_agent.agent.segments import scene_incomplete
+    assert scene_incomplete(content) is False
+
+
+def test_end_marker_not_duplicated_when_writer_emitted_one(project):
+    body = "The story wound down.\n\nEND OF NOVEL\n"
+    path = _write_scene(project, 15, body)
+    shim = _MarkerShim(project)
+    info = {}
+
+    shim._ensure_finale_end_marker(15, info)
+
+    assert path.read_text(encoding="utf-8") == body
+    assert info["end_marker_appended"] is False
+
+
+def test_end_marker_append_is_idempotent_at_file_level(project):
+    path = _write_scene(project, 15, "A settled last line.\n")
+    shim = _MarkerShim(project)
+
+    first, second = {}, {}
+    shim._ensure_finale_end_marker(15, first)
+    after_first = path.read_text(encoding="utf-8")
+    shim._ensure_finale_end_marker(15, second)
+
+    assert first["end_marker_appended"] is True
+    assert second["end_marker_appended"] is False
+    assert path.read_text(encoding="utf-8") == after_first
+
+
+def test_end_marker_missing_file_never_raises(project):
+    shim = _MarkerShim(project)
+    info = {}
+    shim._ensure_finale_end_marker(99, info)  # no scenes/scene_099.md
+    assert "end_marker_appended" not in info

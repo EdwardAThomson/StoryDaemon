@@ -347,6 +347,33 @@ def test_resolved_loops_do_not_block_creation(mock_memory):
     assert result == "created"
 
 
+def test_dedup_default_threshold_is_075():
+    """Default lowered 0.8 -> 0.75 (docs/progress_report_20260712.md section 8.3):
+    two documented near-misses at 0.784/0.788 sat just under the old threshold."""
+    assert Config().get('coherence.loop_dedup_threshold') == 0.75
+
+
+def test_documented_near_miss_pair_now_dedups_at_defaults(mock_memory):
+    """The triple run's OL23/OL27 (verbatim, ratio 0.788): semantically the same
+    legal-firm question, double-created under 0.8 and then double-closed by one
+    event. At the 0.75 default it dedups. Semantic dedup remains the roadmap
+    fix for the paraphrase species character matching can never see."""
+    ol23 = ("Will the legal firm accept Darol's case and provide representation "
+            "before Brixoth moves against her?")
+    ol27 = ("Will the legal firm accept Darol's whistleblower case and provide "
+            "representation before Brixoth discovers her decision to escalate?")
+    ratio = SequenceMatcher(None, ol27.strip().lower(), ol23.strip().lower()).ratio()
+    assert 0.75 <= ratio < 0.8  # the blind-spot band the change closes
+
+    updater = _hygiene_updater(mock_memory)
+    mock_memory.load_open_loops.return_value = [_open_loop(description=ol23)]
+
+    result = updater._create_open_loop({"description": ol27}, tick=7, scene_id="S007")
+
+    assert result == "duplicate"
+    mock_memory.add_open_loop.assert_not_called()
+
+
 def test_dedup_threshold_boundary(mock_memory):
     """The threshold is inclusive: ratio == threshold dedups, just above it keeps."""
     new_desc = "Will Aris stay quiet about the data heist after the merger closes?"

@@ -173,6 +173,41 @@ def _is_end_marker(line: str) -> bool:
     return "END" in words or "FIN" in words
 
 
+# The canonical end-marker line the finale guarantee appends. Must satisfy
+# _is_end_marker above, so the guarantee and the completion heuristic can never
+# disagree about what counts as an ending (asserted at import time below).
+END_MARKER = "THE END"
+
+
+def ensure_end_marker(text: str, marker: str = END_MARKER) -> Tuple[str, bool]:
+    """Guarantee the text ends with an explicit end-marker line.
+
+    Returns ``(text, appended)``. Appends ``marker`` as its own final line only
+    when the last non-empty line is not already an end marker (by the SAME
+    ``_is_end_marker`` recognizer ``scene_incomplete`` uses, so an existing
+    "THE END", "*END OF NOVEL*", or "FIN" line is respected and the append is
+    idempotent). Empty or whitespace-only text is returned unchanged: there is
+    no scene to conclude, and a bare marker over nothing would be noise.
+
+    Phase 3 sacred finale (docs/progress_report_20260712.md section 5): the
+    triple run's finale ended complete and settled but carried no marker, and
+    the settled-ending instruction deliberately does not ask for one, so the
+    marker's presence was luck. The agent calls this deterministically after
+    the finale scene is committed; non-finale scenes are never touched.
+    """
+    if not text or not text.strip():
+        return text, False
+    lines = [line.strip() for line in text.strip().splitlines() if line.strip()]
+    if lines and _is_end_marker(lines[-1]):
+        return text, False
+    return text.rstrip() + f"\n\n{marker}\n", True
+
+
+# The guarantee is only a guarantee while the two sides agree; a drive-by edit
+# to either the marker text or the recognizer should fail loudly at import.
+assert _is_end_marker(END_MARKER), "END_MARKER must satisfy _is_end_marker"
+
+
 def trim_to_last_sentence(text: str) -> Tuple[str, bool]:
     """Cut trailing partial prose back to the last complete sentence.
 

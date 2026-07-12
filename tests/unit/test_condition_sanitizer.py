@@ -118,17 +118,29 @@ def test_resolvable_refs_kept():
 
 
 def test_gated_checks_dropped_even_with_resolvable_refs():
-    # char_at_location and loop_resolved are structurally unsatisfiable today
-    # (2026-07-10 run): authored conditions on them are dropped by the gate
-    # regardless of whether their refs resolve.
+    # char_at_location is structurally unsatisfiable today (2026-07-10 run:
+    # nothing writes location state): authored conditions on it are dropped by
+    # the gate regardless of whether their refs resolve. loop_resolved was
+    # un-gated 2026-07-12 (77.8 percent claim precision cleared the bar) and
+    # rides through with a resolvable ref.
     beat = _beat(postconditions=[
         {"check": "char_at_location", "char": "C000", "location": "L000"},
         {"check": "loop_resolved", "loop": "OL001"},
     ])
     warnings = sanitize_beat_conditions([beat], FakeMemory(), _config())
+    assert beat.postconditions == [{"check": "loop_resolved", "loop": "OL001"}]
+    assert len(warnings) == 1
+    assert "gated from authoring" in warnings[0] and "char_at_location" in warnings[0]
+
+
+def test_loop_resolved_phantom_ref_still_dropped():
+    # Un-gated does not mean unvalidated: a loop_resolved condition referencing
+    # a loop that does not exist is dropped by the ref check, exactly like
+    # every other checker's phantom refs.
+    beat = _beat(postconditions=[{"check": "loop_resolved", "loop": "OL999"}])
+    warnings = sanitize_beat_conditions([beat], FakeMemory(), _config())
     assert beat.postconditions == []
-    assert len(warnings) == 2
-    assert all("gated from authoring" in w for w in warnings)
+    assert any("unresolvable loop ref" in w for w in warnings)
 
 
 def test_malformed_params_dropped():
@@ -169,6 +181,84 @@ def test_unreadable_roster_skips_existence_checks():
     warnings = sanitize_beat_conditions([beat], FakeMemory(broken=True), _config())
     assert beat.postconditions == [{"check": "char_in_prose", "char": "C123"}]
     assert warnings == []
+
+
+# ---------------------------------------------------------------------------
+# Finale exemption (Phase 3, 2026-07-12 un-gating: the story's final slot must
+# not carry loop_resolved postconditions, the finale over-claim species)
+# ---------------------------------------------------------------------------
+
+_LOOP_CLAIM = {"check": "loop_resolved", "loop": "OL001"}
+
+
+def _length_config(length=15):
+    config = _config()
+    config.set("coherence.target_story_length", length)
+    return config
+
+
+def test_final_slot_beat_loses_loop_resolved_with_warning():
+    # Batch authored at tick 11 of a 15-tick story: positions 1-4 land on ticks
+    # 12-15, so position 4 is the finale slot (the triple run's PB014 shape).
+    beats = [_beat(beat_id=f"PB{i:03d}", postconditions=[dict(_LOOP_CLAIM)])
+             for i in range(1, 5)]
+    warnings = sanitize_beat_conditions(beats, FakeMemory(), _length_config(15),
+                                        current_tick=11)
+    for beat in beats[:3]:
+        assert beat.postconditions == [_LOOP_CLAIM]  # non-finale beats keep theirs
+    assert beats[3].postconditions == []
+    assert any("final slot" in w and "PB004" in w for w in warnings)
+
+
+def test_final_slot_keeps_other_postconditions():
+    beat = _beat(postconditions=[
+        dict(_LOOP_CLAIM),
+        {"check": "char_in_prose", "char": "C000"},
+    ])
+    sanitize_beat_conditions([beat], FakeMemory(), _length_config(15), current_tick=14)
+    assert beat.postconditions == [{"check": "char_in_prose", "char": "C000"}]
+
+
+def test_final_slot_preconditions_untouched():
+    # The exemption targets the over-claim species (postconditions); a
+    # loop_resolved PREcondition states a dependency, not a claim.
+    beat = _beat(preconditions=[dict(_LOOP_CLAIM)])
+    sanitize_beat_conditions([beat], FakeMemory(), _length_config(15), current_tick=14)
+    assert beat.preconditions == [_LOOP_CLAIM]
+
+
+def test_beats_past_the_runway_also_stripped():
+    # An uncapped batch overshooting the story's end: the final slot AND the
+    # overshoot land at/past target_story_length, so both are stripped.
+    beats = [_beat(beat_id=f"PB{i:03d}", postconditions=[dict(_LOOP_CLAIM)])
+             for i in range(1, 4)]
+    sanitize_beat_conditions(beats, FakeMemory(), _length_config(15), current_tick=13)
+    assert beats[0].postconditions == [_LOOP_CLAIM]   # tick 14
+    assert beats[1].postconditions == []              # tick 15, the finale slot
+    assert beats[2].postconditions == []              # tick 16, past the end
+
+
+def test_no_current_tick_skips_the_exemption():
+    beat = _beat(postconditions=[dict(_LOOP_CLAIM)])
+    warnings = sanitize_beat_conditions([beat], FakeMemory(), _length_config(15))
+    assert beat.postconditions == [_LOOP_CLAIM]
+    assert warnings == []
+
+
+def test_no_story_length_skips_the_exemption():
+    config = _config()
+    config.set("coherence.target_story_length", None)
+    beat = _beat(postconditions=[dict(_LOOP_CLAIM)])
+    sanitize_beat_conditions([beat], FakeMemory(), config, current_tick=14)
+    assert beat.postconditions == [_LOOP_CLAIM]
+
+
+def test_overtime_keeps_existing_behavior():
+    # At or past the intended end the runway is exhausted (remaining 0): the
+    # exemption stands down, same overtime rule as cap_beat_count.
+    beat = _beat(postconditions=[dict(_LOOP_CLAIM)])
+    sanitize_beat_conditions([beat], FakeMemory(), _length_config(15), current_tick=15)
+    assert beat.postconditions == [_LOOP_CLAIM]
 
 
 # ---------------------------------------------------------------------------

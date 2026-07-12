@@ -185,6 +185,13 @@ class StoryAgent:
                             "retries_used": 0,
                             "loops_suppressed": 0,
                         }
+                        # The denouement screen's negative reason (when the
+                        # pending beat was rejected) rides the finale payload
+                        # into the tick result and the metrics trail (Phase 3
+                        # hardening, the section 8.4 observability fix).
+                        screen_refusal = getattr(self, "_finale_screen_refusal", None)
+                        if screen_refusal:
+                            finale_info["screen_refusal"] = screen_refusal
                         print(f"   🎬 Sacred finale ({ask_source}): {current_beat.description}")
 
                 if current_beat is None:
@@ -314,6 +321,12 @@ class StoryAgent:
 
             print("   8. Committing scene...")
             scene_id = self.committer.commit_scene(scene_data, tick, plan)
+
+            # Step 8.1: Phase 3 sacred finale, end-marker guarantee: the committed
+            # finale scene file always ends with an explicit end-marker line
+            # (deterministic append; never touches non-finale scenes).
+            if finale_info is not None:
+                self._ensure_finale_end_marker(tick, finale_info)
 
             if eval_result:
                 try:
@@ -1091,6 +1104,10 @@ class StoryAgent:
         bookkeeping work on a real beat. Returns (beat, ask_source), or
         (None, None) on total failure (the tick proceeds exactly as today).
         """
+        # Reset per call so a prior tick's refusal never leaks into this one's
+        # finale_info (the observability fix for the silent screen "no",
+        # docs/progress_report_20260712.md section 8.4).
+        self._finale_screen_refusal = None
         try:
             from .finale import (author_finale_beat, beat_satisfies_finale_tension,
                                  screen_beat_for_finale, template_finale_beat)
@@ -1103,8 +1120,18 @@ class StoryAgent:
                     print(f"        ✓ Pending beat {pending.id} passes the finale screen"
                           + (f": {reason}" if reason else ""))
                     return pending, "pending_beat"
+                if screen is not None:
+                    # A real screen "no": print and persist the negative reason,
+                    # symmetric with the judge-refusal observability fix (it used
+                    # to vanish; the screen only ever printed on "yes").
+                    self._finale_screen_refusal = (
+                        (screen.get("reason") or "").strip() or "(no reason given)"
+                    )
+                    print(f"        ✗ Pending beat {pending.id} fails the finale "
+                          f"screen: {self._finale_screen_refusal}")
             if pending is not None:
-                self._note_finale_bypass(pending, tick)
+                self._note_finale_bypass(pending, tick,
+                                         screen_reason=self._finale_screen_refusal)
 
             beat = author_finale_beat(
                 self.llm, self.plot_manager, self.memory, self.state, self.config
@@ -1120,17 +1147,22 @@ class StoryAgent:
             logging.getLogger(__name__).warning(f"Sacred finale ask failed (tick {tick}): {e}")
             return None, None
 
-    def _note_finale_bypass(self, beat, tick) -> None:
+    def _note_finale_bypass(self, beat, tick, screen_reason=None) -> None:
         """Record on a bypassed pending beat that the sacred finale superseded it.
 
         The beat is NOT deleted or abandoned: it stays pending (overtime ticks can
-        still consume it), it just carries the note. Never raises.
+        still consume it), it just carries the note. When the denouement screen
+        rejected the beat, its negative reason rides along in the same note
+        (Phase 3 hardening, docs/progress_report_20260712.md section 8.4: the
+        reason used to vanish). Never raises.
         """
         try:
             outline = self.plot_manager.load_outline()
             for b in outline.beats:
                 if b.id == beat.id:
                     note = f"Superseded by the sacred finale at tick {tick}; left pending"
+                    if screen_reason:
+                        note += f" (finale screen refusal: {screen_reason})"
                     notes = (b.execution_notes or "").rstrip()
                     b.execution_notes = f"{notes} {note}".strip()
                     break
@@ -1138,6 +1170,34 @@ class StoryAgent:
         except Exception as e:
             logging.getLogger(__name__).warning(
                 f"Failed to note finale bypass on beat {getattr(beat, 'id', '?')}: {e}"
+            )
+
+    def _ensure_finale_end_marker(self, tick, finale_info) -> None:
+        """Step 8.1, Phase 3 sacred finale: guarantee the committed finale scene
+        file ends with an explicit end-marker line ("THE END").
+
+        The triple run's finale (docs/progress_report_20260712.md section 5) was
+        complete and settled but carried no marker: the settled-ending
+        instruction never asks for one, so its presence was luck. The marker is
+        appended deterministically after commit, only when the file's last
+        non-empty line is not already a marker, using the SAME recognizer the
+        completion heuristic uses (segments._is_end_marker via
+        ensure_end_marker), so the two can never disagree. Runs only on
+        sacred-finale ticks; never raises.
+        """
+        try:
+            from .segments import ensure_end_marker
+
+            path = self.project_path / "scenes" / f"scene_{tick:03d}.md"
+            content = path.read_text(encoding="utf-8")
+            updated, appended = ensure_end_marker(content)
+            if appended:
+                path.write_text(updated, encoding="utf-8")
+                print("        Appended the end marker to the finale scene")
+            finale_info["end_marker_appended"] = appended
+        except Exception as e:
+            logging.getLogger(__name__).warning(
+                f"Finale end-marker guarantee failed (tick {tick}): {e}"
             )
 
     def _control_scene_tension(self, scene_data, tension_result, tick, writer_context,

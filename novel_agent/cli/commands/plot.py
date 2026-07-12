@@ -373,16 +373,44 @@ def _sanitize_beat_conditions(project_dir: Path, beats: List[PlotBeat]) -> None:
     Same sanitize-not-trust pass the agent path runs in
     PlotOutlineManager._resolve_beat_conditions, via the shared helper: drop
     unknown checks and phantom refs, reconcile tension conditions against each
-    beat's tension_target. Never raises; a bad condition must not break beat
-    generation.
+    beat's tension_target, and strip loop_resolved postconditions from a beat
+    landing on the story's final slot (finale exemption). Never raises; a bad
+    condition must not break beat generation.
     """
     try:
         memory = MemoryManager(project_dir)
         config = _project_config(project_dir)
-        for warning in sanitize_beat_conditions(beats, memory, config):
+        current_tick = load_project_state(str(project_dir)).get("current_tick", None)
+        for warning in sanitize_beat_conditions(beats, memory, config,
+                                                current_tick=current_tick):
             print(f"  ⚠️  {warning}")
     except Exception as e:
         print(f"  ⚠️  Beat condition sanitization skipped: {e}")
+
+
+def _dedup_beats(project_dir: Path, beats: List[PlotBeat]) -> List[PlotBeat]:
+    """Drop freshly authored beats that duplicate the live horizon or the batch.
+
+    Same sanitize-not-trust pass the agent path runs in
+    PlotOutlineManager._dedup_beats, via the shared helper (plot/dedup.py,
+    Phase 3 hardening): a beat whose description fuzzy-matches a pending or
+    recently completed beat, or an earlier beat in the same batch, is dropped
+    with a warning naming the match. Gated by generation.beat_dedup. Never
+    raises; an unreadable outline or any other problem keeps all beats.
+    """
+    try:
+        from ...plot.dedup import dedup_new_beats
+
+        manager = PlotOutlineManager(project_dir)
+        outline = manager.load_outline()
+        config = _project_config(project_dir)
+        kept, warnings = dedup_new_beats(beats, outline.beats, config)
+        for warning in warnings:
+            print(f"  ⚠️  {warning}")
+        return kept
+    except Exception as e:
+        print(f"  ⚠️  Beat dedup skipped: {e}")
+        return beats
 
 
 def _sanitize_loop_claims(project_dir: Path, beats: List[PlotBeat]) -> None:
@@ -471,6 +499,7 @@ def generate_and_append_beats_cli(
         beat_dicts = beat_dicts[:count]
 
     new_beats = _assign_new_beat_ids(outline, beat_dicts)
+    new_beats = _dedup_beats(project_dir, new_beats)
     _reconcile_generated_beats(project_dir, new_beats)
     _sanitize_beat_conditions(project_dir, new_beats)
     _sanitize_loop_claims(project_dir, new_beats)
@@ -562,6 +591,7 @@ def revise_and_regenerate_beats_cli(
     #    outline so abandoned beats are counted and never reused.
     outline = manager.load_outline()
     new_beats = _assign_new_beat_ids(outline, beat_dicts)
+    new_beats = _dedup_beats(project_dir, new_beats)
     _reconcile_generated_beats(project_dir, new_beats)
     _sanitize_beat_conditions(project_dir, new_beats)
     _sanitize_loop_claims(project_dir, new_beats)

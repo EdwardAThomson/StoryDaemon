@@ -190,6 +190,11 @@ class CoherenceMetrics:
             "finale_ask_source": (finale_result or {}).get("ask_source"),
             "finale_retries_used": (finale_result or {}).get("retries_used"),
             "finale_loops_suppressed": (finale_result or {}).get("loops_suppressed"),
+            # The denouement screen's negative reason when it rejected the pending
+            # beat (Phase 3 hardening, the 2026-07-12 observability fix: the "no"
+            # used to vanish). None on non-finale ticks, on finale ticks where no
+            # pending beat reached the screen, and on a screen "yes".
+            "finale_screen_refusal": (finale_result or {}).get("screen_refusal"),
             # Judged loop closure and creation hygiene (Phase 3, Slice 0 of the
             # interleaving design). Complements the loops_opened/loops_closed churn
             # counts above: loops_closed_by_beat is how many of a completed beat's

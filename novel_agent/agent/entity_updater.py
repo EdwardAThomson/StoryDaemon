@@ -370,16 +370,17 @@ class EntityUpdater:
         Phase 3 (Slice 0 of the interleaving design): purely deterministic, no
         LLM. difflib.SequenceMatcher ratio on case-insensitive descriptions,
         against open loops only (a resolved loop's question may legitimately
-        reopen). Threshold from coherence.loop_dedup_threshold (default 0.8:
-        light rewordings of the same question land well above it, distinct
-        questions sharing sentence scaffolding land below it). Returns the
+        reopen). Threshold from coherence.loop_dedup_threshold (default 0.75
+        since the two documented ~0.78 near-misses, see config.py: light
+        rewordings of the same question land above it, distinct questions
+        sharing sentence scaffolding land below it). Returns the
         best match at or above the threshold. Never raises; any problem means
         "no duplicate" so creation proceeds (graceful degradation).
         """
         try:
             if not self.config.get('coherence.loop_dedup', True):
                 return None
-            threshold = float(self.config.get('coherence.loop_dedup_threshold', 0.8))
+            threshold = float(self.config.get('coherence.loop_dedup_threshold', 0.75))
             text = (description or "").strip().lower()
             if not text:
                 return None

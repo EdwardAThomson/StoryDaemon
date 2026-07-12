@@ -139,6 +139,7 @@ class PlotOutlineManager:
     def add_beats(self, beats: List[PlotBeat]) -> List[PlotBeat]:
         outline = self.load_outline()
         beats_assigned = self._assign_ids(outline, beats)
+        beats_assigned = self._dedup_beats(outline, beats_assigned)
         self._resolve_beat_references(beats_assigned)
         self._resolve_beat_conditions(beats_assigned)
         self._sanitize_loop_claims(beats_assigned)
@@ -146,6 +147,28 @@ class PlotOutlineManager:
         outline.beats.extend(beats_assigned)
         self.save_outline(outline)
         return beats_assigned
+
+    def _dedup_beats(self, outline: PlotOutline, beats: List[PlotBeat]) -> List[PlotBeat]:
+        """Drop freshly authored beats that duplicate the live horizon or the batch.
+
+        Sibling of _resolve_beat_references (Phase 3 hardening,
+        docs/progress_report_20260712.md section 8.2: a duplicated beat became
+        9,200 characters of verbatim prose plus duplicate loops downstream).
+        Deterministic fuzzy match via the shared helper (plot/dedup.py), also
+        used by the CLI authoring path (cli/commands/plot.py) so the two cannot
+        drift. Gated by generation.beat_dedup. Never raises; any problem keeps
+        all beats (fallback_to_reactive relies on that).
+        """
+        try:
+            from .dedup import dedup_new_beats
+
+            kept, warnings = dedup_new_beats(beats, outline.beats, self.config)
+            for warning in warnings:
+                print(f"        ⚠️  {warning}")
+            return kept
+        except Exception as e:
+            print(f"        ⚠️  Beat dedup skipped: {e}")
+            return beats
 
     def _resolve_beat_references(self, beats: List[PlotBeat]) -> None:
         """Force every beat's entity references to real IDs; drop phantoms.
@@ -168,14 +191,19 @@ class PlotOutlineManager:
 
         Sibling of _resolve_beat_references (Phase 3, contracts Slice 1): unknown
         check names and unresolvable entity/loop refs are dropped with a warning,
-        and tension conditions are reconciled against the beat's own
-        tension_target. Never raises; a bad condition must not break beat
-        generation (fallback_to_reactive relies on that).
+        tension conditions are reconciled against the beat's own tension_target,
+        and (given the current tick) a beat landing on the story's final slot
+        has its loop_resolved postconditions stripped (finale exemption). Never
+        raises; a bad condition must not break beat generation
+        (fallback_to_reactive relies on that).
         """
         try:
             from ..contracts.authoring import sanitize_beat_conditions
 
-            for warning in sanitize_beat_conditions(beats, self.memory, self.config):
+            current_tick = self._load_state().get("current_tick", None)
+            for warning in sanitize_beat_conditions(
+                beats, self.memory, self.config, current_tick=current_tick
+            ):
                 print(f"        ⚠️  {warning}")
         except Exception as e:
             print(f"        ⚠️  Beat condition sanitization skipped: {e}")

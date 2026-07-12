@@ -39,6 +39,10 @@ def initialize_llm(
         backend: LLM backend identifier ("codex", "api", "gemini-cli", or "claude-cli").
         codex_bin: Path to Codex CLI binary (for backend="codex").
         model: Model identifier for API-like backends (for backend="api" or "gemini-cli").
+        timeout: Per-call timeout in seconds, applied uniformly: the CLI
+            backends' subprocess timeout and the api backend's per-request HTTP
+            timeout (previously inert there, docs/progress_report_20260712.md
+            section 8.1). Falls back to 300 when unset, same as the CLI backends.
 
     Returns:
         An initialized LLM client instance.
@@ -55,7 +59,7 @@ def initialize_llm(
     elif backend_normalized in {"api", "openai"}:
         # "openai" kept for backward compatibility; it now means
         # "use the API backend" with the configured model.
-        _llm_client = MultiProviderInterface(model=model)
+        _llm_client = MultiProviderInterface(model=model, timeout=timeout or 300)
     elif backend_normalized in {"gemini-cli", "gemini"}:
         _llm_client = GeminiCliInterface(model=model, default_timeout=timeout or 300)
     elif backend_normalized in {"claude-cli", "claude"}:

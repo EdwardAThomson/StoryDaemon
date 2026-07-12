@@ -17,9 +17,14 @@ DEFAULT_CONFIG = {
                                     # x tokens_per_word x scene_budget_multiplier). Kept so
                                     # old project configs load cleanly; nothing reads it.
         'extractor_max_tokens': 2000,
-        'timeout': 300,  # Per-call timeout (seconds) for the claude-cli backend's `claude -p`
-                         # (a full agent — slower than a completion API). Any positive int; no
-                         # hard max, but huge values just delay failure when a call derails.
+        'timeout': 300,  # Per-call timeout (seconds), applied on every backend: the CLI
+                         # backends' subprocess timeout (claude -p is a full agent, slower
+                         # than a completion API) and, since 2026-07-12, the api backend's
+                         # per-request HTTP timeout on all provider clients (previously
+                         # inert there: SDK defaults governed and a hung OpenRouter
+                         # connection ran 22.4 minutes, docs/progress_report_20260712.md
+                         # section 8.1). Any positive int; no hard max, but huge values
+                         # just delay failure when a call derails.
         'model': 'gpt-5.5',  # Generic model name for API backend (OpenAI/Gemini/Claude)
         'openai_model': 'gpt-5.5',
         'openai_api_key_env': 'OPENAI_API_KEY',
@@ -74,6 +79,29 @@ DEFAULT_CONFIG = {
         'tokens_per_word': 1.4,           # words-to-tokens sizing factor for prose
         'scene_budget_multiplier': 2.0,   # ceiling headroom over the stated word target
         'scene_max_segments': 3,          # total segments per scene (first render + continuations)
+
+        # Beat-level dedup at authoring time (Phase 3 hardening,
+        # docs/progress_report_20260712.md section 8.2): a freshly authored beat
+        # whose description fuzzy-matches a pending / recently completed beat, or
+        # an earlier beat in the same batch, is dropped with a warning before it
+        # reaches the outline (the triple run's duplicated PB005/PB006 produced
+        # ~9,200 characters of verbatim prose across two scenes plus duplicate
+        # loops downstream). Deterministic, no LLM; shared by both authoring
+        # paths (plot/manager.py and cli/commands/plot.py).
+        'beat_dedup': True,
+        # Similarity at or above which a new beat is a duplicate. The gauge is
+        # max(difflib ratio, sorted-token difflib ratio) on case-insensitive
+        # descriptions: plain difflib alone cannot separate the species (the
+        # triple run's real duplicate pair measures 0.521 while a legitimately
+        # distinct same-batch pair in grantrate-run measures 0.513); the
+        # sorted-token variant lifts word-order-shuffled duplicates (that same
+        # duplicate pair rises to 0.697) while distinct beats stay low.
+        # Calibrated across the work/ corpus: confirmed duplicates measure
+        # 0.697-0.770, legitimately distinct pairs top out at 0.574, and 0.65
+        # splits the gap while deliberately keeping the one ambiguous
+        # escalation-retread specimen (0.644): dropping a legitimate beat is
+        # worse than letting a near-dup through (see plot/dedup.py).
+        'beat_dedup_threshold': 0.65,
 
         # Beat contracts (Phase 3, docs/BLOCKS_CONTRACTS_LANDING_SKETCH.md Slice 1):
         # postconditions are authored with each beat at generation time, sanitized
@@ -176,12 +204,17 @@ DEFAULT_CONFIG = {
         # deterministic, no LLM) and cap creations per tick so one scene cannot flood
         # the ledger. Pure hygiene, so it defaults on.
         'loop_dedup': True,
-        # Ratio at or above which a new loop is a duplicate. 0.8 splits the observed
-        # failure modes: real duplicates are light rewordings of the same question
-        # (ratio well above 0.85), while distinct loops that share sentence scaffolding
-        # ("Will X do Y" vs "Will X do Z") can reach the mid-0.7s, so 0.75 would
-        # swallow genuinely different questions.
-        'loop_dedup_threshold': 0.8,
+        # Ratio at or above which a new loop is a duplicate. Lowered 0.8 -> 0.75
+        # (Phase 3 hardening, docs/progress_report_20260712.md section 8.3): the
+        # 0.8 threshold had a measured blind spot at ~0.78-0.79, with two
+        # documented near-misses of semantically identical double-created
+        # questions in two runs (slice0-run2's OL29/OL33 at 0.784 and the triple
+        # run's OL23/OL27 at 0.788, the latter then double-closed by one event).
+        # Genuinely distinct strands sit far lower (the same difflib-behavior
+        # rationale the thread matcher documents), so 0.75 closes the gap.
+        # Semantic dedup remains the roadmap fix for the paraphrase species that
+        # character matching can never see (slice0's OL23/OL32 pair at 0.341).
+        'loop_dedup_threshold': 0.75,
         # Max new loops per tick; entries beyond the cap are dropped lowest-importance
         # first. None or 0 disables the cap.
         'loop_creation_cap': 4,

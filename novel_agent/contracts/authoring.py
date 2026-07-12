@@ -28,24 +28,29 @@ _TENSION_CHECKS = ("tension_at_least", "tension_at_most")
 # Checks the LLM may not author, because they are structurally unsatisfiable
 # today (Phase 3; proven live, docs/progress_report_20260710.md section 5):
 # char_at_location reads character.current_state.location_id, which nothing in
-# the fact-extraction pipeline ever populates, and loop_resolved requires a loop
-# status of "resolved", which the pipeline never sets in practice (0 of 70 loops
-# on the 2026-07-10 run). An authored condition on either wedges the beat queue
-# indefinitely. Both checkers stay registered in conditions.py and BeatContract
-# evaluation still supports them (a hand-written outline may use them); lift the
-# gate per check when the pipeline actually writes the state it reads (loop
-# resolution is part of the planned loop-aging work). For loop_resolved the
-# judged closure path (Phase 3, Slice 0 of the interleaving design:
-# agent/loop_closure.py, gated by coherence.loop_closure) is what actually
-# writes loop status at step 11.6; its validation run passed
-# (docs/progress_report_20260711.md), but the planner's claims did not: the
-# judge refused 10 of 13, every refusal a beat that merely ADVANCED its claimed
-# loop, so un-gating today would convert honest refusals into contract failures
-# and churn the beat queue. The resolves-vs-advances claim reframe (Phase 3,
-# Slice 0 follow-ups: resolves_loops means answered on the page, advances_loops
-# takes the rest) has now shipped; re-measuring the judge's grant rate under it
-# is the remaining prerequisite before un-gating loop_resolved.
-GATED_AUTHORING_CHECKS = {"char_at_location", "loop_resolved"}
+# the fact-extraction pipeline ever populates, so an authored condition on it
+# wedges the beat queue indefinitely. The checker stays registered in
+# conditions.py and BeatContract evaluation still supports it (a hand-written
+# outline may use it); lift the gate when the pipeline actually writes the
+# location state it reads.
+#
+# loop_resolved was UN-GATED 2026-07-12 (docs/progress_report_20260712.md
+# section 4): the judged closure path (agent/loop_closure.py plus the judged
+# extractor path, coherence.loop_closure) writes loop status, and under the
+# resolves-vs-advances claim reframe the measured claim precision cleared the
+# pre-registered 60-70 percent bar (9 claims, 7 honest, 77.8 percent; both
+# refusals genuine edge cases, the truncation-caused refusal species extinct).
+# Honest cost accounting: a loop_resolved postcondition is checked at step 11.5
+# against loop status, so it is satisfied by a same-scene extractor-judged
+# resolution (steps 9.6/10) or an earlier tick's closure; a refused or
+# unconfirmed claim is now a CONTRACT FAILURE that routes to keep-pending or a
+# rolling-horizon revision, which is the intended enforcement at 78 percent
+# claim honesty (on the measurement run that would have been two endgame
+# horizon firings). The finale slot is exempt: see sanitize_beat_conditions,
+# which strips loop_resolved postconditions from any beat occupying the
+# story's final slot (the over-claim species: the same run's planner authored
+# a 7-claim finale beat).
+GATED_AUTHORING_CHECKS = {"char_at_location"}
 
 # The LLM tension scorer's practical ceiling (Phase 3; measured across all four
 # descent validation arms, docs/progress_report_20260710.md addendum): climax
@@ -73,11 +78,15 @@ object {"check": "<name>", ...params} using ONLY these checks:
 - char_in_prose: the character appears in the scene. Example: {"check": "char_in_prose", "char": "C001"}
 - tension_at_least: the scene's tension score (0-10) is at least the value. Example: {"check": "tension_at_least", "value": 6}
 - tension_at_most: the scene's tension score (0-10) is at most the value. Example: {"check": "tension_at_most", "value": 4}
+- loop_resolved: an open loop is RESOLVED, meaning the scene answers the loop's
+  question on the page (answered in the negative still counts as answered).
+  Claim it ONLY when the scene resolves the loop outright; a scene that merely
+  advances the loop must not claim it. Example: {"check": "loop_resolved", "loop": "OL004"}
 - prose_contains: the prose literally contains a term. Example: {"check": "prose_contains", "any": ["Skyvault Accord"]}
 
 Postcondition rules:
 - Check the beat's JOB (what must be true of the story afterward), not the scene's wording.
-- Prefer entity_exists, char_in_prose, and the tension checks.
+- Prefer entity_exists, char_in_prose, loop_resolved, and the tension checks.
 - AVOID prose_contains except for a required proper noun: a scene can depict an event
   without any given word, and contain the word without the event.
 - Use ONLY the exact entity/loop IDs listed above; conditions referencing unknown IDs are dropped.
@@ -124,7 +133,7 @@ def contract_schema_example(config) -> str:
 # Sanitization (after parsing, before the beats are persisted)
 # ---------------------------------------------------------------------------
 
-def sanitize_beat_conditions(beats, memory, config) -> List[str]:
+def sanitize_beat_conditions(beats, memory, config, current_tick: Optional[int] = None) -> List[str]:
     """Hold freshly authored beats' conditions to the checker vocabulary, in place.
 
     Drops (with a warning, never a failure): non-object conditions, unknown check
@@ -133,6 +142,21 @@ def sanitize_beat_conditions(beats, memory, config) -> List[str]:
     malformed checker params, and anything past ``MAX_CONDITIONS_PER_BEAT``. Then reconciles
     tension conditions against each beat's own ``tension_target`` (see
     ``_reconcile_tension_conditions``). Returns human-readable warnings.
+
+    Finale exemption (Phase 3, docs/progress_report_20260712.md section 4): when
+    ``current_tick`` is given, a beat occupying the story's FINAL slot must not
+    carry ``loop_resolved`` postconditions and has them stripped here. Seam
+    rationale: this sits at sanitize time on ``remaining_story_ticks`` (batch
+    position i, 1-based, lands on tick ``current_tick + i``; the final slot is
+    ``i == remaining``) rather than on the authoring-time tension schedule,
+    because the schedule is gated by ``coherence.arc_phase_mandate`` and the
+    tension curve while the exemption must hold whenever a story end is
+    configured at all. Beats past the final slot (an uncapped batch overshooting
+    the runway) are stripped too: their slots are past the story's end. The
+    sacred finale's own authored/template beats never reach this path with LLM
+    conditions (Python stamps their contract in ``_stamp_finale_contract``);
+    this exemption covers the screen-passing pending-beat case. ``current_tick``
+    None (legacy caller, unreadable state) skips the exemption.
 
     No-op (returns []) when ``generation.use_contracts`` is off: the prompt never
     asked for conditions, so there is nothing trustworthy to keep.
@@ -145,9 +169,11 @@ def sanitize_beat_conditions(beats, memory, config) -> List[str]:
     known_chars = _known_ids(memory, "list_characters")
     known_locs = _known_ids(memory, "list_locations")
     known_loops = _known_loop_ids(memory)
+    remaining = _remaining_ticks(current_tick, config)
 
-    for beat in beats:
+    for position, beat in enumerate(beats, start=1):
         label = getattr(beat, "id", "") or "?"
+        final_slot = remaining is not None and position >= remaining
         for attr in ("preconditions", "postconditions"):
             conditions = getattr(beat, attr, None) or []
             kept: List[Dict[str, Any]] = []
@@ -158,6 +184,14 @@ def sanitize_beat_conditions(beats, memory, config) -> List[str]:
                         f"beat {label}: dropped {attr[:-1]} {cond!r}: check "
                         f"{check!r} is gated from authoring (structurally "
                         f"unsatisfiable until the pipeline writes the state it reads)"
+                    )
+                    continue
+                if final_slot and attr == "postconditions" and check == "loop_resolved":
+                    warnings.append(
+                        f"beat {label}: dropped {attr[:-1]} {cond!r}: the story's "
+                        f"final slot is exempt from loop_resolved (the finale "
+                        f"over-claim species; still-open loops expire honestly "
+                        f"at story end instead)"
                     )
                     continue
                 problem = _condition_problem(
@@ -180,6 +214,28 @@ def sanitize_beat_conditions(beats, memory, config) -> List[str]:
         warnings.extend(_reconcile_tension_conditions(beat, config))
 
     return warnings
+
+
+def _remaining_ticks(current_tick, config) -> Optional[int]:
+    """Runway for the finale exemption, or None to skip it (graceful degradation).
+
+    Wraps ``arc_pressure.remaining_story_ticks`` (imported lazily, matching the
+    two authoring paths' import convention): None when ``current_tick`` was not
+    supplied, no story length is configured, the runway is already exhausted
+    (overtime keeps existing behavior, same rule as ``cap_beat_count``), or the
+    read fails for any reason.
+    """
+    if current_tick is None:
+        return None
+    try:
+        from ..agent.arc_pressure import remaining_story_ticks
+
+        remaining = remaining_story_ticks(int(current_tick), config)
+    except Exception:
+        return None
+    if remaining is None or remaining <= 0:
+        return None
+    return remaining
 
 
 def _known_ids(memory, lister: str) -> Optional[set]:
