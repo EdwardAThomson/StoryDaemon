@@ -3,9 +3,9 @@
 **Status:** Design proposal (no implementation)
 **Date:** 2026-07-12
 **Specs:** Slice T4 of `THREAD_INTERLEAVING_DESIGN.md` (construction pressure), extended by the parallel-execution architecture
-**Related:** `THREAD_INTERLEAVING_DESIGN.md` (the portfolio model this builds on), `progress_report_20260712.md` (the T1.5 validation), `BLOCKS_CONTRACTS_LANDING_SKETCH.md` (contracts), `novel_agent/agent/thread_registry.py` (the shipped machinery)
+**Related:** `THREAD_INTERLEAVING_DESIGN.md` (the portfolio model this builds on), `MASTERS_THREADS_TENSION_STUDY.md` (the corpus calibration this was revised against), `progress_report_20260712.md` (the T1.5 validation), `BLOCKS_CONTRACTS_LANDING_SKETCH.md` (contracts), `novel_agent/agent/thread_registry.py` (the shipped machinery)
 
-Evidence markers used throughout: **[evidence]** (measured, decided), **[proposed]** (design decision awaiting validation), **[pending: masters study]** (awaits the corpus study running in parallel).
+Evidence markers used throughout: **[evidence]** (measured, decided), **[proposed]** (design decision awaiting validation). The **[pending: masters study]** sections of the original draft were resolved when the corpus study landed (2026-07-12); every section it changed carries a "Revised per `MASTERS_THREADS_TENSION_STUDY.md`" note.
 
 ## 1. What this specs and why now
 
@@ -23,6 +23,18 @@ carry identity).
 
 Conclusion: the portfolio the selection policy needs will not emerge. Python
 must construct it. That is this spec's core (section 3).
+
+*Revised per `MASTERS_THREADS_TENSION_STUDY.md` (2026-07-12).* The corpus
+study reframed WHY the B-thread is constructed. The interleaving design
+imagined it partly as a calm reservoir to cut to; the masters keep no such
+thing (**[evidence]** every 2+ chapter thread in the corpus sits within 0.9
+points of its book's register, and calm lives in chapters distributed across
+threads, 16-30 percent of chapters in the calmer half of the corpus). The
+B-thread's purpose is therefore structural: POV and cast variety, the block
+hand-off rhythm the masters actually use (long committed runs, then a
+hand-off), and the convergence payoff. Relief is a scheduling property of
+calm CHAPTERS placeable on any thread, plus a rare authored relief cut
+(section 6.6), not a property the B-thread supplies.
 
 The spec is extended by a new architectural idea (the user's, designed in
 faithfully): threads whose scenes share no entities have no data dependency
@@ -47,9 +59,15 @@ commitments, not tunables):
 
 ## 2. Construction pressure: detection **[proposed]**
 
+*Revised per `MASTERS_THREADS_TENSION_STUDY.md`: the diversity trigger is
+confirmed as primary; the demand-gap trigger is demoted to an explicitly
+experimental, opt-in secondary; the runway floor's `thread_min_run` is now
+derived from story length.*
+
 Python decides WHEN a thread is constructed and the constraint envelope it
-must satisfy. The LLM authors everything inside the envelope. Two triggers,
-both deterministic, both cheap (registry plus curve reads, no LLM call):
+must satisfy. The LLM authors everything inside the envelope. One primary
+trigger and one demoted experimental trigger, both deterministic, both cheap
+(registry plus curve reads, no LLM call):
 
 ### 2.1 The diversity trigger (the one that will actually fire)
 
@@ -68,11 +86,36 @@ Fires once per story when all of:
 **[evidence]** rationale: the default curve rises to a peak then descends, so
 a mid-story calm *demand* gap rarely opens on its own; but all-main-forever is
 proven, so diversity zero past the floor fraction is the reliable signal. On
-the triple run's shape this fires around tick 3-7 of 15.
+the triple run's shape this fires around tick 3-7 of 15. The masters study
+confirms the target: corpus books run 2-3 concurrent threads (observed
+ceiling: 3, and the genre-matched thriller is genuinely single-thread), our
+runs produce exactly 1. Diversity, not calm supply, is the deficit the corpus
+comparison actually exhibits.
 
-### 2.2 The demand-gap trigger (the curve foresees calm the portfolio cannot serve)
+### 2.2 The demand-gap trigger (demoted: experimental, opt-in)
 
-Evaluated each tick inside the same window, fires when all of:
+*Revised per `MASTERS_THREADS_TENSION_STUDY.md`.* This trigger's premise was
+"the curve foresees calm the portfolio cannot serve, so construct calm
+supply". The study measured that premise against the corpus and it fails:
+**[evidence]** no master book keeps a persistently calm secondary strand
+(every 2+ chapter thread sits within 0.9 points of its book's register, and
+the largest deviation runs HOTTER: Dracula's Transylvania strand at +0.9);
+calm arrives as chapters distributed across the threads instead. Constructing
+a thread in order to manufacture calm supply is a device without corpus
+support.
+
+Demoted rather than removed, on one argument: our pipeline has a measured
+failure the masters do not have (the 2026-06 validation showed the planner
+cannot de-escalate into a descending tail), so an experimental lever aimed at
+exactly that failure is worth keeping instrumented until detector telemetry
+retires it. The trigger is opt-in (`coherence.demand_gap_trigger`, default
+False), flagged experimental on every surface that reports it, and evaluated
+only when the diversity trigger did not fire. If T4a telemetry shows it
+silent on the house curve (expected: the default curve stays above the calm
+band until well past the construction cutoff), it is removed rather than
+promoted.
+
+When enabled, evaluated each tick inside the same window; fires when all of:
 
 - Lookahead: `min_target = min(interpolate_curve(t) for t in [tick, tick + W])`
   with `W = generation.plot_beats_ahead` (the horizon the next batch will
@@ -85,28 +128,52 @@ Evaluated each tick inside the same window, fires when all of:
 - Same story-fraction window and runway floor as 2.1.
 
 Both triggers record their evaluation to metrics every tick
-(`construction_evaluated`, `construction_reason`, fired or not), in the
-instrument-first tradition: the detector ships and is measured before the
-authoring behavior turns on.
+(`construction_would_fire`, `construction_trigger`; the human-readable reason
+rides the tick result), in the instrument-first tradition: the detector ships
+and is measured (Slice T4a) before the authoring behavior turns on.
 
 ### 2.3 The runway floor (dead-weight guard)
 
-Construction requires the remaining ticks to fit the whole B-thread
+*Revised per `MASTERS_THREADS_TENSION_STUDY.md`: `thread_min_run` is derived
+from story length instead of being an absolute constant.* The masters
+interleave by committed blocks: strand runs of 8-14+ chapters, roughly 15-30
+percent of book length per run (**[evidence]** Moonstone's narrator blocks
+are 8-23 chapters of 51 units, Dracula's converged run is 16 of 27; braiding
+tighter than 2-3 chapters per run appears only when arcs share one POV and
+cast, the Austen shape). Scaled to our story lengths at the 20 percent
+working point:
+
+```
+thread_min_run = max(2, round(0.2 * target_story_length))   unless set explicitly
+```
+
+The arithmetic: at length 15 the masters' 15-30 percent band spans 2.25-4.5
+ticks per run, so the derivation gives 3 (runs of 3-5 ticks are the faithful
+range); at length 24 it gives 5; at length 40 it gives 8. Setting
+`coherence.thread_min_run` to an integer overrides the derivation.
+
+Construction then requires the remaining ticks to fit the whole B-thread
 lifecycle, not just its opening:
 
 ```
-remaining >= thread_min_run          (default 3, the whiplash guard's decent run)
-           + main_min_run            (default 3, the main thread keeps its floor)
+remaining >= thread_min_run          (derived above, the whiplash guard's decent run)
+           + main_min_run            (= thread_min_run, the main thread keeps the same floor)
            + convergence_reserve     (default 1, the merge beat, section 5.3)
-           + finale_reserve          (default 1, the sacred finale slot)
+           + finale_reserve          (1, the sacred finale slot)
 ```
 
-With defaults that is 8 ticks. A 15-tick story firing at tick 6 clears it; at
-tick 9 it does not, and the trigger stays silent even inside the fraction
-window. This is the direct answer to the T1 backfill's warning: a B-thread
+At length 15 that is 3 + 3 + 1 + 1 = 8 ticks: firing at tick 6 clears it (9
+remaining); tick 9 does not (6 remaining), and the trigger stays silent even
+inside the fraction window. At length 24 the floor is 12; at length 40 it is
+18. This is the direct answer to the T1 backfill's warning: a B-thread
 planted without room to live is dead weight, so it is not planted.
 
 ## 3. Construction pressure: the B-thread ask **[proposed]**
+
+*Revised per `MASTERS_THREADS_TENSION_STUDY.md`: the B-thread is constructed
+for structural and POV variety, the block hand-off rhythm, and the
+convergence payoff, not as calm supply (section 1). Its register and its
+ending requirement changed accordingly (3.2).*
 
 ### 3.1 Who writes what
 
@@ -135,9 +202,14 @@ Charter context (assembled by Python):
   `scenes_mentioned` that are not main-thread members (the character
   detector's stubs are the natural pool). Drawing from this pool is preferred
   over minting; minting goes through `name.generate` grounding as always.
-- The target register band (from the trigger: calm 2-4 for a demand-gap fire,
-  or a contrast band chosen against the main thread's recent trace for a
-  diversity fire).
+- The target register band. *Revised per `MASTERS_THREADS_TENSION_STUDY.md`:*
+  for a diversity fire (the primary case) the band is the STORY's register,
+  wide: masters hold every multi-chapter thread within about a point of the
+  book mean while each thread carries its own 5-7 point local sawtooth, so
+  the B-thread is chartered at the main thread's register (mean of its recent
+  trace, plus or minus 1) with in-band variation expected, NOT at a contrast
+  band. Only an experimental demand-gap fire charters a calm band (2-4), and
+  that path is explicitly corpus-unsupported (section 2.2).
 - The story foundation and primary goal (the B-thread must belong to this
   story).
 
@@ -151,11 +223,16 @@ Charter output (JSON, sanitized like a plan):
 | `home_location` | Resolved L id or a mint request; disjoint from the main thread's current hot location |
 | `register_band` | Clamped to the envelope's band |
 | `local_arc` | Three-point shape (open, develop, converge), each with a tension note inside the band |
-| `convergence_seed` | Required: a described future intersection with the main thread (a person, object, or event both strands touch). Python opens it as a high-importance open loop tagged with both thread ids. A charter without a credible seed is rejected and re-rolled once; two failures abort construction (graceful degradation, the trigger may re-fire later) |
+| `convergence_seed` | Required in one of two forms (*revised per `MASTERS_THREADS_TENSION_STUDY.md`*): (a) a described future intersection with the main thread (a person, object, or event both strands touch), opened by Python as a high-importance open loop tagged with both thread ids; or (b) a declared deliberate non-convergence (`converges: false`) with a described standalone resolution the thread will reach on its own terms, opened as the thread's own high-importance loop (the Moonstone narrator pattern: strands that hand off and never co-converge). A charter that can say neither how it will converge nor how it will resolve is rejected and re-rolled once; two failures abort construction (graceful degradation, the trigger may re-fire later) |
 
-The convergence seed requirement is the second half of the dead-weight guard:
-a B-thread that cannot say how it will matter to the main story does not get
-constructed. This is a design commitment, not a tunable.
+The seed requirement is the second half of the dead-weight guard: a B-thread
+that cannot say how it will matter (by converging) or how it will end (by
+resolving on its own terms) does not get constructed. This is a design
+commitment, not a tunable. The FORM loosened from convergence-only to
+convergence-or-deliberate-non-convergence because the corpus legitimizes both
+(section 5.3); the guard itself did not loosen, and a non-converging thread
+still owes the finale a `resolved` or `expired` ending (`dangling_threads`
+applies unchanged, 6.2).
 
 Python then mints the TH id (`mint_thread`, existing), stamps the charter
 fields onto the Thread record (new fields: `origin: "constructed"`,
@@ -385,8 +462,21 @@ checkable (fine-grained timekeeping in emergent prose is a losing game):
 
 ### 5.3 Merge-point contracts (when threads DO intermingle)
 
-Convergence is a designated beat, not an accident. The convergence seed loop
-(3.2) is its anchor. The convergence beat is authored like any beat (the LLM
+*Revised per `MASTERS_THREADS_TENSION_STUDY.md`: convergence timing is left
+wide, and deliberate non-convergence is first-class.* The corpus range is
+wide on both axes: **[evidence]** Dracula's strands first touch at 0.28 of
+the book and run fully merged for the last 40 percent; Moonstone's converge
+at 0.83; Austen's arcs braid from 0.07 onward; and three Moonstone narrator
+strands legitimately NEVER merge (baton hand-offs, not convergence). "All
+threads converge at the climax" is one option, not a law. This spec therefore
+imposes no convergence-timing window beyond the finale reserve, and a
+chartered non-convergence (3.2 form b) is a legal shape provided the thread
+still ends `resolved` or `expired` on the page: the finale accounting (6.2,
+`dangling_threads`) applies to non-converging threads exactly as to
+converging ones.
+
+Convergence, when chartered, is a designated beat, not an accident. The
+convergence seed loop (3.2) is its anchor. The convergence beat is authored like any beat (the LLM
 decides its substance) but carries a Python-stamped contract:
 
 Preconditions (all deterministic):
@@ -411,9 +501,12 @@ Postconditions:
 Effects at commit: claim sets union (or thread B's claims transfer), thread B's
 registry status becomes `converged` (terminal: subsequent scenes attribute to
 the merged/main thread), and the epoch advances. A story may instead END a
-B-thread without convergence only by deliberate expiry (`expired` status with
-a reason), which the finale accounting surfaces (6.2). Silent abandonment is
-not a legal state.
+B-thread without convergence two ways (*revised per
+`MASTERS_THREADS_TENSION_STUDY.md`*): a chartered non-convergence resolving on
+the page (`resolved` status, 3.2 form b, its standalone-resolution loop judged
+closed by the existing loop-closure judge), or deliberate expiry (`expired`
+status with a reason). Both are surfaced by the finale accounting (6.2).
+Silent abandonment is not a legal state.
 
 ### 5.4 Where the checks live
 
@@ -503,7 +596,7 @@ floor for the A/B validation run, to be confirmed by the run itself).
 
 | Field | Meaning |
 |---|---|
-| `construction_evaluated` / `construction_reason` | Trigger telemetry every tick (2.1/2.2), fired or not |
+| `construction_would_fire` / `construction_trigger` | Detector telemetry every tick (2.1/2.2, shipped in Slice T4a): would construction fire, and which trigger (`diversity` / `demand_gap`); the reason string rides the tick result |
 | `thread_id`, `thread_origin` | Per committed scene (attribution exists; origin distinguishes constructed threads) |
 | `story_clock` | `(epoch, thread_ordinal)` per scene |
 | `intermingle_checks_run` / `intermingle_checks_failed` | Gate telemetry, with the failing check name |
@@ -511,6 +604,71 @@ floor for the A/B validation run, to be confirmed by the run itself).
 | `assembly_position` | Reader-order index once the manifest exists; null before |
 | `thread_tension_drift` | Per-thread analogue of the drift metric, measured against the thread's band |
 | `generation_buffer_depth` | P2 only: unplaced scenes per thread |
+
+### 6.6 The relief cut: rare and authored **[proposed]**
+
+*New section per `MASTERS_THREADS_TENSION_STUDY.md`.* The interleaving
+design's hot-to-cool relief cut is real in the corpus and RARE:
+**[evidence]** the routine thread switch is tension-neutral (49 switches,
+mean delta -0.04, statistically indistinguishable from staying on-thread),
+but the three largest tension drops in all 149 chapters each coincide with a
+thread switch (Dracula's 9-to-2 castle-to-Whitby cut is the canonical case;
+the other two are Moonstone's prologue-to-Betteredge and nightgown-discovery
+cuts). Three events in 149 chapters is an authored, structurally loud move,
+not a scheduling rhythm. This matches the design's original rarity instinct
+(standing constraint 4: cut-aways are rare and deliberate); the corpus now
+confirms that instinct with numbers.
+
+Specified accordingly: the relief cut is a deliberate, Python-scheduled
+device, budgeted at MOST once or twice per book, placed only at big PLANNED
+drops (a curve transition of `tension_step_for_transition` or more, with a
+thread positioned to serve the cool side). It is never a standing rhythm and
+never an emergent side effect of the selection policy; the assembly policy
+(4.4, T4e) treats it as a spent-from-a-budget move and records the placement
+reasoning in the manifest. The mirror device (cutting away INTO trouble, the
+corpus's four +3 cuts) shares the same budget discipline.
+
+### 6.7 Tension-curve presets: house default plus genre-aware opt-ins **[proposed]**
+
+*New section per `MASTERS_THREADS_TENSION_STUDY.md` (shipped alongside Slice
+T4a).* The study measured the default curve against the corpus and found no
+book traces its shape (cold open, smooth monotonic rise, 0.9 peak, settle to
+4): best decile correlation is 0.70 with the CALMEST book, and the
+genre-matched thriller sits at -0.07. Masters instead show a genre register
+the whole book oscillates around (4.3 to 7.1), openings at or above register,
+a peak block at 0.7-0.8 or a final-chapter climax, and a committed ending
+mode: descend to 1-3, or hold 8-9 to the last page.
+
+Decision (both, deliberately):
+
+- **The default stays exactly the current curve.** The quiet-epilogue shape
+  (rise to a 0.9 peak, settle to 4) is retained as the HOUSE STYLE, now
+  explicitly labeled a stylistic choice the masters do not share rather than
+  a measured norm. Every existing project, fixture, and validation baseline
+  keeps byte-identical behavior.
+- **Named presets grounded in the study's decile tables are opt-in**
+  (`coherence.curve_preset`, default `house`). An explicitly customized
+  `target_tension_curve` always wins over any preset, and `None` still
+  disables arc-pressure entirely.
+
+| Preset | Shape (control points) | Traceability (study tables) |
+|---|---|---|
+| `house` (default) | `[[0,3],[0.25,5],[0.5,6],[0.75,8],[0.9,9],[1,4]]` (the shipped default, unchanged) | none claimed: house style |
+| `thriller-register` | open 8, sawtooth 6.5-8 around register ~7, final point 9 | Steps register 7.1 (opens d0 8.0, range 6-8, ends 8); Dracula register 7.1 (d0 7.7, final chapter 9); local drops 1.5-2 on volatility 0.9-1.5 |
+| `wind-down` | open 6, early trough 3, twin peaks 7 (~0.25 and 0.75), spike 9 at 0.9, tail 2 | Moonstone register 5.6: prologue 6, chapter-2 trough (d0 3.6), twin peak deciles d3/d7 at 7.0, single-chapter 9s at 0.74 and 0.91, closing units 2-1-3 |
+| `domestic-arc` | open 2.5, register 4.5, mid trough 3, peak 8 at 0.75, tail 1.5 | P&P register 4.3: d0 2.5, Hunsford trough d4 3.0, peak decile d7 6.2 with the single-chapter 8 at 0.75, final chapters 2 and 1 |
+
+Preset control points live in `arc_pressure.py` (`CURVE_PRESETS`), with the
+resolution rule in `resolve_tension_curve`; everything that reads the curve
+(planner and writer guidance, arc phase, the beat schedule, the finale target
+and cap) resolves through it, so an opted-in preset governs the whole
+pipeline coherently: a thriller preset raises the finale target to the 8-9
+climax its register demands, while the house default keeps today's calm
+finale. One craft note the numbers carry: masters' descents are SHORT (1-3
+closing chapters), so `wind-down` and `domestic-arc` hold near register until
+about 0.9 before dropping, a much smaller de-escalation demand than the house
+curve's long falling segment, and therefore friendlier to the known
+cannot-de-escalate failure.
 
 ## 7. How many threads
 
@@ -526,20 +684,26 @@ floor for the A/B validation run, to be confirmed by the run itself).
   by story length long before it is bounded by the machinery. 3+ is a
   config change, not a design change, but it is not part of Build 2's
   validation.
-- **[pending: masters study]** The corpus study running in parallel will
-  report what published novels actually do: typical concurrent strand
-  counts, strand run lengths between cut-aways, convergence timing as a
-  story fraction, and how often B-strands out-live convergence. This section
-  intentionally cites no numbers for it. When it lands, its findings should
-  set: the default `thread_min_run`, the `construction_cutoff` fraction, the
-  convergence-timing window, and whether `max_active_threads` above 2 or 3
-  ever earns a default.
+- **[evidence]** *Revised per `MASTERS_THREADS_TENSION_STUDY.md` (the study
+  landed 2026-07-12).* What the corpus reports: thread counts run 1 to about
+  5-6 per book, with only 2-3 ever alive concurrently (ceiling observed: 3),
+  and the genre-matched thriller is genuinely single-thread.
+  `max_active_threads = 2` is confirmed as the default: it sits at the
+  masters' concurrency ceiling, not their floor, and single-thread remains a
+  first-class shape for chase-structured stories (the design already
+  degrades to it). The study re-defaulted `thread_min_run` (derived from
+  story length, section 2.3) and loosened the convergence requirement
+  (section 5.3). One number it did NOT move: `construction_cutoff` stays
+  0.5. Moonstone opens new narrator BLOCKS as late as 0.74 of the book, but
+  those are hand-offs within one continuing investigation, not new plot
+  strands; nothing in the corpus supports minting a genuinely new strand
+  late, so the early/mid craft line stands.
 
 ## 8. Risks, honestly
 
 | Risk | Reality | Mitigation |
 |---|---|---|
-| Dead-weight B-thread (the T1 backfill's warning) | The single most likely failure: a constructed thread nobody would miss | Charter gate with required convergence seed (3.2); runway floor (2.3); convergence preconditions require a lived arc (5.3); deliberate-expiry path so a failed thread dies visibly; validation includes READING the B-thread, not just scoring it |
+| Dead-weight B-thread (the T1 backfill's warning) | The single most likely failure: a constructed thread nobody would miss | Charter gate with a required convergence-or-standalone-resolution declaration (3.2); runway floor with the length-derived minimum run (2.3); convergence preconditions require a lived arc (5.3); deliberate-expiry path so a failed thread dies visibly; validation includes READING the B-thread, not just scoring it |
 | Canon drift between parallel strands | Fact extraction on thread B mutates world understanding thread A's in-flight scene contradicts | Claim disjointness makes entity-level drift structurally impossible; lore stays global and serialized with the contradiction detector as the cross-thread guard; P2's commit-gate re-check catches the in-flight window; P1 has no in-flight window at all |
 | Chronology bugs | "Meanwhile" logic is genuinely hard; the coarse clock will miss prose-level anachronisms | Coarse epoch checks catch the structural class (one entity, two places); prose-level time errors remain the evaluator's territory and are accepted as out of scope; validation reads for them |
 | Cost multiplication | A second strand is more scenes, and P2 buffers may generate scenes the assembly later regrets | B-thread scenes are budgeted by the runway math (6.4), not open-ended; P2 buffer depth capped at 1-2 scenes per thread; regretted-scene rate is a P2 metric with a kill threshold |
@@ -557,7 +721,7 @@ Slice 2 preconditions.
 
 | Slice | Ships | Gate | Validation run and bar |
 |---|---|---|---|
-| **T4a: construction detector** | Triggers (section 2) as pure instrumentation: every tick logs `construction_evaluated` and would-fire reasons; nothing changes behavior | always-on metrics | Re-run the standard fixture (corporate thriller, 15-16 ticks). Bar: diversity trigger would-fire exactly once, inside the fraction window, respecting the runway floor; demand-gap stays silent on the default rising curve; zero tick failures attributable to the detector |
+| **T4a: construction detector + curve presets** (*revised per `MASTERS_THREADS_TENSION_STUDY.md`*) | Triggers (section 2) as pure instrumentation: every tick records `construction_would_fire` / `construction_trigger` (the reason rides the tick result and prints on a would-fire tick); nothing changes behavior. Ships with the preset registry (6.7): `coherence.curve_preset` default `house` resolves to the shipped curve byte-identically | `coherence.thread_construction_detector` (default True: pure instrumentation) | Re-run the standard fixture (corporate thriller, 15-16 ticks). Bar: the detector is stateless, so diversity would-fire on a contiguous run of ticks whose first firing lands inside the fraction window and clears the runway floor, and NO would-fire tick falls outside the window (the once-per-story latch belongs to T4b's actual construction); demand-gap stays silent (default off, and expected silent on the house curve even when opted in); zero tick failures attributable to the detector; default-config target/phase metrics byte-identical under the house preset |
 | **T4b: charter + seeding** (P0) | Charter authoring call, registry stamping, construction mandate in beat generation, register-band reconciliation | `coherence.thread_construction` (default False) | 2-thread A/B run at `target_story_length` ~24. Bar: charter sanitizes clean (cast disjoint, seed loop created); mandate adopted (>= 2 B-beats authored and selected within 2 batches); B-thread reaches `thread_min_run`; qualitative read says the B-thread is alive, not dead weight; main-thread metrics do not regress (drift, ending bar) |
 | **T4c: thread-scoped context + story clock** (P1) | Writer context scoped to the scene's thread; epoch/ordinal stamping; loop `thread_id`; scene naming by ID; assembly manifest written (order still = generation order) | same flag family | Re-run the A/B fixture. Bar: deterministic scan shows B-thread scenes reference zero A-exclusive entities; clock stamps monotonic per thread; compile byte-identical to scene order for a single-thread legacy project |
 | **T4d: intermingle checks + convergence** | Claim preconditions, no-touch write-set diff, convergence beat contract, deliberate expiry path | `coherence.thread_contracts` | Forced-convergence run. Bar: convergence beat executes only after preconditions pass (at least one deliberate precondition rejection observed and recovered via horizon revision); seed loop judged closed; finale reports zero silently dangling threads |
@@ -568,22 +732,27 @@ Slice 2 preconditions.
 
 ```yaml
 coherence:
+  thread_construction_detector: true # T4a detector (shipped): pure instrumentation, no behavior change
   thread_construction: false        # T4b master gate
   construction_floor: 0.15          # story fraction: earliest construction
   construction_cutoff: 0.5          # story fraction: latest construction (early/mid only)
+  demand_gap_trigger: false         # EXPERIMENTAL secondary trigger (2.2); corpus-unsupported, opt-in
   calm_threshold: 4                 # demand-gap trigger band top
   serve_margin: 2                   # thread can serve a target within this distance
-  thread_min_run: 3                 # whiplash guard: decent run per thread
+  thread_min_run: null              # whiplash guard; null = derived: max(2, round(0.2 * target_story_length))
   convergence_reserve: 1            # slots held for the merge beat
-  max_active_threads: 2             # validated limit; raising it is config, not design
+  max_active_threads: 2             # confirmed by the masters study (concurrency ceiling observed: 3)
+  curve_preset: house               # tension-curve preset (6.7, shipped); house = the default curve, byte-identical
   thread_contracts: false           # T4d gate
   thread_assembly: false            # T4e gate
 generation:
   parallel_threads: false           # P2 gate
 ```
 
-`thread_min_run` and the fraction windows are the knobs the masters study is
-expected to re-default **[pending: masters study]**.
+*Revised per `MASTERS_THREADS_TENSION_STUDY.md`:* the study re-defaulted
+`thread_min_run` (derived from story length, section 2.3), confirmed
+`max_active_threads` 2, kept the fraction windows, demoted the demand-gap
+trigger to opt-in, and grounded the curve presets (6.7).
 
 ## 11. Open questions
 
@@ -593,12 +762,19 @@ expected to re-default **[pending: masters study]**.
 2. When the demand-gap trigger fires but the diversity trigger already
    constructed a thread, is a THIRD strand ever the right answer inside
    `max_active_threads`, or does the existing B-thread absorb the demand by
-   re-chartering its band? (Proposed: absorb; construction stays rare.)
+   re-chartering its band? (*Revised per `MASTERS_THREADS_TENSION_STUDY.md`:*
+   largely mooted by the demotion; the trigger is experimental, opt-in, and
+   evaluated only when diversity did not fire. If it ever earns promotion,
+   the existing B-thread absorbs the demand by re-chartering its band; the
+   masters' concurrency ceiling of 3 says a third strand should stay a
+   config change, never a default.)
 3. Should deliberate thread expiry be allowed to leave the convergence seed
    loop open as a story-level dangling question (a strand that never paid
    off, sometimes legitimate in literary fiction), or must expiry always
-   resolve or expire the seed? (Proposed: expiry expires the seed with the
-   thread, honesty over ambiguity; revisit against the masters study.)
+   resolve or expire the seed? (*Revised per `MASTERS_THREADS_TENSION_STUDY.md`:*
+   deliberate non-convergence is now a chartered, first-class ending (3.2
+   form b, 5.3), which removes most of the pressure to leave seeds dangling;
+   expiry still expires the seed with the thread, honesty over ambiguity.)
 4. POV and threads: T4c scopes context per thread, but whether a single
    thread can rotate POV among its members (the POV-switch machinery allows
    it) is left to the writer-context follow-up flagged in the interleaving

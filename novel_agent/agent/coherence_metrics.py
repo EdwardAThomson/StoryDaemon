@@ -107,6 +107,7 @@ class CoherenceMetrics:
         loops_expired: Optional[int] = None,
         dangling_threads: Optional[int] = None,
         thread_result: Optional[Dict[str, Any]] = None,
+        construction_result: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Compute one coherence record, append it to the JSONL log, and return it."""
         loops = self.memory.load_open_loops()
@@ -232,6 +233,16 @@ class CoherenceMetrics:
             # not run this tick or coherence.thread_identity is off, so
             # selection adoption is measurable per run.
             "thread_selection_source": (thread_result or {}).get("source"),
+            # Construction-pressure detector (Phase 3, interleaving Slice T4a):
+            # would thread construction fire at this tick, and on which trigger
+            # (diversity | demand_gap). Instrument-only: nothing constructs in
+            # this slice. Both None when the detector did not run (gate off,
+            # hook failure), the None-when-unavailable convention;
+            # construction_trigger is also None on a ran-but-no-fire tick, so
+            # "did not run" and "ran and would not fire" stay distinguishable
+            # via construction_would_fire (None vs False).
+            "construction_would_fire": (construction_result or {}).get("would_fire"),
+            "construction_trigger": (construction_result or {}).get("trigger"),
             "recorded_at": datetime.utcnow().isoformat() + "Z",
         }
         self._append(record)

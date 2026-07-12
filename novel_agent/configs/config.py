@@ -142,6 +142,14 @@ DEFAULT_CONFIG = {
         # set it to None to disable arc-pressure.
         'target_story_length': 40,
         'target_tension_curve': [[0.0, 3], [0.25, 5], [0.5, 6], [0.75, 8], [0.9, 9], [1.0, 4]],
+        # Tension-curve preset (Phase 3, interleaving Slice T4a): named control-point
+        # sets grounded in the masters study's decile tables (arc_pressure.CURVE_PRESETS;
+        # docs/MASTERS_THREADS_TENSION_STUDY.md). "house" resolves to exactly the default
+        # curve above (the quiet-epilogue house style), so default behavior is
+        # byte-identical; "thriller-register", "wind-down", and "domestic-arc" are
+        # opt-in. An explicitly customized target_tension_curve always wins over the
+        # preset, and target_tension_curve None still disables arc-pressure entirely.
+        'curve_preset': 'house',
         # Phase 3 #2: closed-loop tension control. When a scored scene is more than
         # tension_rewrite_threshold off the arc-pressure target, do ONE revision pass
         # toward the target (kept only if it lands closer). Adds ~2 LLM calls per
@@ -239,6 +247,29 @@ DEFAULT_CONFIG = {
         # prefers the selected id over the T1 first-label fallback. False
         # restores exact T1 behavior (label normalization only).
         'thread_identity': True,
+        # Construction-pressure detector (Phase 3, interleaving Slice T4a;
+        # docs/THREAD_CONSTRUCTION_DESIGN.md section 2). Per tick, computes whether
+        # thread construction WOULD fire (recorded as construction_would_fire /
+        # construction_trigger in the rubric, reason in the tick result). Pure
+        # instrumentation, so it defaults on (the coherence-rubric precedent);
+        # nothing constructs until Slice T4b's coherence.thread_construction gate.
+        'thread_construction_detector': True,
+        'construction_floor': 0.15,   # story fraction: earliest construction
+        'construction_cutoff': 0.5,   # story fraction: latest construction (early/mid only)
+        # Whiplash-guard minimum run per thread. None = derived from story length:
+        # max(2, round(0.2 * target_story_length)), the masters' committed blocks at
+        # roughly 15-30 percent of book length (length 15 gives 3, 24 gives 5, 40
+        # gives 8). An explicit positive integer overrides the derivation.
+        'thread_min_run': None,
+        'convergence_reserve': 1,     # runway slots held for the merge beat
+        # Demand-gap trigger (EXPERIMENTAL, demoted per the masters study: no corpus
+        # book keeps a calm B-thread to cut to, so the construct-calm-supply premise
+        # is unsupported; kept opt-in because the pipeline's measured inability to
+        # de-escalate is a real problem the masters do not have). Evaluated only
+        # when the diversity trigger did not fire.
+        'demand_gap_trigger': False,
+        'calm_threshold': 4,          # demand-gap: the calm band's top
+        'serve_margin': 2,            # demand-gap: a thread serves a target within this
     },
     'plot': {
         # Beat integration mode: controls how strongly the agent treats plot beats.

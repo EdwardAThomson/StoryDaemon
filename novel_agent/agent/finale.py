@@ -22,7 +22,12 @@ import json
 import logging
 from typing import Any, Dict, List, Optional, Tuple
 
-from .arc_pressure import ARC_PHASE_MANDATES, FINAL_BEAT_DIRECTIVE, interpolate_curve
+from .arc_pressure import (
+    ARC_PHASE_MANDATES,
+    FINAL_BEAT_DIRECTIVE,
+    interpolate_curve,
+    resolve_tension_curve,
+)
 from .prompts import format_finale_beat_prompt, format_finale_screen_prompt
 from ..plot.entities import PlotBeat
 
@@ -74,9 +79,13 @@ def finale_target_tension(config) -> float:
 
     The endpoint is the target curve interpolated at progress 1.0 (the last
     control point's level). With arc-pressure disabled (curve None/empty) the
-    sunshine default keeps the sacred path meaningful.
+    sunshine default keeps the sacred path meaningful. Reads the curve through
+    ``resolve_tension_curve`` (Slice T4a presets), so an opted-in preset's
+    ending mode governs the finale coherently: a thriller-register preset ends
+    at its 9-point climax instead of being re-rolled toward calm, while the
+    default house preset keeps today's calm finale exactly.
     """
-    curve = config.get('coherence.target_tension_curve', None)
+    curve = resolve_tension_curve(config)
     endpoint = interpolate_curve(1.0, curve) if curve else None
     return float(endpoint) if endpoint is not None else FINALE_DEFAULT_TARGET
 

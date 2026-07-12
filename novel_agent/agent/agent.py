@@ -162,8 +162,16 @@ class StoryAgent:
             Result dictionary with tick info and success status
         """
         tick = self.state["current_tick"]
-        
+
         try:
+            # Step 0.5: Construction-pressure detector (Phase 3, interleaving
+            # Slice T4a): would thread construction fire at this tick?
+            # Evaluated before planning, where T4b's actual construction would
+            # run, so the verdict sees exactly the state construction would
+            # see. Instrument-only: recorded and surfaced, never read for
+            # decisions in this slice. Never breaks a tick.
+            construction_result = self._detect_construction_pressure(tick)
+
             # Check if plot-first mode is enabled
             # Skip plot-first for tick 1 to allow character/world establishment
             use_plot_first = self.config.get('generation.use_plot_first', False)
@@ -475,6 +483,7 @@ class StoryAgent:
                 loops_capped=self._loops_capped_metric(facts, update_stats),
                 expiry_result=expiry_result,
                 thread_result=thread_result,
+                construction_result=construction_result,
             )
 
             result = {
@@ -507,6 +516,9 @@ class StoryAgent:
 
             if thread_result:
                 result["thread"] = thread_result
+
+            if construction_result:
+                result["construction_pressure"] = construction_result
 
             if extractor_closure_result:
                 result["extractor_closure"] = extractor_closure_result
@@ -683,9 +695,15 @@ class StoryAgent:
             # signal yet), keeping the trace total from the first scene.
             thread_result = self._update_thread_registry(tick, scene_id, None, None)
 
+            # Construction-pressure detector (Phase 3, interleaving Slice T4a):
+            # tick 0 sits below the construction floor, so this records the
+            # detector's no-fire verdict and keeps the metrics series total.
+            construction_result = self._detect_construction_pressure(tick)
+
             # Phase 3: record per-tick coherence metrics (tick 0 has no tension evaluation)
             coherence_record = self._record_coherence_metrics(
-                tick, scene_id, scene_data, None, thread_result=thread_result
+                tick, scene_id, scene_data, None, thread_result=thread_result,
+                construction_result=construction_result
             )
 
             result = {
@@ -706,8 +724,11 @@ class StoryAgent:
             if coherence_record:
                 result["coherence"] = coherence_record
 
+            if construction_result:
+                result["construction_pressure"] = construction_result
+
             return result
-        
+
         except RuntimeError as e:
             # Tool execution error
             execution_results = getattr(e, 'execution_results', {
@@ -1474,6 +1495,29 @@ class StoryAgent:
             logging.getLogger(__name__).warning(f"Thread attribution failed (tick {tick}): {e}")
             return None
 
+    def _detect_construction_pressure(self, tick):
+        """Phase 3 (interleaving Slice T4a): construction-pressure detector (step 0.5).
+
+        Pure instrumentation: computes whether thread construction WOULD fire
+        at this tick (diversity trigger, plus the demoted experimental
+        demand-gap trigger when opted in) without changing planning or
+        authoring. Prints a console line on a would-fire tick, and returns the
+        verdict for the tick result and the rubric, or None when the gate
+        (coherence.thread_construction_detector) is off or the detector failed
+        (the None-when-unavailable convention). Never raises.
+        """
+        try:
+            from .thread_construction import evaluate_construction_pressure
+
+            result = evaluate_construction_pressure(self.memory, self.config, tick)
+            if result and result.get("would_fire"):
+                print(f"        Construction pressure would fire: {result['reason']}")
+            return result
+        except Exception as e:
+            logging.getLogger(__name__).warning(
+                f"Construction-pressure detector failed (tick {tick}): {e}")
+            return None
+
     @staticmethod
     def _scene_generation_meta(scene_data):
         """Write-until-concluded metadata for the tick result (Phase 3 segment plumbing).
@@ -1493,7 +1537,7 @@ class StoryAgent:
                                   contract_result=None, finale_result=None,
                                   loop_closure_result=None, loops_deduped=None,
                                   loops_capped=None, expiry_result=None,
-                                  thread_result=None):
+                                  thread_result=None, construction_result=None):
         """Phase 3 coherence instrumentation. Never raises (graceful degradation).
 
         Returns the per-tick metric record, or None if disabled/failed. A failure here
@@ -1535,6 +1579,7 @@ class StoryAgent:
                     if expiry_result else None
                 ),
                 thread_result=thread_result,
+                construction_result=construction_result,
             )
         except Exception as e:
             logging.getLogger(__name__).warning(f"Coherence metrics failed (tick {tick}): {e}")

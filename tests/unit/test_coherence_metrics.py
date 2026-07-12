@@ -322,3 +322,38 @@ def test_scene_segment_fields_default_none(project):
     rec = cm.record_tick(tick=1, scene_id="S001", tension_result=None)
     assert rec["scene_segments"] is None
     assert rec["scene_truncated"] is None
+
+
+# ---- construction-pressure detector fields (Phase 3, interleaving Slice T4a) --
+
+def test_construction_fields_recorded_on_would_fire(project):
+    cm = _metrics(project)
+    rec = cm.record_tick(tick=6, scene_id="S006", tension_result=None,
+                         construction_result={"would_fire": True, "trigger": "diversity",
+                                              "reason": "diversity (1 thread at 40 percent)",
+                                              "story_fraction": 0.4, "thread_count": 1,
+                                              "runway": 9})
+    assert rec["construction_would_fire"] is True
+    assert rec["construction_trigger"] == "diversity"
+
+
+def test_construction_fields_on_no_fire_tick(project):
+    # Ran-but-would-not-fire: would_fire False, trigger None (distinguishable
+    # from "did not run", where would_fire itself is None).
+    cm = _metrics(project)
+    rec = cm.record_tick(tick=1, scene_id="S001", tension_result=None,
+                         construction_result={"would_fire": False, "trigger": None,
+                                              "reason": "before the construction floor",
+                                              "story_fraction": 0.067, "thread_count": 1,
+                                              "runway": 14})
+    assert rec["construction_would_fire"] is False
+    assert rec["construction_trigger"] is None
+
+
+def test_construction_fields_default_none(project):
+    # None when the detector did not run (gate off, hook failure), the
+    # None-when-unavailable convention.
+    cm = _metrics(project)
+    rec = cm.record_tick(tick=1, scene_id="S001", tension_result=None)
+    assert rec["construction_would_fire"] is None
+    assert rec["construction_trigger"] is None

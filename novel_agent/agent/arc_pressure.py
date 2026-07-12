@@ -14,11 +14,21 @@ author wants — a short story vs. a novel — and is the main knob to tune.
 The target curve is a list of ``[progress_fraction, tension_level]`` control
 points, linearly interpolated. Setting ``coherence.target_tension_curve`` to None
 disables arc-pressure entirely (returns no target, injects nothing).
+
+Curve presets (Phase 3, interleaving Slice T4a): ``coherence.curve_preset`` names
+a control-point set from ``CURVE_PRESETS``. The default ``"house"`` resolves to
+exactly the shipped default curve (the quiet-epilogue house style), so default
+behavior is byte-identical; the named alternatives are grounded in the masters
+study's decile tables (docs/MASTERS_THREADS_TENSION_STUDY.md) and are opt-in. An
+explicitly customized ``target_tension_curve`` always wins over any preset.
 """
 
+import logging
 from typing import Any, Dict, List, Optional, Sequence
 
 from .tension_scale import band_for, scale_overview
+
+logger = logging.getLogger(__name__)
 
 # Arc-phase derivation constants (Phase 3 arc-phase mandate). Validation
 # (docs/progress_report_20260602.md) showed the planner reads the numeric target as "how
@@ -51,6 +61,71 @@ def _parse_curve(curve: Optional[Sequence[Sequence[float]]]) -> List[List[float]
     return points
 
 
+# ---------------------------------------------------------------------------
+# Curve presets (Phase 3, interleaving Slice T4a)
+# ---------------------------------------------------------------------------
+
+# The shipped default curve, verbatim (configs/config.py keeps the same literal;
+# a drift-guard test asserts the two stay equal). This is the quiet-epilogue
+# HOUSE STYLE: cold open, smooth rise to a 0.9 peak, settle to 4. The masters
+# study showed no corpus book traces this shape (best decile correlation 0.70,
+# the genre-matched thriller at -0.07); it is retained as a deliberate stylistic
+# choice, not a measured norm (docs/THREAD_CONSTRUCTION_DESIGN.md section 6.7).
+HOUSE_CURVE = [[0.0, 3], [0.25, 5], [0.5, 6], [0.75, 8], [0.9, 9], [1.0, 4]]
+
+# Named opt-in presets, numbers traceable to the masters study's decile tables
+# (docs/MASTERS_THREADS_TENSION_STUDY.md, "Results: tension curves").
+CURVE_PRESETS: Dict[str, List[List[float]]] = {
+    "house": HOUSE_CURVE,
+    # Steps/Dracula rows: open AT register (Steps d0 8.0, Dracula d0 7.7),
+    # sawtooth 6.5-8 around register ~7.1 (local drops of 1.5-2 on chapter
+    # volatility 0.9-1.5), climax on the final page (Steps ends 8, Dracula's
+    # last chapter is 9; thrillers do not wind down at chapter scale).
+    "thriller-register": [[0.0, 8], [0.1, 7], [0.25, 6.5], [0.4, 8], [0.55, 6.5],
+                          [0.7, 8], [0.8, 7], [1.0, 9]],
+    # Moonstone row (register 5.6): opens above its calm start (prologue 6),
+    # chapter-2 trough (d0 3.6), twin peak deciles d3/d7 at 7.0, single-chapter
+    # 9 at 0.91, then the SHORT committed descent to the 2-1-3 closing units.
+    "wind-down": [[0.0, 6], [0.05, 3], [0.25, 7], [0.45, 5], [0.6, 5.5],
+                  [0.75, 7], [0.9, 9], [1.0, 2]],
+    # P&P row (register 4.3): opens at its own calm register (d0 2.5), Hunsford
+    # trough (d4 3.0), peak decile d7 6.2 with the single-chapter 8 at 0.75,
+    # back to register (d8 4.5), final chapters 2 and 1.
+    "domestic-arc": [[0.0, 2.5], [0.2, 4.5], [0.45, 3], [0.7, 6.2], [0.75, 8],
+                     [0.9, 4.5], [1.0, 1.5]],
+}
+
+
+def resolve_tension_curve(config) -> Optional[List[List[float]]]:
+    """The effective target tension curve, or None when arc-pressure is disabled.
+
+    Precedence (Phase 3, interleaving Slice T4a):
+
+    - ``coherence.target_tension_curve`` set to None/empty disables arc-pressure,
+      exactly as before; a preset never resurrects a deliberately disabled curve.
+    - A curve that differs from the shipped default is an explicit author choice
+      and wins over any preset.
+    - Otherwise (the untouched default) ``coherence.curve_preset`` picks the
+      control points. ``"house"`` (the default) resolves to exactly the default
+      curve, so default behavior is byte-identical; an unknown preset warns and
+      falls back to the house curve (graceful degradation).
+    """
+    curve = config.get('coherence.target_tension_curve', None)
+    if not curve:
+        return None
+    if _parse_curve(curve) != _parse_curve(HOUSE_CURVE):
+        return curve
+    preset = config.get('coherence.curve_preset', 'house')
+    if not isinstance(preset, str) or not preset.strip():
+        return curve
+    points = CURVE_PRESETS.get(preset.strip().casefold())
+    if points is None:
+        logger.warning(f"Unknown curve preset {preset!r}; using the house curve "
+                       f"(known: {', '.join(sorted(CURVE_PRESETS))})")
+        return curve
+    return points
+
+
 def interpolate_curve(progress: float, curve: Sequence[Sequence[float]]) -> Optional[float]:
     """Linearly interpolate a tension target at ``progress`` over a curve.
 
@@ -77,8 +152,12 @@ def interpolate_curve(progress: float, curve: Sequence[Sequence[float]]) -> Opti
 
 
 def compute_target_tension(current_tick: int, config) -> Optional[float]:
-    """Target tension (0-10) for the current story position, or None if disabled."""
-    curve = config.get('coherence.target_tension_curve', None)
+    """Target tension (0-10) for the current story position, or None if disabled.
+
+    Reads the curve through ``resolve_tension_curve`` (Slice T4a), so an opted-in
+    preset governs here; the default house preset is the default curve unchanged.
+    """
+    curve = resolve_tension_curve(config)
     if not curve:
         return None
     length = config.get('coherence.target_story_length', 40)
@@ -208,8 +287,9 @@ def compute_arc_phase(current_tick: int, config) -> Optional[str]:
 
     Deliberately NOT gated by ``coherence.arc_phase_mandate``: metrics record the phase
     even when the mandate injection is off, so mandate-on/off runs stay comparable.
+    Reads the curve through ``resolve_tension_curve`` (Slice T4a presets).
     """
-    curve = config.get('coherence.target_tension_curve', None)
+    curve = resolve_tension_curve(config)
     if not curve:
         return None
     length = config.get('coherence.target_story_length', 40)
@@ -311,7 +391,7 @@ def beat_tension_schedule(current_tick: int, count: int, config) -> List[Dict[st
         return []
     if not config.get('coherence.arc_phase_mandate', True):
         return []
-    curve = config.get('coherence.target_tension_curve', None)
+    curve = resolve_tension_curve(config)
     if not curve:
         return []
     length = config.get('coherence.target_story_length', 40)
