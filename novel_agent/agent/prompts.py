@@ -255,7 +255,7 @@ Write a scene passage from {pov_character_name}'s deep POV that ACCOMPLISHES THE
 5. **Show don't tell** - Use actions, dialogue, and sensory details
 6. **Sensory details** - Engage sight, sound, smell, touch, taste
 7. **Internal thoughts and reactions** - Show character's mental state
-8. **Length:** Write as much as the scene needs - no arbitrary limits
+8. **Length:** Aim for the word target in the Length Guidance above (a guide, not a hard cap) and ALWAYS bring the scene to a complete, deliberate ending - never stop mid-sentence
 9. **Ground factions** - When an organization appears for the first time, include a brief identity line (who they are) or use a generated faction representative in dialogue
 
 **OUTPUT FORMAT:** 
@@ -281,12 +281,64 @@ Do NOT mention files, directories, code, prompts, commands, or being an AI/model
 Generate the scene now:"""
 
 
+# Phase 3 (segment plumbing for the block DSL): continuation request for the
+# write-until-concluded scene loop. The conclude instruction is what makes the
+# loop converge; this is never an open-ended "continue". The request carries the
+# FULL scene so far, the same contract every future block/sub-block segment will
+# use (sequential segments, each seeing all prior prose).
+SCENE_CONTINUATION_PROMPT_TEMPLATE = """You are a creative fiction writer finishing a scene that is already in progress.
+
+## Scene Intention
+
+{scene_intention}
+
+## POV Character
+
+{pov_character_name}
+
+## The Scene So Far (complete text)
+
+{scene_so_far}
+
+## Your Task
+
+The scene above stops before its ending. Continue it seamlessly from the exact point where it stops, and CONCLUDE the scene within roughly 200-300 words.
+
+Firm rules:
+1. Do NOT repeat, rephrase, or summarize any text from the scene so far; pick up exactly where it stops.
+2. If it stops mid-sentence, finish that sentence first.
+3. Bring the scene to a definite close: land the final beat, then STOP. Do not open new threads, arrivals, or revelations.
+4. Match the prose style, tense, and deep POV of the scene so far.
+
+**OUTPUT FORMAT:** Output ONLY the continuation prose. No title, no notes, no commentary, no repetition of earlier text.
+
+Continue and conclude the scene now:"""
+
+
+def format_scene_continuation_prompt(scene_so_far: str, writer_context: dict = None) -> str:
+    """Format the continuation request for the write-until-concluded loop.
+
+    Args:
+        scene_so_far: The full scene text accumulated so far
+        writer_context: The original writer context (for intention and POV name)
+
+    Returns:
+        Formatted prompt string
+    """
+    context = writer_context or {}
+    return SCENE_CONTINUATION_PROMPT_TEMPLATE.format(
+        scene_intention=context.get("scene_intention") or "(as established by the scene)",
+        pov_character_name=context.get("pov_character_name") or "the established POV character",
+        scene_so_far=scene_so_far,
+    )
+
+
 def format_planner_prompt(context: dict) -> str:
     """Format the planner prompt with context variables.
-    
+
     Args:
         context: Dictionary with all context variables
-    
+
     Returns:
         Formatted prompt string
     """

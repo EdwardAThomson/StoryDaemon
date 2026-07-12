@@ -11,7 +11,11 @@ DEFAULT_CONFIG = {
         'codex_bin_path': 'codex',
         'default_max_tokens': 2000,
         'planner_max_tokens': 1000,
-        'writer_max_tokens': 3000,
+        'writer_max_tokens': 3000,  # Legacy flat scene ceiling, superseded by the Phase 3
+                                    # write-until-concluded loop: the writer now sizes each
+                                    # request from generation.scene_word_targets (word target
+                                    # x tokens_per_word x scene_budget_multiplier). Kept so
+                                    # old project configs load cleanly; nothing reads it.
         'extractor_max_tokens': 2000,
         'timeout': 300,  # Per-call timeout (seconds) for the claude-cli backend's `claude -p`
                          # (a full agent — slower than a completion API). Any positive int; no
@@ -53,6 +57,23 @@ DEFAULT_CONFIG = {
         # carry contract and arc-guidance lines and truncate deterministically at
         # 1000 tokens; the CLI path's 2000 parsed first-try on the 2026-07-10 run.
         'beat_max_tokens': 2000,
+
+        # Write-until-concluded scene loop (Phase 3, segment plumbing for the block
+        # DSL). Evidence: docs/progress_report_20260711.md grant-rate addendum, where
+        # the old flat 3000-token writer ceiling truncated 8 of 16 scenes mid-sentence.
+        # The planner's optional scene_length metadata (brief|short|long|extended) maps
+        # to an explicit word target stated in the writer prompt; the request ceiling is
+        # sized at word_target x tokens_per_word x scene_budget_multiplier, so instructed
+        # length and allowed length finally agree. When the first render still ends cut
+        # (finish_reason "length" or the completion heuristic), bounded continuation
+        # segments (each seeing the full scene so far, each told to CONCLUDE) run up to
+        # scene_max_segments total; a scene still incomplete after the cap is trimmed to
+        # the last complete sentence and flagged (scene_truncated in metrics).
+        'scene_word_targets': {'brief': 400, 'short': 800, 'long': 1400, 'extended': 2200},
+        'default_scene_length': 'long',   # target label when the plan gives no scene_length
+        'tokens_per_word': 1.4,           # words-to-tokens sizing factor for prose
+        'scene_budget_multiplier': 2.0,   # ceiling headroom over the stated word target
+        'scene_max_segments': 3,          # total segments per scene (first render + continuations)
 
         # Beat contracts (Phase 3, docs/BLOCKS_CONTRACTS_LANDING_SKETCH.md Slice 1):
         # postconditions are authored with each beat at generation time, sanitized

@@ -476,6 +476,10 @@ class StoryAgent:
                 "entities_updated": update_stats
             }
 
+            scene_generation = self._scene_generation_meta(scene_data)
+            if scene_generation:
+                result["scene_generation"] = scene_generation
+
             if coherence_record:
                 result["coherence"] = coherence_record
             
@@ -681,6 +685,10 @@ class StoryAgent:
                 "update_stats": update_stats,
                 "actions_executed": len(execution_results.get("actions_executed", []))
             }
+
+            scene_generation = self._scene_generation_meta(scene_data)
+            if scene_generation:
+                result["scene_generation"] = scene_generation
 
             if coherence_record:
                 result["coherence"] = coherence_record
@@ -1021,9 +1029,19 @@ class StoryAgent:
 
             print(f"   7.6. Tension {current}/10 off target {target:g} — revising once...")
             prev_tension = last_scene_tension(self.memory)
-            revised_text = self.writer.revise_for_tension(
-                scene_data["text"], target, current, writer_context, prev_tension
-            )
+            # Phase 3 segment plumbing: prefer the meta variant (carries the
+            # completion guarantee's trimmed flag); plain revise_for_tension is
+            # the fallback so hand-rolled writers keep working.
+            revise_meta = {}
+            reviser = getattr(self.writer, "revise_for_tension_with_meta", None)
+            if reviser is not None:
+                revised_text, revise_meta = reviser(
+                    scene_data["text"], target, current, writer_context, prev_tension
+                )
+            else:
+                revised_text = self.writer.revise_for_tension(
+                    scene_data["text"], target, current, writer_context, prev_tension
+                )
             if not revised_text:
                 return scene_data, tension_result
 
@@ -1035,6 +1053,10 @@ class StoryAgent:
                 new_result['tension_pre_rewrite'] = current
                 scene_data = {**scene_data, "text": revised_text,
                               "word_count": len(revised_text.split())}
+                if revise_meta.get("trimmed"):
+                    # The adopted revision was trim-flagged; the committed scene
+                    # must carry that truth (scene_truncated in metrics).
+                    scene_data["trimmed"] = True
                 return scene_data, new_result
 
             print(f"        revision not closer ({new_level}); keeping original")
@@ -1392,6 +1414,21 @@ class StoryAgent:
             logging.getLogger(__name__).warning(f"Thread attribution failed (tick {tick}): {e}")
             return None
 
+    @staticmethod
+    def _scene_generation_meta(scene_data):
+        """Write-until-concluded metadata for the tick result (Phase 3 segment plumbing).
+
+        Returns {segments_used, concluded_naturally, trimmed} when the writer
+        reported it, else None (hand-rolled writers, older scene dicts).
+        """
+        if not isinstance(scene_data, dict) or scene_data.get("segments_used") is None:
+            return None
+        return {
+            "segments_used": scene_data.get("segments_used"),
+            "concluded_naturally": scene_data.get("concluded_naturally"),
+            "trimmed": scene_data.get("trimmed"),
+        }
+
     def _record_coherence_metrics(self, tick, scene_id, scene_data, tension_result,
                                   contract_result=None, finale_result=None,
                                   loop_closure_result=None, loops_deduped=None,
@@ -1412,6 +1449,11 @@ class StoryAgent:
                 scene_id=scene_id,
                 scene_text=scene_data.get("text"),
                 word_count=scene_data.get("word_count", 0),
+                # Write-until-concluded loop (Phase 3, segment plumbing): how many
+                # segments produced the scene, and whether the trim fallback fired.
+                # None when the writer did not report (hand-rolled writers).
+                scene_segments=scene_data.get("segments_used"),
+                scene_truncated=scene_data.get("trimmed"),
                 tension_result=tension_result,
                 goal_description=primary.get("description"),
                 contract_result=contract_result,

@@ -1,52 +1,172 @@
 """Scene writer for generating prose."""
 
-from typing import Dict, Any, List
+import logging
+from typing import Dict, Any, List, Optional, Tuple
+
+from .segments import (
+    continuation_token_budget,
+    scene_incomplete,
+    token_budget_for,
+    trim_to_last_sentence,
+    word_target_for,
+)
+
+logger = logging.getLogger(__name__)
 
 
 class SceneWriter:
     """Generates scene prose using LLM."""
-    
+
     def __init__(self, llm_interface, config):
         """Initialize scene writer.
-        
+
         Args:
             llm_interface: CodexInterface instance
             config: Configuration object
         """
         self.llm = llm_interface
         self.config = config
-    
+
     def write_scene(self, writer_context: Dict[str, Any]) -> Dict[str, Any]:
-        """Generate scene prose.
-        
+        """Generate scene prose via the write-until-concluded segment loop.
+
+        Phase 3 (segment plumbing for the block DSL): the request ceiling is
+        sized from the scene's word target (2x headroom, so an on-target scene
+        never brushes it), and a first render that still ends cut (finish_reason
+        "length" or the completion heuristic) gets bounded continuation
+        segments, each carrying the full scene so far with a firm instruction to
+        conclude. A scene that exhausts the cap still incomplete is trimmed to
+        the last complete sentence and flagged: truncation is a state this path
+        cannot ship.
+
         Args:
             writer_context: Context dictionary from WriterContextBuilder
-        
+
         Returns:
             Dictionary with:
                 - text: Scene prose
                 - word_count: Number of words
                 - title: Extracted or generated title
+                - segments_used: How many LLM segments produced the text
+                - concluded_naturally: Ended on its own (no trim, no length cut)
+                - trimmed: The trim fallback fired (flagged truncation)
         """
-        # Format the writer prompt
+        # Format the writer prompt (carries the explicit word target)
         prompt = self._format_writer_prompt(writer_context)
-        
-        # Get max tokens from config
-        max_tokens = self.config.get('llm.writer_max_tokens', 3000)
-        
-        # Call LLM
-        response = self.llm.generate(prompt, max_tokens=max_tokens)
-        
-        # Parse and return scene data
-        return self._parse_scene_response(response, writer_context)
-    
+
+        # Size the ceiling from the word target instead of a flat token wall
+        word_target = writer_context.get("word_target") or word_target_for(None, self.config)
+        max_tokens = token_budget_for(word_target, self.config)
+
+        # First segment: as today. A failure here raises, exactly as before.
+        text, finish_reason = self._generate_segment(prompt, max_tokens)
+
+        # Continue until concluded (bounded), then trim-and-flag as a last resort.
+        text, meta = self._write_until_concluded(text, finish_reason, writer_context)
+
+        # Parse and return scene data plus generation metadata
+        scene_data = self._parse_scene_response(text, writer_context)
+        scene_data.update(meta)
+        return scene_data
+
+    def _generate_segment(self, prompt: str, max_tokens: int) -> Tuple[str, Optional[str]]:
+        """One LLM request, with the finish_reason when the backend exposes it.
+
+        The api backend's MultiProviderInterface implements generate_with_meta
+        (authoritative "length"/"stop" signal); the CLI backends (codex,
+        claude-cli, gemini-cli) do not, so they return (text, None) and the
+        completion heuristic governs. The plain generate() contract is untouched.
+        """
+        if hasattr(self.llm, "generate_with_meta"):
+            return self.llm.generate_with_meta(prompt, max_tokens=max_tokens)
+        return self.llm.generate(prompt, max_tokens=max_tokens), None
+
+    def _write_until_concluded(
+        self, text: str, finish_reason: Optional[str], writer_context: Dict[str, Any]
+    ) -> Tuple[str, Dict[str, Any]]:
+        """The segment loop: continue-and-conclude until an ending is detected.
+
+        Loop invariant (the whole point): the returned text always has a
+        detected ending, either natural, concluded on request, or trimmed to the
+        last complete sentence with trimmed=True. Graceful degradation: a
+        continuation failure falls back to the text so far, worst case trimmed.
+        """
+        from .prompts import format_scene_continuation_prompt
+
+        max_segments = int(self.config.get('generation.scene_max_segments', 3))
+        segments_used = 1
+        try:
+            while ((finish_reason == "length" or scene_incomplete(text))
+                   and segments_used < max_segments):
+                cont_prompt = format_scene_continuation_prompt(text, writer_context)
+                cont_text, finish_reason = self._generate_segment(
+                    cont_prompt, continuation_token_budget(self.config)
+                )
+                cont_text = self._strip_llm_header((cont_text or "").strip())
+                if not cont_text:
+                    break
+                text = self._join_segments(text, cont_text)
+                segments_used += 1
+                print(f"        scene continued (segment {segments_used} of {max_segments})")
+        except Exception as e:
+            # A loop failure never loses the scene: keep what we have (the
+            # single-shot result at worst) and let the trim guarantee below hold.
+            logger.warning(f"Scene continuation failed; keeping the text so far: {e}")
+
+        trimmed = False
+        if scene_incomplete(text):
+            text, _changed = trim_to_last_sentence(text)
+            trimmed = True
+            print("        scene trimmed to last complete sentence, flagged")
+
+        meta = {
+            "segments_used": segments_used,
+            "concluded_naturally": (not trimmed) and finish_reason != "length",
+            "trimmed": trimmed,
+        }
+        return text, meta
+
+    @staticmethod
+    def _join_segments(text: str, continuation: str) -> str:
+        """Append a continuation segment to the scene so far.
+
+        A mid-sentence stop joins inline (the continuation finishes the
+        sentence); a clean sentence boundary joins as a new paragraph.
+        """
+        base = text.rstrip()
+        if scene_incomplete(base):
+            return base + " " + continuation.lstrip()
+        return base + "\n\n" + continuation.lstrip()
+
+
     def revise_for_tension(self, scene_text: str, target_level: float, current_level: float,
                            writer_context: Dict[str, Any] = None, prev_tension: float = None) -> str:
         """Revise a scene's tension toward `target_level`, keeping the plot outcome.
 
+        Text-only wrapper around revise_for_tension_with_meta (original contract).
+        """
+        text, _meta = self.revise_for_tension_with_meta(
+            scene_text, target_level, current_level, writer_context, prev_tension
+        )
+        return text
+
+    def revise_for_tension_with_meta(
+        self, scene_text: str, target_level: float, current_level: float,
+        writer_context: Dict[str, Any] = None, prev_tension: float = None
+    ) -> Tuple[str, Dict[str, Any]]:
+        """Revise a scene's tension toward `target_level`, keeping the plot outcome.
+
         Uses the shared 0-10 tension scale (so the instruction matches the grader), the real
-        story context, and continuity with the previous scene's tension — a big drop is framed
-        as a deliberate transition, not an unmotivated whiplash. Returns cleaned prose, or "".
+        story context, and continuity with the previous scene's tension: a big drop is framed
+        as a deliberate transition, not an unmotivated whiplash. Returns (cleaned prose or "",
+        meta) where meta carries the completion guarantee's trimmed flag.
+
+        Phase 3 (segment plumbing): the budget is sized from the INPUT scene's length
+        (the old flat 3000-token wall truncated long revisions), and the output gets
+        detect+trim+flag. No continuation loop here, a deliberate judgment call: this
+        is a bounded polish pass whose result is kept only when it scores closer to
+        the target, the complete original scene remains the fallback, and a
+        trimmed-at-sentence revision already satisfies the no-truncation invariant.
         """
         from .prompts import format_tension_revision_prompt
         from .tension_scale import band_for, scale_overview
@@ -86,9 +206,18 @@ class SceneWriter:
             "scale_overview": scale_overview(),
             "scene_text": scene_text,
         })
-        max_tokens = self.config.get('llm.writer_max_tokens', 3000)
-        response = self.llm.generate(prompt, max_tokens=max_tokens)
-        return self._strip_llm_header(response.strip())
+        # Size from the input scene: a revision roughly matches its source's length.
+        source_words = max(len(scene_text.split()), word_target_for(None, self.config))
+        max_tokens = token_budget_for(source_words, self.config)
+        response, finish_reason = self._generate_segment(prompt, max_tokens)
+        text = self._strip_llm_header((response or "").strip())
+
+        meta = {"trimmed": False}
+        if text and (finish_reason == "length" or scene_incomplete(text)):
+            text, _changed = trim_to_last_sentence(text)
+            meta["trimmed"] = True
+            print("        revision trimmed to last complete sentence, flagged")
+        return text, meta
 
     def _format_writer_prompt(self, context: Dict[str, Any]) -> str:
         """Format writer prompt with context.

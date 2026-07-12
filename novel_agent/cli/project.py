@@ -109,11 +109,15 @@ def create_novel_project(
                 'codex_bin_path': config.get('llm.codex_bin_path'),
                 'model': llm_model or config.get('llm.model'),
                 'planner_max_tokens': config.get('llm.planner_max_tokens'),
-                'writer_max_tokens': config.get('llm.writer_max_tokens'),
             },
             'generation': {
                 'target_word_count_min': config.get('generation.target_word_count_min'),
                 'target_word_count_max': config.get('generation.target_word_count_max'),
+                # Write-until-concluded scene loop (Phase 3): word-target sizing
+                # replaced the old flat llm.writer_max_tokens ceiling.
+                'scene_word_targets': config.get('generation.scene_word_targets'),
+                'default_scene_length': config.get('generation.default_scene_length'),
+                'scene_max_segments': config.get('generation.scene_max_segments'),
             }
         }
         

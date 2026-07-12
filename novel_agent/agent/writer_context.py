@@ -72,8 +72,11 @@ class WriterContextBuilder:
         # Format tool results
         tool_results_summary = self._format_tool_results(execution_results)
         
-        # Get optional length guidance from plan metadata
-        scene_length_guidance = self._get_length_guidance(plan)
+        # Length coordination (Phase 3, segment plumbing for the block DSL): the
+        # plan's optional scene_length maps to an explicit word target, stated in
+        # the prompt AND used by the writer to size the request ceiling, so the
+        # instructed length and the allowed length finally agree.
+        scene_length_guidance, word_target = self._get_length_guidance(plan)
         
         # Format plot beat section (Phase 5)
         plot_beat_section = self._format_plot_beat_section(plan)
@@ -121,6 +124,7 @@ class WriterContextBuilder:
             "recent_context": recent_context,
             "tool_results_summary": tool_results_summary,
             "scene_length_guidance": scene_length_guidance,
+            "word_target": word_target,
             "existing_characters": existing_characters,
             "approved_new_names": approved_new_names
         }
@@ -387,30 +391,41 @@ class WriterContextBuilder:
         
         return "\n".join(summary_parts)
     
-    def _get_length_guidance(self, plan: Dict[str, Any]) -> str:
-        """Get optional length guidance from plan.
-        
+    def _get_length_guidance(self, plan: Dict[str, Any]) -> tuple:
+        """Length guidance from plan metadata, with an explicit word target.
+
+        Phase 3 (segment plumbing for the block DSL): the root cause of the
+        2026-07-11 truncation evidence was that nothing connected the instructed
+        length to the allowed length. The guidance now always states a word
+        target ("write roughly N words"), and the same target is returned so the
+        writer can size the request ceiling from it. With no scene_length in the
+        plan, generation.default_scene_length governs ("long" by default).
+
         Args:
             plan: The plan dictionary
-        
+
         Returns:
-            Formatted length guidance string (may be empty)
+            (guidance_string, word_target) tuple
         """
-        # Check if plan has scene_length metadata
-        metadata = plan.get("metadata", {})
-        scene_length = metadata.get("scene_length", "").lower()
-        
-        if scene_length == "brief":
-            return "\n\n**Length Guidance:** Keep this scene brief and focused - a quick moment or transition."
-        elif scene_length == "short":
-            return "\n\n**Length Guidance:** Write a short scene - establish the key moment without extensive detail."
-        elif scene_length == "long":
-            return "\n\n**Length Guidance:** Take your time with this scene - develop it fully with rich detail and depth."
-        elif scene_length == "extended":
-            return "\n\n**Length Guidance:** This is a major scene - write extensively, exploring all nuances and implications."
-        else:
-            # No guidance - let the scene be whatever length it needs
-            return ""
+        from .segments import word_target_for
+
+        metadata = plan.get("metadata") or {}
+        scene_length = metadata.get("scene_length", "")
+        scene_length = scene_length.lower() if isinstance(scene_length, str) else ""
+        word_target = word_target_for(scene_length, self.config)
+
+        flavor = {
+            "brief": "Keep this scene brief and focused - a quick moment or transition.",
+            "short": "Write a short scene - establish the key moment without extensive detail.",
+            "long": "Take your time with this scene - develop it fully with rich detail and depth.",
+            "extended": "This is a major scene - write extensively, exploring all nuances and implications.",
+        }.get(scene_length, "Develop the scene fully, at its natural pace.")
+
+        return (
+            f"\n\n**Length Guidance:** {flavor} Write roughly {word_target} words, "
+            f"and bring the scene to a complete ending within that budget.",
+            word_target,
+        )
     
     def _format_plot_beat_section(self, plan: Dict[str, Any]) -> str:
         """Format plot beat section for writer prompt (Phase 5).

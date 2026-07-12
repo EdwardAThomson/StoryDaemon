@@ -95,6 +95,8 @@ class CoherenceMetrics:
         scene_id: Optional[str],
         scene_text: Optional[str] = None,
         word_count: int = 0,
+        scene_segments: Optional[int] = None,
+        scene_truncated: Optional[bool] = None,
         tension_result: Optional[Dict[str, Any]] = None,
         goal_description: Optional[str] = None,
         contract_result: Optional[Dict[str, Any]] = None,
@@ -150,6 +152,14 @@ class CoherenceMetrics:
             "tick": tick,
             "scene_id": scene_id,
             "word_count": word_count,
+            # Write-until-concluded scene loop (Phase 3, segment plumbing for the
+            # block DSL; evidence docs/progress_report_20260711.md grant-rate
+            # addendum): scene_segments is how many LLM segments produced the
+            # committed prose; scene_truncated is True only when the trim-to-last-
+            # complete-sentence fallback fired. Both None when the writer did not
+            # report (the None-when-unavailable convention).
+            "scene_segments": scene_segments,
+            "scene_truncated": scene_truncated,
             "loops_opened": loops_opened,
             "loops_closed": loops_closed,
             "open_loops_total": open_loops_total,

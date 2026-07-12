@@ -25,7 +25,7 @@ or use the MultiProviderInterface wrapper, which exposes generate/
 generate_with_retry methods.
 """
 
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional, Tuple
 import os
 
 
@@ -180,9 +180,64 @@ def _ensure_gemini_configured():
     _gemini_configured = True
 
 
-# --- Provider-specific prompt helpers -------------------------------------------------
+# --- Finish-reason extraction (Phase 3, segment plumbing for the block DSL) ----------
+#
+# The write-until-concluded scene loop needs to know when a response was cut by
+# the token ceiling. Each provider reports this differently; these helpers
+# normalize to "length" (cut by max_tokens), "stop" (natural stop), any other
+# provider string lowercased, or None (unavailable). Extraction is best-effort:
+# a malformed response yields None and the caller's completion heuristic governs.
 
-def send_prompt_hosted_llm(
+def _openai_finish_reason(response) -> Optional[str]:
+    """choices[0].finish_reason from an OpenAI-shaped response ("length" is native)."""
+    try:
+        reason = response.choices[0].finish_reason
+    except (AttributeError, IndexError, TypeError):
+        return None
+    if reason is None:
+        return None
+    return str(reason).strip().lower() or None
+
+
+def _anthropic_finish_reason(response) -> Optional[str]:
+    """Anthropic stop_reason, mapped: max_tokens -> "length", end_turn/stop_sequence -> "stop"."""
+    reason = getattr(response, "stop_reason", None)
+    if reason is None:
+        return None
+    reason = str(reason).strip().lower()
+    if reason == "max_tokens":
+        return "length"
+    if reason in ("end_turn", "stop_sequence"):
+        return "stop"
+    return reason or None
+
+
+def _gemini_finish_reason(response) -> Optional[str]:
+    """Gemini candidates[0].finish_reason (enum, int, or string), normalized."""
+    try:
+        candidates = getattr(response, "candidates", None)
+        reason = getattr(candidates[0], "finish_reason", None) if candidates else None
+    except (IndexError, TypeError):
+        return None
+    if reason is None:
+        return None
+    if isinstance(reason, int):
+        return {1: "stop", 2: "length"}.get(reason, str(reason))
+    name = (getattr(reason, "name", None) or str(reason)).upper()
+    if "MAX_TOKENS" in name:
+        return "length"
+    if name.endswith("STOP"):
+        return "stop"
+    return name.lower() or None
+
+
+# --- Provider-specific prompt helpers -------------------------------------------------
+#
+# Each provider has a *_meta variant returning (text, finish_reason) for the
+# segment loop, and keeps its original text-only function (contract unchanged)
+# as a thin wrapper.
+
+def send_prompt_hosted_llm_meta(
     prompt: str,
     model: str = "",
     max_tokens: int = 2000,
@@ -190,8 +245,11 @@ def send_prompt_hosted_llm(
     role_description: str = (
         "You are a helpful fiction writing assistant. You will create original text only."
     ),
-) -> str:
-    """Send a prompt to a self-hosted, OpenAI-compatible chat endpoint."""
+) -> Tuple[str, Optional[str]]:
+    """Send a prompt to a self-hosted, OpenAI-compatible chat endpoint.
+
+    Returns (text, finish_reason): hosted endpoints are OpenAI-shaped.
+    """
     if model == "":
         model = os.environ.get("HOSTED_LLM_MODEL", None)
     if not model:
@@ -211,10 +269,15 @@ def send_prompt_hosted_llm(
         # that support it, e.g. vLLM/Qwen; ignored by servers that don't).
         extra_body={"chat_template_kwargs": {"enable_thinking": False}},
     )
-    return response.choices[0].message.content
+    return response.choices[0].message.content, _openai_finish_reason(response)
 
 
-def send_prompt_openrouter(
+def send_prompt_hosted_llm(*args, **kwargs) -> str:
+    """Text-only wrapper around send_prompt_hosted_llm_meta (original contract)."""
+    return send_prompt_hosted_llm_meta(*args, **kwargs)[0]
+
+
+def send_prompt_openrouter_meta(
     prompt: str,
     model: str = "",
     max_tokens: int = 2000,
@@ -222,8 +285,11 @@ def send_prompt_openrouter(
     role_description: str = (
         "You are a helpful fiction writing assistant. You will create original text only."
     ),
-) -> str:
-    """Send a prompt to OpenRouter, a hosted OpenAI-compatible router over many models."""
+) -> Tuple[str, Optional[str]]:
+    """Send a prompt to OpenRouter, a hosted OpenAI-compatible router over many models.
+
+    Returns (text, finish_reason): OpenRouter responses are OpenAI-shaped.
+    """
     if model == "":
         model = os.environ.get("OPENROUTER_MODEL", None)
     if not model:
@@ -244,10 +310,15 @@ def send_prompt_openrouter(
         # for one of them (e.g. vLLM/Qwen's enable_thinking flag) would be silently
         # ignored by most others and would be misleading to carry as a default.
     )
-    return response.choices[0].message.content
+    return response.choices[0].message.content, _openai_finish_reason(response)
 
 
-def send_prompt_openai(
+def send_prompt_openrouter(*args, **kwargs) -> str:
+    """Text-only wrapper around send_prompt_openrouter_meta (original contract)."""
+    return send_prompt_openrouter_meta(*args, **kwargs)[0]
+
+
+def send_prompt_openai_meta(
     prompt: str,
     model: str = "gpt-5.5",
     max_tokens: int = 2000,
@@ -255,8 +326,8 @@ def send_prompt_openai(
     role_description: str = (
         "You are a helpful fiction writing assistant. You will create original text only."
     ),
-) -> str:
-    """Send a prompt to the OpenAI Chat API."""
+) -> Tuple[str, Optional[str]]:
+    """Send a prompt to the OpenAI Chat API. Returns (text, finish_reason)."""
     client = _get_openai_client()
     response = client.chat.completions.create(
         model=model,
@@ -267,16 +338,21 @@ def send_prompt_openai(
         max_tokens=max_tokens,
         temperature=temperature,
     )
-    return response.choices[0].message.content
+    return response.choices[0].message.content, _openai_finish_reason(response)
 
 
-def send_prompt_gemini(
+def send_prompt_openai(*args, **kwargs) -> str:
+    """Text-only wrapper around send_prompt_openai_meta (original contract)."""
+    return send_prompt_openai_meta(*args, **kwargs)[0]
+
+
+def send_prompt_gemini_meta(
     prompt: str,
     model_name: str = "gemini-2.5-pro",
     max_output_tokens: int = 2048,
     temperature: float = 0.9,
-) -> str:
-    """Send a prompt to the Gemini API and return the generated text."""
+) -> Tuple[str, Optional[str]]:
+    """Send a prompt to the Gemini API. Returns (text, finish_reason)."""
     _ensure_gemini_configured()
     model = genai.GenerativeModel(model_name)
     response = model.generate_content(
@@ -287,10 +363,15 @@ def send_prompt_gemini(
         ),
         stream=False,
     )
-    return getattr(response, "text", "")
+    return getattr(response, "text", ""), _gemini_finish_reason(response)
 
 
-def send_prompt_claude(
+def send_prompt_gemini(*args, **kwargs) -> str:
+    """Text-only wrapper around send_prompt_gemini_meta (original contract)."""
+    return send_prompt_gemini_meta(*args, **kwargs)[0]
+
+
+def send_prompt_claude_meta(
     prompt: str,
     model: str = "claude-sonnet-4-5-20250929",
     max_tokens: int = 4096,
@@ -298,8 +379,8 @@ def send_prompt_claude(
     role_description: str = (
         "You are a skilled creative writer focused on producing original fiction."
     ),
-) -> str:
-    """Send a prompt to Anthropic Claude and return the generated text."""
+) -> Tuple[str, Optional[str]]:
+    """Send a prompt to Anthropic Claude. Returns (text, finish_reason)."""
     client = _get_anthropic_client()
     response = client.messages.create(
         model=model,
@@ -308,64 +389,89 @@ def send_prompt_claude(
         system=role_description,
         messages=[{"role": "user", "content": prompt}],
     )
+    finish_reason = _anthropic_finish_reason(response)
     # Anthropic returns a list of content blocks; we take the first text block
     if response.content and hasattr(response.content[0], "text"):
-        return response.content[0].text  # type: ignore[no-any-return]
-    return ""
+        return response.content[0].text, finish_reason  # type: ignore[no-any-return]
+    return "", finish_reason
+
+
+def send_prompt_claude(*args, **kwargs) -> str:
+    """Text-only wrapper around send_prompt_claude_meta (original contract)."""
+    return send_prompt_claude_meta(*args, **kwargs)[0]
 
 
 # --- Model registry (ai_helper-style) --------------------------------------------------
 
 
 ModelFn = Callable[[str, int], str]
+ModelMetaFn = Callable[[str, int], Tuple[str, Optional[str]]]
 
 
-_model_config: Dict[str, ModelFn] = {
+# The meta registry is the single source of truth (Phase 3, segment plumbing):
+# every entry returns (text, finish_reason). The text-only _model_config below is
+# derived from it, so the two can never drift. When refreshing models, update
+# THIS registry (and the gpt-5.5 fallback literals in cli/main.py/commands/*.py).
+_model_config_meta: Dict[str, ModelMetaFn] = {
     # Self-hosted, OpenAI-compatible endpoint (configured via HOSTED_LLM_* env vars)
-    "hosted-llm": lambda prompt, max_tokens: send_prompt_hosted_llm(
+    "hosted-llm": lambda prompt, max_tokens: send_prompt_hosted_llm_meta(
         prompt=prompt, max_tokens=max_tokens,
     ),
     # OpenRouter, a hosted OpenAI-compatible router over many models (configured via OPENROUTER_* env vars)
-    "openrouter": lambda prompt, max_tokens: send_prompt_openrouter(
+    "openrouter": lambda prompt, max_tokens: send_prompt_openrouter_meta(
         prompt=prompt, max_tokens=max_tokens,
     ),
     # OpenAI GPT-5 family (kept in sync with LLM-Remote-Runner)
-    "gpt-5.5": lambda prompt, max_tokens: send_prompt_openai(
+    "gpt-5.5": lambda prompt, max_tokens: send_prompt_openai_meta(
         prompt=prompt, model="gpt-5.5", max_tokens=max_tokens,
     ),
-    "gpt-5.4": lambda prompt, max_tokens: send_prompt_openai(
+    "gpt-5.4": lambda prompt, max_tokens: send_prompt_openai_meta(
         prompt=prompt, model="gpt-5.4", max_tokens=max_tokens,
     ),
-    "gpt-5.2": lambda prompt, max_tokens: send_prompt_openai(
+    "gpt-5.2": lambda prompt, max_tokens: send_prompt_openai_meta(
         prompt=prompt, model="gpt-5.2", max_tokens=max_tokens,
     ),
     # Anthropic Claude 4.5 family
-    "claude-sonnet-4.5": lambda prompt, max_tokens: send_prompt_claude(
+    "claude-sonnet-4.5": lambda prompt, max_tokens: send_prompt_claude_meta(
         prompt=prompt, model="claude-sonnet-4-5-20250929", max_tokens=max_tokens,
     ),
-    "claude-haiku-4.5": lambda prompt, max_tokens: send_prompt_claude(
+    "claude-haiku-4.5": lambda prompt, max_tokens: send_prompt_claude_meta(
         prompt=prompt, model="claude-haiku-4-5-20251001", max_tokens=max_tokens,
     ),
     # Back-compat alias -> Sonnet (referenced by existing configs/docs)
-    "claude-4.5": lambda prompt, max_tokens: send_prompt_claude(
+    "claude-4.5": lambda prompt, max_tokens: send_prompt_claude_meta(
         prompt=prompt, model="claude-sonnet-4-5-20250929", max_tokens=max_tokens,
     ),
     # Google Gemini
-    "gemini-3-flash-preview": lambda prompt, max_tokens: send_prompt_gemini(
+    "gemini-3-flash-preview": lambda prompt, max_tokens: send_prompt_gemini_meta(
         prompt=prompt, model_name="gemini-3-flash-preview", max_output_tokens=max_tokens,
     ),
-    "gemini-3-pro-preview": lambda prompt, max_tokens: send_prompt_gemini(
+    "gemini-3-pro-preview": lambda prompt, max_tokens: send_prompt_gemini_meta(
         prompt=prompt, model_name="gemini-3-pro-preview", max_output_tokens=max_tokens,
     ),
-    "gemini-3.1-pro-preview": lambda prompt, max_tokens: send_prompt_gemini(
+    "gemini-3.1-pro-preview": lambda prompt, max_tokens: send_prompt_gemini_meta(
         prompt=prompt, model_name="gemini-3.1-pro-preview", max_output_tokens=max_tokens,
     ),
-    "gemini-2.5-pro": lambda prompt, max_tokens: send_prompt_gemini(
+    "gemini-2.5-pro": lambda prompt, max_tokens: send_prompt_gemini_meta(
         prompt=prompt, model_name="gemini-2.5-pro", max_output_tokens=max_tokens,
     ),
-    "gemini-2.5-flash": lambda prompt, max_tokens: send_prompt_gemini(
+    "gemini-2.5-flash": lambda prompt, max_tokens: send_prompt_gemini_meta(
         prompt=prompt, model_name="gemini-2.5-flash", max_output_tokens=max_tokens,
     ),
+}
+
+
+def _text_only(meta_fn: ModelMetaFn) -> ModelFn:
+    """Adapt a (text, finish_reason) model function to the text-only contract."""
+    def call(prompt: str, max_tokens: int) -> str:
+        return meta_fn(prompt, max_tokens)[0]
+    return call
+
+
+# Text-only registry, derived from the meta registry (existing generate()
+# callers and get_supported_models() keep their exact contract).
+_model_config: Dict[str, ModelFn] = {
+    name: _text_only(fn) for name, fn in _model_config_meta.items()
 }
 
 
@@ -374,24 +480,44 @@ def get_supported_models() -> List[str]:
     return list(_model_config.keys())
 
 
+def _resolve_model_key(model: str, registry: Dict) -> str:
+    """Resolve a model key against a registry, trying a "-latest" suffix before failing."""
+    if model in registry:
+        return model
+    alt = f"{model}-latest"
+    if alt in registry:
+        return alt
+    supported = ", ".join(sorted(get_supported_models()))
+    raise ValueError(
+        f"Unsupported model: {model}. Supported models are: {supported}"
+    )
+
+
 def send_prompt(prompt: str, model: str = "gpt-5.5", max_tokens: int = 2000) -> str:
     """Send a prompt using the configured model registry.
 
     If the model key is not found, tries a "-latest" suffix before failing.
     """
-    # Resolve model key
-    if model not in _model_config:
-        alt = f"{model}-latest"
-        if alt in _model_config:
-            model = alt
-        else:
-            supported = ", ".join(sorted(get_supported_models()))
-            raise ValueError(
-                f"Unsupported model: {model}. Supported models are: {supported}"
-            )
-
+    model = _resolve_model_key(model, _model_config)
     try:
         return _model_config[model](prompt, max_tokens)
+    except Exception as e:  # noqa: BLE001 - we want a simple wrapper
+        raise RuntimeError(f"Error calling model '{model}': {e}") from e
+
+
+def send_prompt_meta(
+    prompt: str, model: str = "gpt-5.5", max_tokens: int = 2000
+) -> Tuple[str, Optional[str]]:
+    """Send a prompt and return (text, finish_reason).
+
+    finish_reason is normalized across providers: "length" means the response
+    was cut by the token ceiling, "stop" means a natural stop, None means the
+    provider reported nothing usable. Phase 3 segment plumbing for the
+    write-until-concluded scene loop.
+    """
+    model = _resolve_model_key(model, _model_config_meta)
+    try:
+        return _model_config_meta[model](prompt, max_tokens)
     except Exception as e:  # noqa: BLE001 - we want a simple wrapper
         raise RuntimeError(f"Error calling model '{model}': {e}") from e
 
@@ -432,6 +558,19 @@ class MultiProviderInterface:
     def generate(self, prompt: str, max_tokens: int = 2000, timeout: int = 120) -> str:  # noqa: ARG002
         # timeout is accepted for interface compatibility but not used directly
         return send_prompt(prompt, model=self.model, max_tokens=max_tokens)
+
+    def generate_with_meta(
+        self, prompt: str, max_tokens: int = 2000, timeout: int = 120  # noqa: ARG002
+    ) -> Tuple[str, Optional[str]]:
+        """Generate and return (text, finish_reason). Phase 3 segment plumbing.
+
+        finish_reason is normalized to "length" (cut by the token ceiling),
+        "stop" (natural stop), another provider string, or None. Callers opt in
+        via hasattr(client, "generate_with_meta"); the CLI backends (codex,
+        claude-cli, gemini-cli) do not expose response metadata and simply lack
+        this method, so everything degrades to the completion heuristic.
+        """
+        return send_prompt_meta(prompt, model=self.model, max_tokens=max_tokens)
 
     def generate_with_retry(
         self,

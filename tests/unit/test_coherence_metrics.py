@@ -296,3 +296,29 @@ def test_llm_goal_relevance_raises_falls_back(project):
     assert rec["goal_relevance"] == 2.0
     assert rec["goal_relevance_method"] == "embedding"
     assert llm.calls == 2
+
+
+# ---- write-until-concluded scene loop fields (Phase 3 segment plumbing) ------
+
+def test_scene_segment_fields_recorded(project):
+    cm = _metrics(project)
+    rec = cm.record_tick(tick=1, scene_id="S001", scene_text="x", word_count=5,
+                         tension_result=None, scene_segments=2, scene_truncated=False)
+    assert rec["scene_segments"] == 2
+    assert rec["scene_truncated"] is False
+
+
+def test_scene_truncated_true_when_trim_fired(project):
+    cm = _metrics(project)
+    rec = cm.record_tick(tick=1, scene_id="S001", scene_text="x", word_count=5,
+                         tension_result=None, scene_segments=3, scene_truncated=True)
+    assert rec["scene_segments"] == 3
+    assert rec["scene_truncated"] is True
+
+
+def test_scene_segment_fields_default_none(project):
+    # None (not 0/False) when the writer did not report, the usual convention.
+    cm = _metrics(project)
+    rec = cm.record_tick(tick=1, scene_id="S001", tension_result=None)
+    assert rec["scene_segments"] is None
+    assert rec["scene_truncated"] is None
