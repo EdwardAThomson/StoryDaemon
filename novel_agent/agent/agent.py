@@ -427,6 +427,14 @@ class StoryAgent:
             if self._sacred_finale_applies(tick):
                 expiry_result = self._expire_finale_loops(scene_id)
 
+            # Step 11.8: Thread attribution (Phase 3, interleaving Slice T1):
+            # the committed scene joins its beat's primary thread's trace
+            # (implicit "main" when there is no beat or no labels, so the
+            # trace stays total). Pure instrumentation, never breaks a tick.
+            thread_result = self._update_thread_registry(
+                tick, scene_id, tension_result, current_beat
+            )
+
             # Step 12: Extract lore (Phase 7A.4)
             print("   12. Extracting lore...")
             lore_items = self._extract_lore_with_retry(
@@ -453,6 +461,7 @@ class StoryAgent:
                 loops_deduped=self._loops_deduped_metric(facts, update_stats),
                 loops_capped=self._loops_capped_metric(facts, update_stats),
                 expiry_result=expiry_result,
+                thread_result=thread_result,
             )
 
             result = {
@@ -478,6 +487,9 @@ class StoryAgent:
 
             if loop_closure_result:
                 result["loop_closure"] = loop_closure_result
+
+            if thread_result:
+                result["thread"] = thread_result
 
             if extractor_closure_result:
                 result["extractor_closure"] = extractor_closure_result
@@ -649,8 +661,15 @@ class StoryAgent:
             self.state["current_tick"] += 1
             self._save_state()
 
+            # Thread attribution (Phase 3, interleaving Slice T1): tick 0 has no
+            # beat, so the scene lands on the implicit "main" thread (no tension
+            # signal yet), keeping the trace total from the first scene.
+            thread_result = self._update_thread_registry(tick, scene_id, None, None)
+
             # Phase 3: record per-tick coherence metrics (tick 0 has no tension evaluation)
-            coherence_record = self._record_coherence_metrics(tick, scene_id, scene_data, None)
+            coherence_record = self._record_coherence_metrics(
+                tick, scene_id, scene_data, None, thread_result=thread_result
+            )
 
             result = {
                 "success": True,
@@ -1343,10 +1362,41 @@ class StoryAgent:
         except Exception:
             return None
 
+    def _update_thread_registry(self, tick, scene_id, tension_result, current_beat=None):
+        """Phase 3 (interleaving Slice T1): thread attribution (step 11.8).
+
+        Pure instrumentation: the committed scene is attributed to its beat's
+        primary thread (the FIRST plot_threads label; implicit "main" when
+        there is no beat or no labels), updating the thread's tension trace,
+        membership, and consecutive-run count in memory/threads.json. Nothing
+        reads the registry for decisions in this slice. Returns the
+        attribution summary for the tick result and the rubric, or None on
+        failure (the rubric's thread fields stay null, the
+        None-when-unavailable convention). Never raises.
+        """
+        try:
+            from .thread_registry import ThreadRegistry
+
+            tension_level = (tension_result or {}).get("tension_level")
+            result = ThreadRegistry(self.memory, self.config).attribute_scene(
+                tick=tick,
+                scene_id=scene_id,
+                beat=current_beat,
+                tension_level=tension_level,
+            )
+            if result:
+                print(f"        Thread: {result['thread_name']} "
+                      f"(run {result['run_length']}, {result['thread_count']} tracked)")
+            return result
+        except Exception as e:
+            logging.getLogger(__name__).warning(f"Thread attribution failed (tick {tick}): {e}")
+            return None
+
     def _record_coherence_metrics(self, tick, scene_id, scene_data, tension_result,
                                   contract_result=None, finale_result=None,
                                   loop_closure_result=None, loops_deduped=None,
-                                  loops_capped=None, expiry_result=None):
+                                  loops_capped=None, expiry_result=None,
+                                  thread_result=None):
         """Phase 3 coherence instrumentation. Never raises (graceful degradation).
 
         Returns the per-tick metric record, or None if disabled/failed. A failure here
@@ -1382,6 +1432,7 @@ class StoryAgent:
                     expiry_result.get("dangling_threads")
                     if expiry_result else None
                 ),
+                thread_result=thread_result,
             )
         except Exception as e:
             logging.getLogger(__name__).warning(f"Coherence metrics failed (tick {tick}): {e}")

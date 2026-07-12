@@ -7,7 +7,7 @@ from datetime import datetime
 
 from .entities import (
     Character, Location, Scene, OpenLoop, RelationshipGraph, Lore, Faction,
-    HistoryEntry, RelationshipHistoryEntry
+    HistoryEntry, RelationshipHistoryEntry, Thread
 )
 
 
@@ -30,6 +30,10 @@ class MemoryManager:
         self.open_loops_file = self.memory_path / "open_loops.json"
         self.relationships_file = self.memory_path / "relationships.json"
         self.lore_file = self.memory_path / "lore.json"
+        # Thread registry (Phase 3, interleaving Slice T1). Created lazily on
+        # first save (unlike open_loops.json), so projects that never attribute
+        # a scene gain no new file.
+        self.threads_file = self.memory_path / "threads.json"
         self.counters_file = self.memory_path / "counters.json"
         
         self._ensure_directories()
@@ -62,7 +66,8 @@ class MemoryManager:
                 "open_loop": 0,
                 "relationship": 0,
                 "lore": 0,
-                "faction": 0
+                "faction": 0,
+                "thread": 0
             })
     
     def _load_counters(self):
@@ -80,6 +85,7 @@ class MemoryManager:
             "relationship",
             "lore",
             "faction",
+            "thread",
         ]:
             if key not in self.counters:
                 self.counters[key] = 0
@@ -183,6 +189,31 @@ class MemoryManager:
                 self.counters["relationship"] = max_rel + 1
                 changed = True
 
+        # Ensure the thread counter is past any TH* IDs in threads.json
+        # (Phase 3, interleaving Slice T1). The registry is pure
+        # instrumentation, so an unreadable threads.json must not break
+        # MemoryManager construction (graceful degradation).
+        if self.threads_file.exists():
+            try:
+                data = self._read_json(self.threads_file)
+                thread_records = data.get("threads", [])
+            except (json.JSONDecodeError, ValueError, OSError):
+                thread_records = []
+            max_thread = -1
+            for thread in thread_records:
+                thread_id = thread.get("id")
+                if isinstance(thread_id, str) and thread_id.startswith("TH"):
+                    try:
+                        idx = int(thread_id[2:])
+                    except (ValueError, IndexError):
+                        continue
+                    if idx > max_thread:
+                        max_thread = idx
+
+            if max_thread >= 0 and self.counters.get("thread", 0) <= max_thread:
+                self.counters["thread"] = max_thread + 1
+                changed = True
+
         if changed:
             self._save_counters()
     
@@ -267,6 +298,8 @@ class MemoryManager:
             return f"R{current}"
         elif entity_type == "faction":
             return f"F{current}"
+        elif entity_type == "thread":
+            return f"TH{current:03d}"
         else:
             raise ValueError(f"Unknown entity type: {entity_type}")
     
@@ -575,6 +608,22 @@ class MemoryManager:
         loops = self.load_open_loops()
         return [loop for loop in loops if loop.status == status]
     
+    # ========================================================================
+    # Thread Registry (Phase 3, interleaving Slice T1)
+    # ========================================================================
+
+    def load_threads(self) -> List[Thread]:
+        """Load all story threads (empty list when no registry exists yet)."""
+        if not self.threads_file.exists():
+            return []
+        data = self._read_json(self.threads_file)
+        return [Thread.from_dict(thread) for thread in data.get("threads", [])]
+
+    def save_threads(self, threads: List[Thread]):
+        """Save story threads to disk (creates threads.json on first save)."""
+        data = {"threads": [thread.to_dict() for thread in threads]}
+        self._write_json(self.threads_file, data)
+
     # ========================================================================
     # Relationship Graph Management
     # ========================================================================

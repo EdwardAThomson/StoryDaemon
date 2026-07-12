@@ -1020,6 +1020,46 @@ def metrics(
 
 
 @app.command()
+def threads(
+    project: Optional[str] = typer.Option(
+        None,
+        "--project",
+        "-p",
+        help="Path to novel project"
+    ),
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help="Output as JSON"
+    )
+):
+    """List story threads (Phase 3, interleaving Slice T1 instrumentation).
+
+    Shows each thread seeded from beat plot_threads labels: scenes served,
+    tick run pattern, tension range, members, and last activity. Read-only.
+
+    Example:
+        novel threads
+        novel threads --json
+    """
+    from .commands.threads import get_threads_info, display_threads, display_threads_json
+
+    try:
+        project_dir = Path(find_project_dir(project))
+
+        info = get_threads_info(project_dir)
+
+        if json_output:
+            display_threads_json(info)
+        else:
+            display_threads(info)
+
+    except ValueError as e:
+        typer.echo(f"❌ Error: {e}", err=True)
+        raise typer.Exit(1)
+
+
+@app.command()
 def lore(
     project: Optional[str] = typer.Option(
         None,

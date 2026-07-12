@@ -164,6 +164,15 @@ DEFAULT_CONFIG = {
         # Max new loops per tick; entries beyond the cap are dropped lowest-importance
         # first. None or 0 disables the cap.
         'loop_creation_cap': 4,
+        # Thread registry (Phase 3, interleaving Slice T1): ratio at or above which
+        # a beat's plot_threads label maps to an existing thread instead of minting
+        # a new one (difflib SequenceMatcher on normalized labels, deterministic,
+        # no LLM). 0.8 follows the loop-dedup precedent: label variants of one
+        # strand ("velyn_agenda" / "Velyn's agenda") score well above 0.85, while
+        # distinct strands sharing scaffolding sit lower. Pure instrumentation:
+        # nothing reads the registry for decisions in this slice, so there is no
+        # on/off gate beyond coherence.enabled for the metric fields.
+        'thread_match_threshold': 0.8,
     },
     'plot': {
         # Beat integration mode: controls how strongly the agent treats plot beats.
