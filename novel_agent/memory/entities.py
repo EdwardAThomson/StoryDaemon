@@ -485,6 +485,13 @@ class Thread:
     last_active_tick: Optional[int] = None
     beats_served: List[str] = field(default_factory=list)
     scene_ids: List[str] = field(default_factory=list)
+    # Attribution-source counts (Phase 3, interleaving Slice T1.5: thread
+    # identity grounding): how many scenes landed here by explicit beat
+    # thread_id selection vs the T1 first-label fallback vs the implicit-main
+    # fallback, so a validation run can measure selection adoption. Keys:
+    # "selected", "label_fallback", "main". Empty on legacy registries and
+    # when coherence.thread_identity is off.
+    attribution_sources: Dict[str, int] = field(default_factory=dict)
 
     def __post_init__(self):
         """Set timestamp if not provided."""
@@ -611,6 +618,13 @@ class PlotBeat:
     characters_involved: List[str] = field(default_factory=list)
     location: Optional[str] = None
     plot_threads: List[str] = field(default_factory=list)
+    # The ONE registry thread this beat serves (Phase 3, interleaving Slice
+    # T1.5: thread identity grounding). Authored by selection from the prompt's
+    # thread roster (an exact TH id, or "new: <name>" which the sanitizer
+    # mints), never free-typed; mirrors novel_agent/plot/entities.py for the
+    # same cls(**data) reason. None on legacy outlines and when
+    # coherence.thread_identity is off. plot_threads stays as free-text color.
+    thread_id: Optional[str] = None
     tension_target: Optional[int] = None  # 0-10 target tension level
     prerequisites: List[str] = field(default_factory=list)
     status: str = "pending"  # pending, in_progress, completed, skipped, abandoned

@@ -401,7 +401,7 @@ Return your answer as JSON only, with no explanations, no markdown fences, and n
       "description": "...",
       "characters_involved": ["C000", "C001"],
       "location": "L000",
-      "plot_threads": ["thread_a"],
+      "plot_threads": ["thread_a"],{thread_schema_example}
       "tension_target": 7,
       "prerequisites": [],
       "advances_character_arcs": [],
@@ -430,6 +430,7 @@ Tone: {tone}
 ## Locations (use these exact IDs)
 {locations}
 
+{thread_section}
 ## Open loops
 {open_loops}
 
@@ -455,7 +456,7 @@ Each beat must follow these constraints:
 - The "plot_threads" field should list at most 3 concise thread names per beat; pick only the most relevant threads.
 - For "characters_involved" and "location", use ONLY the exact IDs listed in the Characters and Locations sections above (for example C000, L000). Never invent new IDs or abbreviate them; omit the field or use an empty list if no existing entity fits.
 - For "resolves_loops" and "advances_loops", use ONLY the bare loop IDs from the Open loops section (for example ["OL4"]). Do not append the loop's description or invent new loop IDs.
-- Put a loop ID in "resolves_loops" ONLY if this beat's scene will ANSWER that loop ON THE PAGE: the reader learns the answer, or the matter concludes. If the beat merely moves a loop forward (engages it, raises its stakes, works toward it) without answering it, put its ID in "advances_loops" instead.
+- Put a loop ID in "resolves_loops" ONLY if this beat's scene will ANSWER that loop ON THE PAGE: the reader learns the answer, or the matter concludes. If the beat merely moves a loop forward (engages it, raises its stakes, works toward it) without answering it, put its ID in "advances_loops" instead.{thread_rule}
 
 # Your task
 
@@ -479,12 +480,16 @@ def format_plot_generation_prompt(context: dict) -> str:
     Returns:
         Formatted prompt string
     """
-    # Phase 3: the arc schedule and contract sections are optional. Callers that
-    # predate them (or run with the gates off) render empty sections.
+    # Phase 3: the arc schedule, contract, and thread-identity sections are
+    # optional. Callers that predate them (or run with the gates off) render
+    # empty sections.
     context = dict(context)
     context.setdefault("arc_guidance_section", "")
     context.setdefault("contract_section", "")
     context.setdefault("contract_schema_example", "")
+    context.setdefault("thread_section", "")
+    context.setdefault("thread_schema_example", "")
+    context.setdefault("thread_rule", "")
     return PLOT_GENERATION_PROMPT_TEMPLATE.format(**context)
 
 

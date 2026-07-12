@@ -12,6 +12,8 @@ from ...agent.prompts import format_plot_generation_prompt
 from ...agent.arc_pressure import (arc_guidance_for_beats, cap_beat_count,
                                    reconcile_beat_tension_targets)
 from ...agent.loop_closure import sanitize_beat_loop_claims
+from ...agent.thread_registry import (sanitize_beat_thread_ids, thread_prompt_rule,
+                                      thread_roster_section, thread_schema_example)
 from ...contracts.authoring import (contract_authoring_section, contract_schema_example,
                                     sanitize_beat_conditions)
 
@@ -196,6 +198,7 @@ def _assign_new_beat_ids(outline: PlotOutline, beat_dicts: List[Dict[str, Any]])
                 characters_involved=b.get("characters_involved", []) or [],
                 location=b.get("location"),
                 plot_threads=b.get("plot_threads", []) or [],
+                thread_id=b.get("thread_id"),
                 tension_target=b.get("tension_target"),
                 prerequisites=b.get("prerequisites", []) or [],
                 status="pending",
@@ -307,6 +310,19 @@ def _build_plot_generation_prompt(
         contract_section = ""
         schema_example = ""
 
+    # Thread roster + selection rule + shape fragment (Phase 3, interleaving
+    # Slice T1.5: thread identity grounding); all "" when
+    # coherence.thread_identity is off. Never a hard failure.
+    try:
+        _cfg = _project_config(project_dir)
+        thread_section = thread_roster_section(memory, _cfg)
+        thread_example = thread_schema_example(_cfg)
+        thread_rule = thread_prompt_rule(_cfg)
+    except Exception:
+        thread_section = ""
+        thread_example = ""
+        thread_rule = ""
+
     # Single source of truth for the beat-generation prompt lives in
     # agent/prompts.py; this CLI path and the agent's PlotOutlineManager both
     # render the same template, only differing in how they assemble context.
@@ -328,6 +344,9 @@ def _build_plot_generation_prompt(
         "arc_guidance_section": arc_guidance_section,
         "contract_section": contract_section,
         "contract_schema_example": schema_example,
+        "thread_section": thread_section,
+        "thread_schema_example": thread_example,
+        "thread_rule": thread_rule,
     }
     return format_plot_generation_prompt(ctx)
 
@@ -383,6 +402,26 @@ def _sanitize_loop_claims(project_dir: Path, beats: List[PlotBeat]) -> None:
         print(f"  ⚠️  Beat loop-claim sanitization skipped: {e}")
 
 
+def _sanitize_thread_ids(project_dir: Path, beats: List[PlotBeat]) -> None:
+    """Hold every beat's thread_id to the thread registry (select, don't invent).
+
+    Same sanitize-not-trust pass the agent path runs in
+    PlotOutlineManager._resolve_beat_threads, via the shared helper (Phase 3,
+    interleaving Slice T1.5: thread identity grounding): exact TH ids are kept,
+    "new: <name>" mints a registry thread, anything else is matched against
+    existing thread names or cleared with a warning, and a cast disjoint from
+    the resolved thread's membership warns but keeps the assignment. Never
+    raises; a bad selection must not break beat generation.
+    """
+    try:
+        memory = MemoryManager(project_dir)
+        config = _project_config(project_dir)
+        for warning in sanitize_beat_thread_ids(beats, memory, config):
+            print(f"  ⚠️  {warning}")
+    except Exception as e:
+        print(f"  ⚠️  Beat thread_id sanitization skipped: {e}")
+
+
 def _capped_beat_count(project_dir: Path, count: int) -> int:
     """Cap the batch to the remaining story runway (Phase 3 slot alignment).
 
@@ -435,6 +474,7 @@ def generate_and_append_beats_cli(
     _reconcile_generated_beats(project_dir, new_beats)
     _sanitize_beat_conditions(project_dir, new_beats)
     _sanitize_loop_claims(project_dir, new_beats)
+    _sanitize_thread_ids(project_dir, new_beats)
     updated_outline = manager.add_beats(new_beats)
     issues = manager.validate_outline(updated_outline)
 
@@ -525,6 +565,7 @@ def revise_and_regenerate_beats_cli(
     _reconcile_generated_beats(project_dir, new_beats)
     _sanitize_beat_conditions(project_dir, new_beats)
     _sanitize_loop_claims(project_dir, new_beats)
+    _sanitize_thread_ids(project_dir, new_beats)
     updated_outline = manager.add_beats(new_beats)
     issues = manager.validate_outline(updated_outline)
 

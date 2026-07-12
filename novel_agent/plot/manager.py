@@ -142,6 +142,7 @@ class PlotOutlineManager:
         self._resolve_beat_references(beats_assigned)
         self._resolve_beat_conditions(beats_assigned)
         self._sanitize_loop_claims(beats_assigned)
+        self._resolve_beat_threads(beats_assigned)
         outline.beats.extend(beats_assigned)
         self.save_outline(outline)
         return beats_assigned
@@ -197,6 +198,26 @@ class PlotOutlineManager:
                 print(f"        ⚠️  {warning}")
         except Exception as e:
             print(f"        ⚠️  Beat loop-claim sanitization skipped: {e}")
+
+    def _resolve_beat_threads(self, beats: List[PlotBeat]) -> None:
+        """Hold every beat's thread_id to the thread registry (select, don't invent).
+
+        Sibling of _resolve_beat_references (Phase 3, interleaving Slice T1.5:
+        thread identity grounding): exact TH ids are kept, "new: <name>" mints
+        a registry thread, and anything else is matched against existing
+        thread names or cleared with a warning; a cast disjoint from the
+        resolved thread's membership warns but keeps the assignment. Shared
+        helper with the CLI authoring path (cli/commands/plot.py) so the two
+        cannot drift. Never raises; a bad selection must not break beat
+        generation (fallback_to_reactive relies on that).
+        """
+        try:
+            from ..agent.thread_registry import sanitize_beat_thread_ids
+
+            for warning in sanitize_beat_thread_ids(beats, self.memory, self.config):
+                print(f"        ⚠️  {warning}")
+        except Exception as e:
+            print(f"        ⚠️  Beat thread_id sanitization skipped: {e}")
 
     def get_next_beat(self) -> Optional[PlotBeat]:
         outline = self.load_outline()
@@ -321,6 +342,21 @@ class PlotOutlineManager:
             contract_section = ""
             schema_example = ""
 
+        # Thread roster + selection rule + shape fragment (Phase 3, interleaving
+        # Slice T1.5: thread identity grounding); all "" when
+        # coherence.thread_identity is off. Never a hard failure.
+        try:
+            from ..agent.thread_registry import (thread_prompt_rule,
+                                                 thread_roster_section,
+                                                 thread_schema_example)
+            thread_section = thread_roster_section(self.memory, self.config)
+            thread_example = thread_schema_example(self.config)
+            thread_rule = thread_prompt_rule(self.config)
+        except Exception:
+            thread_section = ""
+            thread_example = ""
+            thread_rule = ""
+
         return {
             "novel_name": novel_name,
             "current_tick": current_tick,
@@ -337,6 +373,9 @@ class PlotOutlineManager:
             "arc_guidance_section": arc_guidance_section,
             "contract_section": contract_section,
             "contract_schema_example": schema_example,
+            "thread_section": thread_section,
+            "thread_schema_example": thread_example,
+            "thread_rule": thread_rule,
             "count": count,
             # Beat-generation token budget, from config (generation.beat_max_tokens):
             # the old hardcoded 1000 truncated contract + arc-guidance batches
@@ -388,6 +427,7 @@ class PlotOutlineManager:
                     characters_involved=b.get("characters_involved", []) or [],
                     location=b.get("location"),
                     plot_threads=b.get("plot_threads", []) or [],
+                    thread_id=b.get("thread_id"),
                     tension_target=b.get("tension_target"),
                     prerequisites=b.get("prerequisites", []) or [],
                     advances_character_arcs=b.get("advances_character_arcs", []) or [],
