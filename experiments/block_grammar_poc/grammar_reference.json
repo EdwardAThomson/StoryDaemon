@@ -1,0 +1,1585 @@
+{
+ "meta": {
+  "n_books": 21,
+  "books": [
+   "austen-emma",
+   "austen-persuasion",
+   "austen-pride",
+   "bronte-janeeyre",
+   "buchan-greenmantle",
+   "buchan-thirtyninesteps",
+   "childers-riddlesands",
+   "collins-moonstone",
+   "conrad-heartofdarkness",
+   "conrad-lordjim",
+   "conrad-secretagent",
+   "dickens-taleoftwocities",
+   "dunsany-elfland",
+   "eddison-ouroboros",
+   "haggard-ksm",
+   "haggard-she",
+   "sabatini-captainblood",
+   "sabatini-scaramouche",
+   "stoker-dracula",
+   "wells-timemachine",
+   "wells-warofworlds"
+  ],
+  "n_paragraphs": 38495,
+  "n_transitions": 37836,
+  "source": "nd1_ab/deepseek sidecars via scripts/block_grammar_tables.py"
+ },
+ "modes": [
+  "SETTING",
+  "CHARACTER_DESC",
+  "LORE",
+  "DIALOGUE",
+  "ACTION",
+  "INTERIORITY",
+  "TRANSITION"
+ ],
+ "base_rates": {
+  "SETTING": 0.040810494869463566,
+  "CHARACTER_DESC": 0.028964800623457593,
+  "LORE": 0.033562800363683594,
+  "DIALOGUE": 0.5647746460579296,
+  "ACTION": 0.23213404338225743,
+  "INTERIORITY": 0.08782958825821535,
+  "TRANSITION": 0.011923626444992856
+ },
+ "transition": {
+  "SETTING": {
+   "SETTING": 0.18975705843729482,
+   "CHARACTER_DESC": 0.06434668417596848,
+   "LORE": 0.05318450426789232,
+   "DIALOGUE": 0.23834537097833225,
+   "ACTION": 0.3237032173342088,
+   "INTERIORITY": 0.12147078135259357,
+   "TRANSITION": 0.009192383453709783
+  },
+  "CHARACTER_DESC": {
+   "SETTING": 0.02722323049001815,
+   "CHARACTER_DESC": 0.09800362976406533,
+   "LORE": 0.045372050816696916,
+   "DIALOGUE": 0.5372050816696915,
+   "ACTION": 0.18784029038112524,
+   "INTERIORITY": 0.08892921960072596,
+   "TRANSITION": 0.015426497277676952
+  },
+  "LORE": {
+   "SETTING": 0.06279809220985691,
+   "CHARACTER_DESC": 0.04213036565977742,
+   "LORE": 0.3815580286168522,
+   "DIALOGUE": 0.15977742448330684,
+   "ACTION": 0.21860095389507153,
+   "INTERIORITY": 0.11764705882352941,
+   "TRANSITION": 0.017488076311605722
+  },
+  "DIALOGUE": {
+   "SETTING": 0.01278724981467754,
+   "CHARACTER_DESC": 0.02112676056338028,
+   "LORE": 0.008432171979243884,
+   "DIALOGUE": 0.7036230541141586,
+   "ACTION": 0.1850908080059303,
+   "INTERIORITY": 0.06555782060785767,
+   "TRANSITION": 0.003382134914751668
+  },
+  "ACTION": {
+   "SETTING": 0.06165171382562687,
+   "CHARACTER_DESC": 0.030710835058661144,
+   "LORE": 0.02461467678858983,
+   "DIALOGUE": 0.4769956291695422,
+   "ACTION": 0.3052680009201748,
+   "INTERIORITY": 0.08293075684380032,
+   "TRANSITION": 0.017828387393604785
+  },
+  "INTERIORITY": {
+   "SETTING": 0.04563675609004009,
+   "CHARACTER_DESC": 0.028985507246376812,
+   "LORE": 0.037619488128276285,
+   "DIALOGUE": 0.35892691951896394,
+   "ACTION": 0.3000308356460068,
+   "INTERIORITY": 0.2047486894850447,
+   "TRANSITION": 0.024051803885291396
+  },
+  "TRANSITION": {
+   "SETTING": 0.12962962962962962,
+   "CHARACTER_DESC": 0.011574074074074073,
+   "LORE": 0.09259259259259259,
+   "DIALOGUE": 0.12268518518518519,
+   "ACTION": 0.42824074074074076,
+   "INTERIORITY": 0.14814814814814814,
+   "TRANSITION": 0.06712962962962964
+  }
+ },
+ "row_n": {
+  "SETTING": 1523,
+  "CHARACTER_DESC": 1102,
+  "LORE": 1258,
+  "DIALOGUE": 21584,
+  "ACTION": 8694,
+  "INTERIORITY": 3243,
+  "TRANSITION": 432
+ },
+ "run_stats": {
+  "SETTING": {
+   "mean": 1.2254290171606865,
+   "median": 1.0,
+   "p90": 2,
+   "max": 8,
+   "n_runs": 1282
+  },
+  "CHARACTER_DESC": {
+   "mean": 1.1072492552135054,
+   "median": 1,
+   "p90": 1,
+   "max": 6,
+   "n_runs": 1007
+  },
+  "LORE": {
+   "mean": 1.5911330049261083,
+   "median": 1.0,
+   "p90": 2,
+   "max": 76,
+   "n_runs": 812
+  },
+  "DIALOGUE": {
+   "mean": 3.3172108635947515,
+   "median": 2.0,
+   "p90": 7,
+   "max": 57,
+   "n_runs": 6554
+  },
+  "ACTION": {
+   "mean": 1.4224769181789239,
+   "median": 1.0,
+   "p90": 2,
+   "max": 16,
+   "n_runs": 6282
+  },
+  "INTERIORITY": {
+   "mean": 1.2443871917556129,
+   "median": 1,
+   "p90": 2,
+   "max": 13,
+   "n_runs": 2717
+  },
+  "TRANSITION": {
+   "mean": 1.0674418604651164,
+   "median": 1.0,
+   "p90": 1,
+   "max": 6,
+   "n_runs": 430
+  }
+ },
+ "unit_openers": {
+  "SETTING": 0.23823975720789076,
+  "CHARACTER_DESC": 0.051593323216995446,
+  "LORE": 0.18664643399089528,
+  "DIALOGUE": 0.051593323216995446,
+  "ACTION": 0.2336874051593323,
+  "INTERIORITY": 0.13050075872534142,
+  "TRANSITION": 0.10773899848254932
+ },
+ "unit_closers": {
+  "SETTING": 0.07283763277693475,
+  "CHARACTER_DESC": 0.019726858877086494,
+  "LORE": 0.051593323216995446,
+  "DIALOGUE": 0.23823975720789076,
+  "ACTION": 0.36722306525037934,
+  "INTERIORITY": 0.2094081942336874,
+  "TRANSITION": 0.0409711684370258
+ },
+ "unit_lengths_blocks": [
+  2,
+  2,
+  3,
+  4,
+  4,
+  4,
+  4,
+  5,
+  5,
+  5,
+  6,
+  6,
+  6,
+  6,
+  6,
+  7,
+  7,
+  7,
+  7,
+  7,
+  7,
+  7,
+  7,
+  8,
+  9,
+  9,
+  9,
+  9,
+  9,
+  10,
+  10,
+  11,
+  11,
+  11,
+  11,
+  11,
+  11,
+  11,
+  12,
+  12,
+  12,
+  12,
+  12,
+  12,
+  12,
+  12,
+  13,
+  13,
+  13,
+  13,
+  13,
+  13,
+  13,
+  13,
+  13,
+  14,
+  14,
+  14,
+  14,
+  14,
+  14,
+  14,
+  14,
+  14,
+  14,
+  14,
+  14,
+  15,
+  15,
+  15,
+  15,
+  15,
+  15,
+  15,
+  15,
+  15,
+  15,
+  15,
+  15,
+  15,
+  16,
+  16,
+  16,
+  16,
+  16,
+  16,
+  16,
+  16,
+  16,
+  16,
+  17,
+  17,
+  17,
+  17,
+  17,
+  17,
+  17,
+  17,
+  17,
+  17,
+  17,
+  17,
+  18,
+  18,
+  18,
+  18,
+  18,
+  18,
+  18,
+  18,
+  18,
+  18,
+  18,
+  19,
+  19,
+  19,
+  19,
+  19,
+  19,
+  19,
+  20,
+  20,
+  20,
+  20,
+  20,
+  20,
+  20,
+  20,
+  21,
+  21,
+  21,
+  21,
+  21,
+  21,
+  21,
+  22,
+  22,
+  22,
+  22,
+  22,
+  22,
+  22,
+  22,
+  23,
+  23,
+  23,
+  23,
+  23,
+  23,
+  23,
+  24,
+  24,
+  24,
+  24,
+  24,
+  24,
+  24,
+  24,
+  24,
+  24,
+  25,
+  25,
+  25,
+  25,
+  26,
+  26,
+  26,
+  26,
+  26,
+  27,
+  27,
+  27,
+  27,
+  28,
+  28,
+  28,
+  28,
+  28,
+  29,
+  29,
+  29,
+  29,
+  29,
+  30,
+  30,
+  30,
+  30,
+  30,
+  30,
+  30,
+  30,
+  30,
+  30,
+  30,
+  30,
+  30,
+  31,
+  31,
+  31,
+  31,
+  31,
+  31,
+  31,
+  31,
+  32,
+  32,
+  32,
+  32,
+  32,
+  33,
+  33,
+  33,
+  33,
+  33,
+  34,
+  34,
+  34,
+  34,
+  34,
+  34,
+  34,
+  34,
+  34,
+  34,
+  35,
+  35,
+  35,
+  35,
+  35,
+  35,
+  35,
+  36,
+  36,
+  36,
+  36,
+  36,
+  36,
+  37,
+  37,
+  37,
+  37,
+  37,
+  37,
+  37,
+  37,
+  37,
+  37,
+  37,
+  38,
+  38,
+  38,
+  39,
+  39,
+  39,
+  39,
+  39,
+  39,
+  39,
+  39,
+  39,
+  39,
+  39,
+  39,
+  39,
+  40,
+  40,
+  40,
+  40,
+  40,
+  41,
+  41,
+  41,
+  41,
+  41,
+  41,
+  41,
+  41,
+  42,
+  42,
+  42,
+  42,
+  42,
+  42,
+  42,
+  43,
+  43,
+  43,
+  44,
+  44,
+  44,
+  44,
+  44,
+  44,
+  45,
+  45,
+  45,
+  45,
+  45,
+  45,
+  45,
+  46,
+  46,
+  46,
+  46,
+  46,
+  46,
+  46,
+  47,
+  47,
+  47,
+  47,
+  47,
+  47,
+  47,
+  47,
+  47,
+  48,
+  48,
+  48,
+  48,
+  49,
+  49,
+  49,
+  49,
+  49,
+  49,
+  50,
+  50,
+  50,
+  50,
+  50,
+  50,
+  50,
+  51,
+  51,
+  51,
+  51,
+  51,
+  52,
+  52,
+  52,
+  52,
+  53,
+  53,
+  53,
+  53,
+  53,
+  53,
+  53,
+  53,
+  54,
+  54,
+  55,
+  55,
+  55,
+  55,
+  55,
+  56,
+  56,
+  56,
+  56,
+  56,
+  56,
+  56,
+  56,
+  57,
+  57,
+  57,
+  58,
+  58,
+  58,
+  58,
+  59,
+  59,
+  59,
+  59,
+  59,
+  59,
+  59,
+  59,
+  59,
+  60,
+  60,
+  60,
+  60,
+  60,
+  60,
+  60,
+  60,
+  60,
+  60,
+  60,
+  61,
+  61,
+  61,
+  61,
+  61,
+  61,
+  61,
+  61,
+  61,
+  62,
+  62,
+  62,
+  62,
+  62,
+  62,
+  62,
+  63,
+  63,
+  63,
+  63,
+  64,
+  64,
+  64,
+  64,
+  64,
+  65,
+  65,
+  65,
+  65,
+  65,
+  66,
+  66,
+  67,
+  67,
+  67,
+  68,
+  68,
+  68,
+  68,
+  69,
+  69,
+  69,
+  69,
+  69,
+  69,
+  69,
+  70,
+  70,
+  70,
+  70,
+  70,
+  71,
+  71,
+  71,
+  71,
+  72,
+  72,
+  73,
+  73,
+  73,
+  73,
+  74,
+  74,
+  74,
+  74,
+  74,
+  74,
+  74,
+  74,
+  74,
+  74,
+  74,
+  74,
+  75,
+  75,
+  75,
+  75,
+  75,
+  76,
+  76,
+  76,
+  76,
+  77,
+  77,
+  77,
+  77,
+  77,
+  77,
+  78,
+  78,
+  78,
+  78,
+  78,
+  78,
+  78,
+  79,
+  79,
+  80,
+  80,
+  80,
+  80,
+  81,
+  81,
+  81,
+  81,
+  81,
+  82,
+  82,
+  82,
+  82,
+  83,
+  83,
+  83,
+  83,
+  83,
+  83,
+  83,
+  84,
+  85,
+  85,
+  85,
+  86,
+  86,
+  86,
+  87,
+  87,
+  87,
+  87,
+  87,
+  88,
+  88,
+  89,
+  89,
+  90,
+  90,
+  90,
+  90,
+  91,
+  91,
+  91,
+  92,
+  92,
+  92,
+  92,
+  93,
+  93,
+  93,
+  94,
+  94,
+  96,
+  96,
+  97,
+  97,
+  97,
+  98,
+  98,
+  98,
+  98,
+  99,
+  99,
+  99,
+  99,
+  99,
+  100,
+  101,
+  102,
+  102,
+  102,
+  102,
+  103,
+  103,
+  103,
+  103,
+  104,
+  104,
+  104,
+  105,
+  105,
+  105,
+  105,
+  105,
+  105,
+  106,
+  106,
+  107,
+  107,
+  107,
+  108,
+  108,
+  108,
+  108,
+  108,
+  109,
+  109,
+  110,
+  110,
+  110,
+  110,
+  111,
+  111,
+  111,
+  111,
+  112,
+  112,
+  112,
+  113,
+  114,
+  114,
+  114,
+  115,
+  116,
+  117,
+  118,
+  118,
+  119,
+  119,
+  120,
+  121,
+  122,
+  124,
+  125,
+  125,
+  125,
+  126,
+  126,
+  126,
+  126,
+  127,
+  128,
+  130,
+  131,
+  131,
+  132,
+  132,
+  134,
+  135,
+  137,
+  137,
+  137,
+  137,
+  143,
+  143,
+  145,
+  146,
+  147,
+  147,
+  148,
+  150,
+  150,
+  156,
+  157,
+  157,
+  157,
+  160,
+  161,
+  161,
+  163,
+  168,
+  181,
+  184,
+  186,
+  191,
+  195,
+  204,
+  263,
+  267,
+  324
+ ],
+ "aba": {
+  "overall_observed": 0.3550575543568926,
+  "overall_first_order_prediction": 0.2383387927029052,
+  "n_switches": 17983,
+  "pairs": {
+   "ACTION|CHARACTER_DESC": {
+    "n": 262,
+    "observed_return": 0.24045801526717558,
+    "first_order_prediction": 0.18784029038112524
+   },
+   "ACTION|DIALOGUE": {
+    "n": 4108,
+    "observed_return": 0.29308666017526774,
+    "first_order_prediction": 0.1850908080059303
+   },
+   "ACTION|INTERIORITY": {
+    "n": 682,
+    "observed_return": 0.4120234604105572,
+    "first_order_prediction": 0.3000308356460068
+   },
+   "ACTION|LORE": {
+    "n": 203,
+    "observed_return": 0.35960591133004927,
+    "first_order_prediction": 0.21860095389507153
+   },
+   "ACTION|SETTING": {
+    "n": 515,
+    "observed_return": 0.34951456310679613,
+    "first_order_prediction": 0.3237032173342088
+   },
+   "ACTION|TRANSITION": {
+    "n": 145,
+    "observed_return": 0.5586206896551724,
+    "first_order_prediction": 0.42824074074074076
+   },
+   "CHARACTER_DESC|ACTION": {
+    "n": 203,
+    "observed_return": 0.03940886699507389,
+    "first_order_prediction": 0.030710835058661144
+   },
+   "CHARACTER_DESC|DIALOGUE": {
+    "n": 590,
+    "observed_return": 0.04915254237288136,
+    "first_order_prediction": 0.02112676056338028
+   },
+   "CHARACTER_DESC|INTERIORITY": {
+    "n": 94,
+    "observed_return": 0.0851063829787234,
+    "first_order_prediction": 0.028985507246376812
+   },
+   "CHARACTER_DESC|LORE": {
+    "n": 47,
+    "observed_return": 0.1276595744680851,
+    "first_order_prediction": 0.04213036565977742
+   },
+   "DIALOGUE|ACTION": {
+    "n": 3894,
+    "observed_return": 0.6276322547508988,
+    "first_order_prediction": 0.4769956291695422
+   },
+   "DIALOGUE|CHARACTER_DESC": {
+    "n": 452,
+    "observed_return": 0.7676991150442478,
+    "first_order_prediction": 0.5372050816696915
+   },
+   "DIALOGUE|INTERIORITY": {
+    "n": 1365,
+    "observed_return": 0.6087912087912087,
+    "first_order_prediction": 0.35892691951896394
+   },
+   "DIALOGUE|LORE": {
+    "n": 177,
+    "observed_return": 0.4350282485875706,
+    "first_order_prediction": 0.15977742448330684
+   },
+   "DIALOGUE|SETTING": {
+    "n": 267,
+    "observed_return": 0.44569288389513106,
+    "first_order_prediction": 0.23834537097833225
+   },
+   "DIALOGUE|TRANSITION": {
+    "n": 68,
+    "observed_return": 0.16176470588235295,
+    "first_order_prediction": 0.12268518518518519
+   },
+   "INTERIORITY|ACTION": {
+    "n": 939,
+    "observed_return": 0.12247071352502663,
+    "first_order_prediction": 0.08293075684380032
+   },
+   "INTERIORITY|CHARACTER_DESC": {
+    "n": 92,
+    "observed_return": 0.17391304347826086,
+    "first_order_prediction": 0.08892921960072596
+   },
+   "INTERIORITY|DIALOGUE": {
+    "n": 1149,
+    "observed_return": 0.12097476066144473,
+    "first_order_prediction": 0.06555782060785767
+   },
+   "INTERIORITY|LORE": {
+    "n": 118,
+    "observed_return": 0.2711864406779661,
+    "first_order_prediction": 0.11764705882352941
+   },
+   "INTERIORITY|SETTING": {
+    "n": 142,
+    "observed_return": 0.11267605633802817,
+    "first_order_prediction": 0.12147078135259357
+   },
+   "INTERIORITY|TRANSITION": {
+    "n": 72,
+    "observed_return": 0.20833333333333334,
+    "first_order_prediction": 0.14814814814814814
+   },
+   "LORE|ACTION": {
+    "n": 268,
+    "observed_return": 0.05970149253731343,
+    "first_order_prediction": 0.02461467678858983
+   },
+   "LORE|CHARACTER_DESC": {
+    "n": 53,
+    "observed_return": 0.20754716981132076,
+    "first_order_prediction": 0.045372050816696916
+   },
+   "LORE|DIALOGUE": {
+    "n": 197,
+    "observed_return": 0.05583756345177665,
+    "first_order_prediction": 0.008432171979243884
+   },
+   "LORE|INTERIORITY": {
+    "n": 143,
+    "observed_return": 0.1048951048951049,
+    "first_order_prediction": 0.037619488128276285
+   },
+   "LORE|SETTING": {
+    "n": 76,
+    "observed_return": 0.10526315789473684,
+    "first_order_prediction": 0.05318450426789232
+   },
+   "SETTING|ACTION": {
+    "n": 480,
+    "observed_return": 0.13125,
+    "first_order_prediction": 0.06165171382562687
+   },
+   "SETTING|CHARACTER_DESC": {
+    "n": 98,
+    "observed_return": 0.08163265306122448,
+    "first_order_prediction": 0.02722323049001815
+   },
+   "SETTING|DIALOGUE": {
+    "n": 358,
+    "observed_return": 0.05307262569832402,
+    "first_order_prediction": 0.01278724981467754
+   },
+   "SETTING|INTERIORITY": {
+    "n": 173,
+    "observed_return": 0.12138728323699421,
+    "first_order_prediction": 0.04563675609004009
+   },
+   "SETTING|LORE": {
+    "n": 80,
+    "observed_return": 0.1625,
+    "first_order_prediction": 0.06279809220985691
+   },
+   "TRANSITION|ACTION": {
+    "n": 183,
+    "observed_return": 0.3005464480874317,
+    "first_order_prediction": 0.017828387393604785
+   },
+   "TRANSITION|DIALOGUE": {
+    "n": 52,
+    "observed_return": 0.057692307692307696,
+    "first_order_prediction": 0.003382134914751668
+   },
+   "TRANSITION|INTERIORITY": {
+    "n": 63,
+    "observed_return": 0.4126984126984127,
+    "first_order_prediction": 0.024051803885291396
+   },
+   "TRANSITION|LORE": {
+    "n": 39,
+    "observed_return": 0.02564102564102564,
+    "first_order_prediction": 0.017488076311605722
+   },
+   "TRANSITION|SETTING": {
+    "n": 54,
+    "observed_return": 0.037037037037037035,
+    "first_order_prediction": 0.009192383453709783
+   }
+  }
+ },
+ "second_order": {
+  "ACTION|ACTION": {
+   "n": 2573,
+   "next": {
+    "SETTING": 0.06995724834823164,
+    "CHARACTER_DESC": 0.029148853478429847,
+    "LORE": 0.029926156237854645,
+    "DIALOGUE": 0.3521181500194326,
+    "ACTION": 0.4178002331908278,
+    "INTERIORITY": 0.08783521181500194,
+    "TRANSITION": 0.013214146910221531
+   }
+  },
+  "ACTION|CHARACTER_DESC": {
+   "n": 262,
+   "next": {
+    "SETTING": 0.026717557251908396,
+    "CHARACTER_DESC": 0.10305343511450382,
+    "LORE": 0.04198473282442748,
+    "DIALOGUE": 0.4770992366412214,
+    "ACTION": 0.24045801526717558,
+    "INTERIORITY": 0.10305343511450382,
+    "TRANSITION": 0.007633587786259542
+   }
+  },
+  "ACTION|DIALOGUE": {
+   "n": 4108,
+   "next": {
+    "SETTING": 0.016553067185978577,
+    "CHARACTER_DESC": 0.030428432327166504,
+    "LORE": 0.010223953261927946,
+    "DIALOGUE": 0.5581791626095424,
+    "ACTION": 0.29308666017526774,
+    "INTERIORITY": 0.08787731256085686,
+    "TRANSITION": 0.0036514118792599806
+   }
+  },
+  "ACTION|INTERIORITY": {
+   "n": 682,
+   "next": {
+    "SETTING": 0.06158357771260997,
+    "CHARACTER_DESC": 0.036656891495601175,
+    "LORE": 0.03225806451612903,
+    "DIALOGUE": 0.21700879765395895,
+    "ACTION": 0.4120234604105572,
+    "INTERIORITY": 0.21994134897360704,
+    "TRANSITION": 0.020527859237536656
+   }
+  },
+  "ACTION|LORE": {
+   "n": 203,
+   "next": {
+    "SETTING": 0.04433497536945813,
+    "CHARACTER_DESC": 0.04433497536945813,
+    "LORE": 0.21674876847290642,
+    "DIALOGUE": 0.15270935960591134,
+    "ACTION": 0.35960591133004927,
+    "INTERIORITY": 0.16748768472906403,
+    "TRANSITION": 0.014778325123152709
+   }
+  },
+  "ACTION|SETTING": {
+   "n": 515,
+   "next": {
+    "SETTING": 0.1883495145631068,
+    "CHARACTER_DESC": 0.05436893203883495,
+    "LORE": 0.04271844660194175,
+    "DIALOGUE": 0.22330097087378642,
+    "ACTION": 0.34951456310679613,
+    "INTERIORITY": 0.13203883495145632,
+    "TRANSITION": 0.009708737864077669
+   }
+  },
+  "ACTION|TRANSITION": {
+   "n": 145,
+   "next": {
+    "SETTING": 0.10344827586206896,
+    "CHARACTER_DESC": 0.020689655172413793,
+    "LORE": 0.05517241379310345,
+    "DIALOGUE": 0.10344827586206896,
+    "ACTION": 0.5586206896551724,
+    "INTERIORITY": 0.11724137931034483,
+    "TRANSITION": 0.041379310344827586
+   }
+  },
+  "CHARACTER_DESC|ACTION": {
+   "n": 203,
+   "next": {
+    "SETTING": 0.04433497536945813,
+    "CHARACTER_DESC": 0.03940886699507389,
+    "LORE": 0.029556650246305417,
+    "DIALOGUE": 0.5123152709359606,
+    "ACTION": 0.3103448275862069,
+    "INTERIORITY": 0.054187192118226604,
+    "TRANSITION": 0.009852216748768473
+   }
+  },
+  "CHARACTER_DESC|CHARACTER_DESC": {
+   "n": 106,
+   "next": {
+    "SETTING": 0.04716981132075472,
+    "CHARACTER_DESC": 0.20754716981132076,
+    "LORE": 0.03773584905660377,
+    "DIALOGUE": 0.29245283018867924,
+    "ACTION": 0.22641509433962265,
+    "INTERIORITY": 0.1509433962264151,
+    "TRANSITION": 0.03773584905660377
+   }
+  },
+  "CHARACTER_DESC|DIALOGUE": {
+   "n": 590,
+   "next": {
+    "SETTING": 0.01694915254237288,
+    "CHARACTER_DESC": 0.04915254237288136,
+    "LORE": 0.01864406779661017,
+    "DIALOGUE": 0.6067796610169491,
+    "ACTION": 0.20847457627118643,
+    "INTERIORITY": 0.09830508474576272,
+    "TRANSITION": 0.001694915254237288
+   }
+  },
+  "CHARACTER_DESC|INTERIORITY": {
+   "n": 94,
+   "next": {
+    "SETTING": 0.05319148936170213,
+    "CHARACTER_DESC": 0.0851063829787234,
+    "LORE": 0.05319148936170213,
+    "DIALOGUE": 0.30851063829787234,
+    "ACTION": 0.2765957446808511,
+    "INTERIORITY": 0.22340425531914893
+   }
+  },
+  "DIALOGUE|ACTION": {
+   "n": 3894,
+   "next": {
+    "SETTING": 0.040832049306625574,
+    "CHARACTER_DESC": 0.02362609142270159,
+    "LORE": 0.019517205957883924,
+    "DIALOGUE": 0.6276322547508988,
+    "ACTION": 0.2159732922444787,
+    "INTERIORITY": 0.06266050333846944,
+    "TRANSITION": 0.009758602978941962
+   }
+  },
+  "DIALOGUE|CHARACTER_DESC": {
+   "n": 452,
+   "next": {
+    "SETTING": 0.011061946902654867,
+    "CHARACTER_DESC": 0.048672566371681415,
+    "LORE": 0.011061946902654867,
+    "DIALOGUE": 0.7676991150442478,
+    "ACTION": 0.12168141592920353,
+    "INTERIORITY": 0.035398230088495575,
+    "TRANSITION": 0.004424778761061947
+   }
+  },
+  "DIALOGUE|DIALOGUE": {
+   "n": 15096,
+   "next": {
+    "SETTING": 0.010930047694753578,
+    "CHARACTER_DESC": 0.016030736618971912,
+    "LORE": 0.006624271330153683,
+    "DIALOGUE": 0.7604001059883413,
+    "ACTION": 0.14884737678855325,
+    "INTERIORITY": 0.053855325914149446,
+    "TRANSITION": 0.0033121356650768416
+   }
+  },
+  "DIALOGUE|INTERIORITY": {
+   "n": 1365,
+   "next": {
+    "SETTING": 0.02783882783882784,
+    "CHARACTER_DESC": 0.015384615384615385,
+    "LORE": 0.021245421245421246,
+    "DIALOGUE": 0.6087912087912087,
+    "ACTION": 0.21684981684981686,
+    "INTERIORITY": 0.09743589743589744,
+    "TRANSITION": 0.012454212454212455
+   }
+  },
+  "DIALOGUE|LORE": {
+   "n": 177,
+   "next": {
+    "SETTING": 0.04519774011299435,
+    "CHARACTER_DESC": 0.02824858757062147,
+    "LORE": 0.2033898305084746,
+    "DIALOGUE": 0.4350282485875706,
+    "ACTION": 0.1751412429378531,
+    "INTERIORITY": 0.096045197740113,
+    "TRANSITION": 0.01694915254237288
+   }
+  },
+  "DIALOGUE|SETTING": {
+   "n": 267,
+   "next": {
+    "SETTING": 0.11610486891385768,
+    "CHARACTER_DESC": 0.0599250936329588,
+    "LORE": 0.02247191011235955,
+    "DIALOGUE": 0.44569288389513106,
+    "ACTION": 0.27340823970037453,
+    "INTERIORITY": 0.07865168539325842,
+    "TRANSITION": 0.003745318352059925
+   }
+  },
+  "INTERIORITY|ACTION": {
+   "n": 939,
+   "next": {
+    "SETTING": 0.06922257720979766,
+    "CHARACTER_DESC": 0.03194888178913738,
+    "LORE": 0.023429179978700747,
+    "DIALOGUE": 0.39829605963791265,
+    "ACTION": 0.3365282215122471,
+    "INTERIORITY": 0.12247071352502663,
+    "TRANSITION": 0.01810436634717785
+   }
+  },
+  "INTERIORITY|CHARACTER_DESC": {
+   "n": 92,
+   "next": {
+    "SETTING": 0.03260869565217391,
+    "CHARACTER_DESC": 0.10869565217391304,
+    "LORE": 0.07608695652173914,
+    "DIALOGUE": 0.391304347826087,
+    "ACTION": 0.18478260869565216,
+    "INTERIORITY": 0.17391304347826086,
+    "TRANSITION": 0.03260869565217391
+   }
+  },
+  "INTERIORITY|DIALOGUE": {
+   "n": 1149,
+   "next": {
+    "SETTING": 0.006962576153176675,
+    "CHARACTER_DESC": 0.028720626631853787,
+    "LORE": 0.008703220191470844,
+    "DIALOGUE": 0.597911227154047,
+    "ACTION": 0.23324630113141862,
+    "INTERIORITY": 0.12097476066144473,
+    "TRANSITION": 0.0034812880765883376
+   }
+  },
+  "INTERIORITY|INTERIORITY": {
+   "n": 637,
+   "next": {
+    "SETTING": 0.03610675039246468,
+    "CHARACTER_DESC": 0.026687598116169546,
+    "LORE": 0.054945054945054944,
+    "DIALOGUE": 0.130298273155416,
+    "ACTION": 0.34065934065934067,
+    "INTERIORITY": 0.3924646781789639,
+    "TRANSITION": 0.018838304552590265
+   }
+  },
+  "INTERIORITY|LORE": {
+   "n": 118,
+   "next": {
+    "SETTING": 0.03389830508474576,
+    "CHARACTER_DESC": 0.025423728813559324,
+    "LORE": 0.2457627118644068,
+    "DIALOGUE": 0.15254237288135594,
+    "ACTION": 0.2711864406779661,
+    "INTERIORITY": 0.2711864406779661
+   }
+  },
+  "INTERIORITY|SETTING": {
+   "n": 142,
+   "next": {
+    "SETTING": 0.1619718309859155,
+    "CHARACTER_DESC": 0.06338028169014084,
+    "LORE": 0.035211267605633804,
+    "DIALOGUE": 0.19014084507042253,
+    "ACTION": 0.4295774647887324,
+    "INTERIORITY": 0.11267605633802817,
+    "TRANSITION": 0.007042253521126761
+   }
+  },
+  "LORE|ACTION": {
+   "n": 268,
+   "next": {
+    "SETTING": 0.10074626865671642,
+    "CHARACTER_DESC": 0.06716417910447761,
+    "LORE": 0.05970149253731343,
+    "DIALOGUE": 0.2835820895522388,
+    "ACTION": 0.3619402985074627,
+    "INTERIORITY": 0.10820895522388059,
+    "TRANSITION": 0.018656716417910446
+   }
+  },
+  "LORE|DIALOGUE": {
+   "n": 197,
+   "next": {
+    "SETTING": 0.025380710659898477,
+    "CHARACTER_DESC": 0.03553299492385787,
+    "LORE": 0.05583756345177665,
+    "DIALOGUE": 0.583756345177665,
+    "ACTION": 0.2182741116751269,
+    "INTERIORITY": 0.08121827411167512
+   }
+  },
+  "LORE|INTERIORITY": {
+   "n": 143,
+   "next": {
+    "SETTING": 0.06993006993006994,
+    "CHARACTER_DESC": 0.06293706293706294,
+    "LORE": 0.1048951048951049,
+    "DIALOGUE": 0.2097902097902098,
+    "ACTION": 0.32167832167832167,
+    "INTERIORITY": 0.1958041958041958,
+    "TRANSITION": 0.03496503496503497
+   }
+  },
+  "LORE|LORE": {
+   "n": 471,
+   "next": {
+    "SETTING": 0.029723991507430998,
+    "CHARACTER_DESC": 0.040339702760084924,
+    "LORE": 0.613588110403397,
+    "DIALOGUE": 0.09766454352441614,
+    "ACTION": 0.11040339702760085,
+    "INTERIORITY": 0.08280254777070063,
+    "TRANSITION": 0.025477707006369428
+   }
+  },
+  "SETTING|ACTION": {
+   "n": 480,
+   "next": {
+    "SETTING": 0.13125,
+    "CHARACTER_DESC": 0.04583333333333333,
+    "LORE": 0.020833333333333332,
+    "DIALOGUE": 0.3145833333333333,
+    "ACTION": 0.37916666666666665,
+    "INTERIORITY": 0.10416666666666667,
+    "TRANSITION": 0.004166666666666667
+   }
+  },
+  "SETTING|CHARACTER_DESC": {
+   "n": 98,
+   "next": {
+    "SETTING": 0.08163265306122448,
+    "CHARACTER_DESC": 0.12244897959183673,
+    "LORE": 0.030612244897959183,
+    "DIALOGUE": 0.3673469387755102,
+    "ACTION": 0.2857142857142857,
+    "INTERIORITY": 0.09183673469387756,
+    "TRANSITION": 0.02040816326530612
+   }
+  },
+  "SETTING|DIALOGUE": {
+   "n": 358,
+   "next": {
+    "SETTING": 0.05307262569832402,
+    "CHARACTER_DESC": 0.05027932960893855,
+    "LORE": 0.013966480446927373,
+    "DIALOGUE": 0.5558659217877095,
+    "ACTION": 0.26256983240223464,
+    "INTERIORITY": 0.06424581005586592
+   }
+  },
+  "SETTING|INTERIORITY": {
+   "n": 173,
+   "next": {
+    "SETTING": 0.12138728323699421,
+    "CHARACTER_DESC": 0.03468208092485549,
+    "LORE": 0.05202312138728324,
+    "DIALOGUE": 0.10982658959537572,
+    "ACTION": 0.4046242774566474,
+    "INTERIORITY": 0.2543352601156069,
+    "TRANSITION": 0.023121387283236993
+   }
+  },
+  "SETTING|LORE": {
+   "n": 80,
+   "next": {
+    "SETTING": 0.1625,
+    "CHARACTER_DESC": 0.0375,
+    "LORE": 0.325,
+    "DIALOGUE": 0.05,
+    "ACTION": 0.2875,
+    "INTERIORITY": 0.125,
+    "TRANSITION": 0.0125
+   }
+  },
+  "SETTING|SETTING": {
+   "n": 283,
+   "next": {
+    "SETTING": 0.2968197879858657,
+    "CHARACTER_DESC": 0.06713780918727916,
+    "LORE": 0.0636042402826855,
+    "DIALOGUE": 0.1625441696113074,
+    "ACTION": 0.2826855123674912,
+    "INTERIORITY": 0.1166077738515901,
+    "TRANSITION": 0.01060070671378092
+   }
+  },
+  "TRANSITION|ACTION": {
+   "n": 183,
+   "next": {
+    "SETTING": 0.08196721311475409,
+    "CHARACTER_DESC": 0.0273224043715847,
+    "LORE": 0.00546448087431694,
+    "DIALOGUE": 0.29508196721311475,
+    "ACTION": 0.19672131147540983,
+    "INTERIORITY": 0.09289617486338798,
+    "TRANSITION": 0.3005464480874317
+   }
+  }
+ },
+ "tension_bands": {
+  "calm(<=3)": {
+   "SETTING": 0.03863123835670164,
+   "CHARACTER_DESC": 0.0360819688204726,
+   "LORE": 0.04686733993528777,
+   "DIALOGUE": 0.573879792136484,
+   "ACTION": 0.1995293656240808,
+   "INTERIORITY": 0.09520541229532307,
+   "TRANSITION": 0.009804882831650161
+  },
+  "mid(4-6)": {
+   "SETTING": 0.03548174011512692,
+   "CHARACTER_DESC": 0.023969047843729357,
+   "LORE": 0.03312258186279136,
+   "DIALOGUE": 0.5929036519769746,
+   "ACTION": 0.20911578748702464,
+   "INTERIORITY": 0.09549872605454374,
+   "TRANSITION": 0.00990846465980938
+  },
+  "high(>=7)": {
+   "SETTING": 0.0452567941691621,
+   "CHARACTER_DESC": 0.02785468105542686,
+   "LORE": 0.026159670037855246,
+   "DIALOGUE": 0.5426860274591785,
+   "ACTION": 0.26470422057743376,
+   "INTERIORITY": 0.07898751341883722,
+   "TRANSITION": 0.014351093282106334
+  }
+ },
+ "shading": {
+  "rate": 0.20386383111318843,
+  "top_pairs": [
+   {
+    "primary": "ACTION",
+    "secondary": "INTERIORITY",
+    "count": 971
+   },
+   {
+    "primary": "ACTION",
+    "secondary": "SETTING",
+    "count": 907
+   },
+   {
+    "primary": "ACTION",
+    "secondary": "DIALOGUE",
+    "count": 876
+   },
+   {
+    "primary": "DIALOGUE",
+    "secondary": "ACTION",
+    "count": 823
+   },
+   {
+    "primary": "DIALOGUE",
+    "secondary": "LORE",
+    "count": 541
+   },
+   {
+    "primary": "SETTING",
+    "secondary": "ACTION",
+    "count": 475
+   },
+   {
+    "primary": "INTERIORITY",
+    "secondary": "ACTION",
+    "count": 459
+   },
+   {
+    "primary": "DIALOGUE",
+    "secondary": "INTERIORITY",
+    "count": 391
+   },
+   {
+    "primary": "ACTION",
+    "secondary": "CHARACTER_DESC",
+    "count": 386
+   },
+   {
+    "primary": "ACTION",
+    "secondary": "LORE",
+    "count": 230
+   },
+   {
+    "primary": "DIALOGUE",
+    "secondary": "CHARACTER_DESC",
+    "count": 188
+   },
+   {
+    "primary": "CHARACTER_DESC",
+    "secondary": "ACTION",
+    "count": 170
+   },
+   {
+    "primary": "INTERIORITY",
+    "secondary": "DIALOGUE",
+    "count": 153
+   },
+   {
+    "primary": "CHARACTER_DESC",
+    "secondary": "INTERIORITY",
+    "count": 140
+   },
+   {
+    "primary": "INTERIORITY",
+    "secondary": "LORE",
+    "count": 130
+   },
+   {
+    "primary": "SETTING",
+    "secondary": "INTERIORITY",
+    "count": 125
+   },
+   {
+    "primary": "SETTING",
+    "secondary": "CHARACTER_DESC",
+    "count": 117
+   },
+   {
+    "primary": "INTERIORITY",
+    "secondary": "SETTING",
+    "count": 110
+   },
+   {
+    "primary": "CHARACTER_DESC",
+    "secondary": "SETTING",
+    "count": 82
+   },
+   {
+    "primary": "DIALOGUE",
+    "secondary": "SETTING",
+    "count": 80
+   }
+  ]
+ }
+}

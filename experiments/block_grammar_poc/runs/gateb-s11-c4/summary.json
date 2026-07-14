@@ -1,0 +1,15 @@
+{
+ "compliance": 1.0,
+ "agreement": 0.83375,
+ "mode_share_tv": 0.047244094488189,
+ "confusion": {
+  "DIALOGUE->ACTION": 6,
+  "ACTION->DIALOGUE": 5,
+  "DIALOGUE->INTERIORITY": 3,
+  "ACTION->SETTING": 2,
+  "ACTION->INTERIORITY": 1,
+  "INTERIORITY->ACTION": 1,
+  "DIALOGUE->SETTING": 1,
+  "TRANSITION->ACTION": 1
+ }
+}

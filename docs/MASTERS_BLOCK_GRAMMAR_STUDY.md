@@ -246,11 +246,17 @@ its own transition structure, and its own boundary behaviour:
   and a length distribution. The scene-to-scene matrix is the knob that
   prevents wandering: scenes persist across many blocks by construction.
   **Not yet measured** (Section 10).
-- **L3, block (paragraph).** Per-scene-type first-order matrix, reweighted by
+- **L3, block (paragraph).** Per-scene-type block dynamics, reweighted by
   the L0/L1 tension band (ACTION up, LORE and INTERIORITY down as tension
-  rises). Sections 3, 5, 6 say first-order with geometric runs is
-  empirically sufficient at this level once L2 exists: excursion-and-return
-  falls out naturally because the scene state says which mode is the carrier.
+  rises). *Revised by the Gate A PoC (`experiments/block_grammar_poc/`):*
+  the original hypothesis, first-order rows plus a persistent carrier, gets
+  close but undershoots the return rate, because patterns like
+  ACTION -> DIALOGUE -> ACTION (0.293) are a braid of two persistent modes,
+  not carrier plus interruption. What passes all checks is sampling from the
+  measured second-order kernel P(next | prev, current) within scenes, with
+  the scene layer owning intent, entry, length, and boundaries. Block-level
+  guidance should therefore condition on the previous two blocks, or
+  equivalently track which mode was interrupted.
 - **L4, sub-block.** Shading/composition inside a block, seeded from the
   Section 8 pair statistics.
 
@@ -308,6 +314,13 @@ masters do" is unchanged and if anything sharper.
 
 ## 11. Gaps and next steps
 
+0. **Gate A of the PoC is done and passing** (25/25 statistical checks,
+   multiple seeds): `experiments/block_grammar_poc/` contains the skeleton
+   sampler, the scorecard, and the machine-readable grammar
+   (`grammar_reference.json`, regenerated via
+   `scripts/block_grammar_tables.py --json`). Gates B (skeleton-to-prose
+   round-trip) and C (does skeleton guidance move the known failure metrics)
+   are specified in its README.
 1. **Induce the scene layer (L2).** Nothing labels scenes in the corpus. Two
    routes, both LLM-free: heuristic segmentation (maximal stretches whose
    carrier-mode share stays above a threshold), or fitting a small
