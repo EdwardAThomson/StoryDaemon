@@ -90,15 +90,29 @@ def _load_env_key(name):
     return None
 
 
-class OpenRouterLLM:
-    """Minimal chat-completions client with retries and a disk cache."""
+class PauseRun(Exception):
+    """This session's billed-call budget is spent: stop cleanly, resume by
+    re-running the same command (cache hits are free and don't count)."""
 
-    def __init__(self, model, cache_dir=os.path.join(HERE, "cache")):
+
+class OpenRouterLLM:
+    """Minimal chat-completions client with retries, a disk cache, and an
+    optional shared billed-call budget for write-stop-resume runs.
+
+    ``budget`` is a mutable dict shared across clients in one process:
+    ``{"calls": 0, "max": N or None}``. Cache hits bypass both the network
+    and the budget, so a resumed run fast-forwards through everything a
+    previous session already paid for.
+    """
+
+    def __init__(self, model, cache_dir=os.path.join(HERE, "cache"),
+                 budget=None):
         self.model = model
         self.cache_dir = cache_dir
         os.makedirs(cache_dir, exist_ok=True)
         self.key = _load_env_key("OPENROUTER_API_KEY")
-        self.calls = 0
+        self.budget = budget if budget is not None else {"calls": 0,
+                                                         "max": None}
 
     def _cache_path(self, prompt):
         h = hashlib.sha256(json.dumps(
@@ -106,10 +120,8 @@ class OpenRouterLLM:
             ensure_ascii=False).encode()).hexdigest()
         return os.path.join(self.cache_dir, f"{h}.json")
 
-    def __call__(self, prompt):
-        cpath = self._cache_path(prompt)
-        if os.path.exists(cpath):
-            return json.load(open(cpath))["text"]
+    def _transport(self, prompt):
+        """One network round-trip with retries (overridden in tests)."""
         if not self.key:
             raise RuntimeError("OPENROUTER_API_KEY not found (env or .env)")
         body = json.dumps({
@@ -128,16 +140,34 @@ class OpenRouterLLM:
             try:
                 with urllib.request.urlopen(req, timeout=300) as resp:
                     out = json.load(resp)
-                text = out["choices"][0]["message"]["content"]
-                self.calls += 1
-                json.dump({"model": self.model, "text": text},
-                          open(cpath, "w"))
-                return text
-            except (urllib.error.HTTPError, urllib.error.URLError,
-                    TimeoutError, KeyError) as e:
+                return out["choices"][0]["message"]["content"]
+            except urllib.error.HTTPError as e:
+                # retry only transient statuses; 402 (out of credits), 401,
+                # 400 etc. can never succeed, so fail fast with a clear hint
+                if e.code not in (408, 429, 500, 502, 503, 504):
+                    hint = (" (OpenRouter credits exhausted: top up at "
+                            "openrouter.ai/credits)" if e.code == 402 else "")
+                    raise RuntimeError(
+                        f"OpenRouter non-retryable HTTP {e.code}{hint}") from e
+                last = e
+                time.sleep(2 ** attempt)
+            except (urllib.error.URLError, TimeoutError, KeyError) as e:
                 last = e
                 time.sleep(2 ** attempt)
         raise RuntimeError(f"OpenRouter call failed after retries: {last}")
+
+    def __call__(self, prompt):
+        cpath = self._cache_path(prompt)
+        if os.path.exists(cpath):
+            return json.load(open(cpath))["text"]
+        if (self.budget["max"] is not None
+                and self.budget["calls"] >= self.budget["max"]):
+            raise PauseRun(
+                f"billed-call budget spent ({self.budget['calls']})")
+        text = self._transport(prompt)
+        self.budget["calls"] += 1
+        json.dump({"model": self.model, "text": text}, open(cpath, "w"))
+        return text
 
 
 # --- writer ---------------------------------------------------------------------------
@@ -176,6 +206,31 @@ Hard rules:
 
 _MARKER = re.compile(r"\[(\d+)\]\s*")
 
+MARKER_REMINDER = ("\n\nREMINDER: every paragraph MUST begin with its plan "
+                   "number in square brackets and a space, like \"[1] \". "
+                   "Do not omit the markers.")
+
+
+def render_marked(writer, prompt, n_blocks):
+    """Writer call with the marker protocol enforced.
+
+    One re-ask if the output has no [n] markers at all (mirrors the judge's
+    one-re-ask convention); if it STILL comes back unmarked but the
+    paragraph count matches the plan, fall back to positional alignment and
+    record that it happened. Returns (prose, numbers, paragraphs, flags).
+    """
+    prose = writer(prompt)
+    nums, paras = split_paragraphs(prose)
+    flags = {"marker_retry": False, "positional_fallback": False}
+    if not any(n is not None for n in nums):
+        flags["marker_retry"] = True
+        prose = writer(prompt + MARKER_REMINDER)
+        nums, paras = split_paragraphs(prose)
+    if not any(n is not None for n in nums) and len(paras) == n_blocks:
+        nums = list(range(1, n_blocks + 1))
+        flags["positional_fallback"] = True
+    return prose, nums, paras, flags
+
 
 def split_paragraphs(text):
     """Split writer output on [n] markers; fall back to blank-line splitting.
@@ -199,12 +254,14 @@ def split_paragraphs(text):
 
 # --- judge (corpus protocol) -----------------------------------------------------------
 
-def judge_labels(paragraphs, llm):
+def judge_annotations(paragraphs, llm):
     """Batches of 20, one re-ask, lenient parse: the corpus protocol.
 
-    _parse_batch raises on a totally unusable response (the analyzer's
-    ask_json catches that and re-asks once); we mirror that here, and a batch
-    that fails both attempts becomes a hole (all-None), never a hard failure.
+    Returns the full per-paragraph dicts ({"primary": ..., "secondary": ...}
+    or None for holes). _parse_batch raises on a totally unusable response
+    (the analyzer's ask_json catches that and re-asks once); we mirror that
+    here, and a batch that fails both attempts becomes a hole (all-None),
+    never a hard failure.
     """
     labels = []
     for start in range(0, len(paragraphs), block_rhythm.BATCH_SIZE):
@@ -219,7 +276,13 @@ def judge_labels(paragraphs, llm):
             except ValueError:
                 continue
         labels.extend(parsed if parsed is not None else [None] * len(batch))
-    return [(x or {}).get("primary") for x in labels]
+    return labels
+
+
+def judge_labels(paragraphs, llm):
+    """Primary labels only (Gate B's view of judge_annotations)."""
+    return [(x or {}).get("primary")
+            for x in judge_annotations(paragraphs, llm)]
 
 
 # --- fakes (plumbing test, no network) --------------------------------------------------
@@ -256,7 +319,8 @@ class FakeLLM:
             self.n += 1
             if self.noise_every and self.n % self.noise_every == 0:
                 lab = "SETTING"
-            out.append({"n": i + 1, "primary": lab, "secondary": None})
+            sec = "SETTING" if self.n % 5 == 0 and lab != "SETTING" else None
+            out.append({"n": i + 1, "primary": lab, "secondary": sec})
         return json.dumps(out)
 
 
@@ -318,6 +382,9 @@ def main():
     ap.add_argument("--writer-model", default=JUDGE_MODEL)
     ap.add_argument("--fake", action="store_true")
     ap.add_argument("--rescore", metavar="RUN_DIR")
+    ap.add_argument("--pause-after-calls", type=int, default=None,
+                    help="stop cleanly after N billed LLM calls; re-run the "
+                         "same command to resume (cache hits are free)")
     args = ap.parse_args()
 
     if args.rescore:
@@ -339,24 +406,32 @@ def main():
         if len(sk) <= args.max_blocks:
             skeletons.append(sk)
 
-    writer = FakeLLM() if args.fake else OpenRouterLLM(args.writer_model)
-    judge = writer if args.fake else OpenRouterLLM(JUDGE_MODEL)
+    budget = {"calls": 0, "max": args.pause_after_calls}
+    writer = (FakeLLM() if args.fake
+              else OpenRouterLLM(args.writer_model, budget=budget))
+    judge = writer if args.fake else OpenRouterLLM(JUDGE_MODEL, budget=budget)
 
     chapters = []
-    for i, sk in enumerate(skeletons):
-        prose = writer(writer_prompt(sk, chapter_no=i + 2))
-        numbers, paras = split_paragraphs(prose)
-        judged = judge_labels(paras, judge)
-        rec = {"skeleton": sk, "prose": prose, "numbers": numbers,
-               "paragraphs": paras, "judged": judged,
-               "metrics": score_chapter(sk, numbers, judged)}
-        chapters.append(rec)
-        json.dump(rec, open(os.path.join(run_dir, f"chapter_{i}.json"), "w"),
-                  indent=1)
-        print(f"chapter {i}: {rec['metrics']['n_blocks']} blocks -> "
-              f"{rec['metrics']['n_paragraphs']} paragraphs, "
-              f"coverage {rec['metrics']['marker_coverage']}, "
-              f"agreement {rec['metrics']['agreement']}")
+    try:
+        for i, sk in enumerate(skeletons):
+            prose, numbers, paras, flags = render_marked(
+                writer, writer_prompt(sk, chapter_no=i + 2), len(sk))
+            judged = judge_labels(paras, judge)
+            rec = {"skeleton": sk, "prose": prose, "numbers": numbers,
+                   "paragraphs": paras, "judged": judged, "flags": flags,
+                   "metrics": score_chapter(sk, numbers, judged)}
+            chapters.append(rec)
+            json.dump(rec,
+                      open(os.path.join(run_dir, f"chapter_{i}.json"), "w"),
+                      indent=1)
+            print(f"chapter {i}: {rec['metrics']['n_blocks']} blocks -> "
+                  f"{rec['metrics']['n_paragraphs']} paragraphs, "
+                  f"coverage {rec['metrics']['marker_coverage']}, "
+                  f"agreement {rec['metrics']['agreement']}")
+    except PauseRun as e:
+        print(f"PAUSED: {e}. Completed chapters are saved; every billed "
+              f"response is cached. Re-run the same command to resume.")
+        sys.exit(3)
     report(chapters, run_dir)
 
 

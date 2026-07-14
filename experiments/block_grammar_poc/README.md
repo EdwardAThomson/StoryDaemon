@@ -81,14 +81,66 @@ Artifacts (skeleton, prose, judged labels, metrics per chapter) live under
 `runs/`; LLM responses are disk-cached under `cache/` (gitignored), so
 re-scoring is free and re-runs only pay for changed prompts.
 
-## Gate C (next): does it move the known failure metrics?
+## Gate C (this directory, BUILT; verdict pending scale): does skeleton guidance move the failure metrics?
 
-Skeleton-guided vs baseline single-shot chapters from the same premise,
-scored on block metrics plus the analyzer's st1 (slop, MTLD, cliche).
-Success = the skeleton version pulls the known generated-prose failures
-(interiority self-transition ~0.40 vs masters ~0.21, under-shading) into the
-master bands. Passing Gate C is the evidence bar for wiring skeletons into
-`novel_agent` properly.
+`gate_c.py` is the A/B that justifies (or blocks) wiring skeletons into
+`novel_agent`: baseline arm = premise + word budget only (today's
+single-shot shape); skeleton arm = identical plus a Gate-A skeleton with
+the Gate-B marker protocol. Same writer, temperature, and word budget, so
+structure is the only treatment. Both arms are judged with the corpus
+protocol and compared, pooled per arm, against the masters' bands on the
+pre-registered failure metrics: interiority self-transition (band ceiling
+0.30) and shading rate (floor 0.10), with a directional check that the
+skeleton arm sits no farther from the masters than the baseline.
+
+The scorecard is tri-state: any metric measured on fewer than 20
+interiority transitions reports **INCONCLUSIVE** (exit 2), never PASS or
+FAIL. That rule exists because the first short debug run (2 chapters,
+24-block cap) produced a spurious FAIL from a 1-vs-5-event comparison,
+exactly the bug class the run was meant to catch.
+
+Debug-run observations (2 chapters/arm, too small for a verdict, kept in
+`runs/gatec-s23-c2/`): skeleton-arm compliance held (all markers present,
+25/29 labels matching plan); unguided DeepSeek does NOT chain interiority
+the way StoryDaemon's pilot prose did (band verdicts need more data); and
+the baseline over-shades dramatically (0.708 of paragraphs mixed vs
+masters 0.204) while the skeleton arm lands near-masters at 0.241, an
+unexpected point in favour of structured guidance.
+
+```
+python3 gate_c.py --fake                    # plumbing test (rigged baseline
+                                            #  chains interiority; scorecard
+                                            #  must discriminate)
+python3 gate_c.py --chapters 2 --seed 23 --max-blocks 24   # short debug run
+python3 gate_c.py --chapters 8 --max-blocks 40             # verdict-scale
+python3 gate_c.py --rescore runs/gatec-s23-c2
+```
+
+Verdict-scale sizing: interiority is ~9% of blocks, so >= 20 interiority
+transitions per arm needs roughly 8 chapters at full skeleton lengths.
+Structural metrics only in v1; st1 surface scoring (slop/MTLD/cliche) via
+the analyzer venv is a follow-up.
+
+## Write, stop, resume
+
+Real runs are interruptible at two levels, tested without network by
+`test_resume.py` (7/7 checks):
+
+- **Implicit:** every billed response is disk-cached by (model,
+  temperature, system, prompt) hash, and skeletons are seed-deterministic,
+  so re-running the IDENTICAL command after any crash, Ctrl-C, or 402
+  fast-forwards through completed calls for free and only pays for what's
+  missing. Completed chapters' artifacts are saved as they finish.
+- **Explicit:** `--pause-after-calls N` (gate_b and gate_c) stops cleanly
+  after N billed calls with exit code 3; cache hits don't count against
+  the budget, so a resumed session's budget is spent only on new work.
+  Example: run a verdict chunk one billed call at a time:
+
+  ```
+  python3 gate_c.py --chapters 2 --seed 31 --pause-after-calls 1   # pay 1 call
+  python3 gate_c.py --chapters 2 --seed 31 --pause-after-calls 1   # 1 more
+  ...repeat until it exits 0/1/2 instead of 3 (pausing) ...
+  ```
 
 ## Files
 
@@ -96,4 +148,6 @@ master bands. Passing Gate C is the evidence bar for wiring skeletons into
 - `sampler.py`: L1/L2/L3 skeleton generator (`Grammar`, `Params`, `Sampler`)
 - `gate_a.py`: statistical scorecard, exit 0 = pass
 - `gate_b.py`: skeleton -> prose -> judge round-trip, exit 0 = pass
+- `gate_c.py`: skeleton-vs-baseline A/B on the failure metrics
+  (exit 0 pass / 1 fail / 2 inconclusive)
 - `runs/`: per-run artifacts; `cache/`: LLM response cache (gitignored)

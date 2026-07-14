@@ -1,0 +1,58 @@
+{
+ "arm": "skeleton",
+ "prose": "[1] The Meridian expedition had vanished two years prior, leaving behind only speculation and whispers. Funded by the Royal Geographical Society, their mission was to map the uncharted volcanic islands of the South Pacific, but their last known communication was a fragmented log entry describing a \"black spire\" rising from the sea. The Alcyone\u2019s crew now followed those same waters, driven by rumors of wreckage spotted by whalers and the faint hope of survivors. The archipelago was a labyrinth of smoldering peaks and frothing tides, its dangers compounded by the lingering ash that clouded the horizon and choked the lungs of those who ventured too close.\n\n[2] The volcanic chain had been named the Ember Isles by early navigators, though few dared to sail its perilous straits. Indigenous tales spoke of a god who slumbered beneath the earth, his breath igniting the fires that scorched the land. European explorers, lured by the promise of rare minerals and scientific discovery, often met grim fates in its waters. The Alcyone\u2019s charts were incomplete, pieced together from fragmented accounts and Yusuf\u2019s cryptic recollections. The crew knew the risks, but the allure of solving the Meridian mystery outweighed the dread of what might lie ahead.\n\n[3] Elena Marsh stood at the rail, her silhouette sharp against the gray haze. Her dark hair was pinned loosely, tendrils escaping to brush her cheeks, and her practical dress\u2014a high-collared blouse and long skirt\u2014was stained with ink and ash. She clutched her brother\u2019s cipher notebook tightly, its pages filled with symbols only she could decipher. Her eyes, a piercing green, scanned the horizon with a mix of determination and unease. She moved with the precision of someone accustomed to fieldwork, her posture straight but her hands restless, betraying the weight of her mission.\n\n[4] Elena\u2019s thoughts churned like the waves below. She wondered if her brother, Thomas, had felt this same foreboding before his disappearance. His notebook was a labyrinth of codes and sketches, each page a fragment of his mind she struggled to piece together. She feared she was chasing ghosts, yet the thought of abandoning the search was unbearable. The Alcyone\u2019s crew trusted her instincts, but doubt gnawed at her. What if she led them into danger for nothing? She tightened her grip on the notebook, forcing herself to focus. There had to be answers in these islands.\n\n[5] Captain Reeve barked orders from the quarterdeck, his voice cutting through the din of the crew\u2019s preparations. \u201cTrim the sails! Keep her steady!\u201d The Alcyone shuddered as it navigated the narrow channel between two jagged islands, their peaks shrouded in smoke. Sailors scrambled to adjust the rigging, their movements swift and practiced. Yusuf stood at the helm, his weathered hands guiding the ship with an almost preternatural ease. The air grew thicker with ash, and the crew donned cloth masks to shield their faces.\n\n[6] Elena moved to the bow, shielding her eyes as she peered ahead. A faint glint caught her attention\u2014something metallic among the rocks. \u201cCaptain!\u201d she called, pointing. Reeve joined her, squinting into the haze. \u201cYusuf, bring us closer,\u201d he commanded. The quartermaster adjusted the course, the ship creaking as it veered toward the object. As they approached, the shape became clearer: a fragment of a ship\u2019s hull, its edges blackened and warped. Elena\u2019s heart quickened. Could this be the Meridian? The crew gathered at the rail, their voices hushed as they stared at the wreckage.",
+ "paragraphs": [
+  "The Meridian expedition had vanished two years prior, leaving behind only speculation and whispers. Funded by the Royal Geographical Society, their mission was to map the uncharted volcanic islands of the South Pacific, but their last known communication was a fragmented log entry describing a \"black spire\" rising from the sea. The Alcyone\u2019s crew now followed those same waters, driven by rumors of wreckage spotted by whalers and the faint hope of survivors. The archipelago was a labyrinth of smoldering peaks and frothing tides, its dangers compounded by the lingering ash that clouded the horizon and choked the lungs of those who ventured too close.",
+  "The volcanic chain had been named the Ember Isles by early navigators, though few dared to sail its perilous straits. Indigenous tales spoke of a god who slumbered beneath the earth, his breath igniting the fires that scorched the land. European explorers, lured by the promise of rare minerals and scientific discovery, often met grim fates in its waters. The Alcyone\u2019s charts were incomplete, pieced together from fragmented accounts and Yusuf\u2019s cryptic recollections. The crew knew the risks, but the allure of solving the Meridian mystery outweighed the dread of what might lie ahead.",
+  "Elena Marsh stood at the rail, her silhouette sharp against the gray haze. Her dark hair was pinned loosely, tendrils escaping to brush her cheeks, and her practical dress\u2014a high-collared blouse and long skirt\u2014was stained with ink and ash. She clutched her brother\u2019s cipher notebook tightly, its pages filled with symbols only she could decipher. Her eyes, a piercing green, scanned the horizon with a mix of determination and unease. She moved with the precision of someone accustomed to fieldwork, her posture straight but her hands restless, betraying the weight of her mission.",
+  "Elena\u2019s thoughts churned like the waves below. She wondered if her brother, Thomas, had felt this same foreboding before his disappearance. His notebook was a labyrinth of codes and sketches, each page a fragment of his mind she struggled to piece together. She feared she was chasing ghosts, yet the thought of abandoning the search was unbearable. The Alcyone\u2019s crew trusted her instincts, but doubt gnawed at her. What if she led them into danger for nothing? She tightened her grip on the notebook, forcing herself to focus. There had to be answers in these islands.",
+  "Captain Reeve barked orders from the quarterdeck, his voice cutting through the din of the crew\u2019s preparations. \u201cTrim the sails! Keep her steady!\u201d The Alcyone shuddered as it navigated the narrow channel between two jagged islands, their peaks shrouded in smoke. Sailors scrambled to adjust the rigging, their movements swift and practiced. Yusuf stood at the helm, his weathered hands guiding the ship with an almost preternatural ease. The air grew thicker with ash, and the crew donned cloth masks to shield their faces.",
+  "Elena moved to the bow, shielding her eyes as she peered ahead. A faint glint caught her attention\u2014something metallic among the rocks. \u201cCaptain!\u201d she called, pointing. Reeve joined her, squinting into the haze. \u201cYusuf, bring us closer,\u201d he commanded. The quartermaster adjusted the course, the ship creaking as it veered toward the object. As they approached, the shape became clearer: a fragment of a ship\u2019s hull, its edges blackened and warped. Elena\u2019s heart quickened. Could this be the Meridian? The crew gathered at the rail, their voices hushed as they stared at the wreckage."
+ ],
+ "numbers": [
+  1,
+  2,
+  3,
+  4,
+  5,
+  6
+ ],
+ "annotations": [
+  {
+   "primary": "LORE",
+   "secondary": "SETTING"
+  },
+  {
+   "primary": "LORE",
+   "secondary": null
+  },
+  {
+   "primary": "CHARACTER_DESC",
+   "secondary": "SETTING"
+  },
+  {
+   "primary": "INTERIORITY",
+   "secondary": null
+  },
+  {
+   "primary": "ACTION",
+   "secondary": "SETTING"
+  },
+  {
+   "primary": "ACTION",
+   "secondary": "DIALOGUE"
+  }
+ ],
+ "flags": {
+  "marker_retry": true,
+  "positional_fallback": false
+ },
+ "skeleton": [
+  "LORE",
+  "LORE",
+  "CHARACTER_DESC",
+  "INTERIORITY",
+  "ACTION",
+  "ACTION"
+ ]
+}
