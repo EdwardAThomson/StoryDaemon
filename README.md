@@ -333,6 +333,9 @@ novel goals [--json] [--project <path>]
 # Show per-tick coherence metrics (loop churn, contradictions, tension vs. target, goal relevance)
 novel metrics [--json] [--project <path>]
 
+# List story threads (scenes served, tick run pattern, tension range, members, last activity)
+novel threads [--json] [--project <path>]
+
 # Show world lore and rules
 novel lore [--group-by category|type|none] [--category <cat>] [--type <type>] [--importance <level>] [--stats] [--json] [--project <path>]
 
