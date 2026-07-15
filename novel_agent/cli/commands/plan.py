@@ -3,6 +3,8 @@ import json
 from pathlib import Path
 from typing import Optional
 
+from llm_backends import DEFAULT_API_MODEL
+
 
 def preview_plan(project_dir: Path, save: Optional[Path] = None, verbose: bool = False) -> bool:
     """Preview the next plan without executing it.
@@ -45,7 +47,7 @@ def preview_plan(project_dir: Path, save: Optional[Path] = None, verbose: bool =
         codex_bin = config.get('llm.codex_bin_path', 'codex')
         model = (
             config.get('llm.model')
-            or config.get('llm.openai_model', 'gpt-5.5')
+            or config.get('llm.openai_model', DEFAULT_API_MODEL)
         )
         try:
             llm = initialize_llm(

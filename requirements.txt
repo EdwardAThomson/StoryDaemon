@@ -1,3 +1,14 @@
+# Shared LLM backend layer (llm-backends): the six novel_agent/tools/ backend
+# modules are compatibility shims over this package (extraction plan in
+# docs/LLM_BACKENDS_INVENTORY.md, section 7.4 step 2). Installed today as a
+# sibling-checkout dev install (section 7.5):
+#     pip install -e ../llm-backends
+# Once the repo is pushed to GitHub and tagged, replace the editable install
+# with the pinned git-URL form (uncomment the line below):
+#     llm-backends @ git+https://github.com/EdwardAThomson/llm-backends@v0.1.0
+# Not yet listed in setup.py install_requires because the repo may not be
+# public; add it there in the same git-URL form when it is.
+
 # Core dependencies
 typer>=0.9.0
 pyyaml>=6.0.0

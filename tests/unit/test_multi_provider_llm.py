@@ -327,16 +327,28 @@ def test_initialize_llm_wires_timeout_into_api_backend():
 
 def test_clients_constructed_with_capped_sdk_retries(monkeypatch):
     class RetryAwareFakeOpenAI:
-        def __init__(self, base_url=None, api_key=None, max_retries=None):
+        def __init__(self, base_url=None, api_key=None, max_retries=None,
+                     timeout=None):
             self.base_url = base_url
             self.max_retries = max_retries
+            self.timeout = timeout
 
     monkeypatch.setattr(multi_provider_llm, "OpenAI", RetryAwareFakeOpenAI)
     monkeypatch.setenv("OPENROUTER_API_KEY", "k")
+    monkeypatch.setenv("OPENAI_API_KEY", "k")
 
+    # llm-backends adoption (intended change): the OpenRouter client uses the
+    # analyzer's hardened settings (max_retries=6, client timeout=120s;
+    # measured 20-26% paragraph loss under the SDK default), NOT the general
+    # SDK_MAX_RETRIES cap. Previously this asserted SDK_MAX_RETRIES here.
     client = multi_provider_llm._get_openrouter_client()
+    assert client.max_retries == multi_provider_llm.OPENROUTER_MAX_RETRIES
+    assert multi_provider_llm.OPENROUTER_MAX_RETRIES == 6
+    assert client.timeout == multi_provider_llm.OPENROUTER_TIMEOUT
 
-    assert client.max_retries == multi_provider_llm.SDK_MAX_RETRIES
+    # Every other client keeps the wall-time-bounding internal-retry cap.
+    plain = multi_provider_llm._get_openai_client()
+    assert plain.max_retries == multi_provider_llm.SDK_MAX_RETRIES
     assert multi_provider_llm.SDK_MAX_RETRIES == 1
 
 

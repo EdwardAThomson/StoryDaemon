@@ -15,6 +15,8 @@ from .foundation import (
     load_foundation_from_file,
     create_foundation_from_args
 )
+from llm_backends import DEFAULT_API_MODEL
+
 from ..tools.llm_interface import initialize_llm, send_prompt
 from ..tools.registry import ToolRegistry
 from ..tools.memory_tools import (
@@ -163,7 +165,7 @@ def _prompt_for_llm_selection() -> tuple[str, str]:
         # codex or api: fall back to configured defaults
         default_model = (
             config.get("llm.model")
-            or config.get("llm.openai_model", "gpt-5.5")
+            or config.get("llm.openai_model", DEFAULT_API_MODEL)
         )
 
     typer.echo(
@@ -406,7 +408,7 @@ def tick(
         model = (
             llm_model
             or config.get('llm.model')
-            or config.get('llm.openai_model', 'gpt-5.5')
+            or config.get('llm.openai_model', DEFAULT_API_MODEL)
         )
         
         # Show prompt saving status
@@ -605,7 +607,7 @@ def run(
         model_display = (
             llm_model
             or config.get('llm.model')
-            or config.get('llm.openai_model', 'gpt-5.5')
+            or config.get('llm.openai_model', DEFAULT_API_MODEL)
         )
         typer.echo(f"🤖 LLM backend: {backend_display} (model={model_display})")
         
@@ -647,7 +649,7 @@ def run(
                     model = (
                         llm_model
                         or config.get('llm.model')
-                        or config.get('llm.openai_model', 'gpt-5.5')
+                        or config.get('llm.openai_model', DEFAULT_API_MODEL)
                     )
                     llm = initialize_llm(
                         backend=backend,
@@ -1281,7 +1283,7 @@ def plot_generate(
         codex_bin_effective = config.get("llm.codex_bin_path", "codex")
         model = (
             config.get("llm.model")
-            or config.get("llm.openai_model", "gpt-5.5")
+            or config.get("llm.openai_model", DEFAULT_API_MODEL)
         )
 
         typer.echo(f"📍 Project: {project_dir}")
@@ -1339,7 +1341,7 @@ def plot_revise(
         codex_bin_effective = config.get("llm.codex_bin_path", "codex")
         model = (
             config.get("llm.model")
-            or config.get("llm.openai_model", "gpt-5.5")
+            or config.get("llm.openai_model", DEFAULT_API_MODEL)
         )
 
         typer.echo(f"📍 Project: {project_dir}")

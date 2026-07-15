@@ -1,24 +1,14 @@
-"""Shared neutral working directory for CLI-agent LLM backends.
+"""Compatibility shim over the llm-backends package; will eventually be dropped.
 
-The `codex`, `claude` and `gemini` CLIs are full repo-aware *agents*, not completion
-APIs: run from the StoryDaemon repo they load agent instructions (CLAUDE.md / AGENTS.md)
-and the codebase and start *acting on the repo* instead of answering the prompt — they
-derail and time out (proven with `claude -p`). Running them from an empty scratch
-directory (no `.git`, no agent files, no source) keeps them pure text generators.
-
-This is deliberately backend-independent: every CLI backend runs from the *same* neutral
-cwd, created once per process.
+``neutral_cwd()`` now lives in the shared `llm-backends` package (see
+docs/LLM_BACKENDS_INVENTORY.md section 7.4, step 2). This module aliases
+itself to ``llm_backends.agent_cwd`` in ``sys.modules``, so the process-wide
+neutral scratch directory is the package's own single instance regardless of
+which import path a caller uses. New code should import from
+``llm_backends``.
 """
+import sys
 
-import tempfile
-from typing import Optional
+from llm_backends import agent_cwd as _impl
 
-_neutral_cwd: Optional[str] = None
-
-
-def neutral_cwd() -> str:
-    """Return a process-wide empty scratch directory for CLI-agent subprocesses."""
-    global _neutral_cwd
-    if _neutral_cwd is None:
-        _neutral_cwd = tempfile.mkdtemp(prefix="storydaemon-agent-")
-    return _neutral_cwd
+sys.modules[__name__] = _impl

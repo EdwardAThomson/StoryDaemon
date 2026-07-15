@@ -4,6 +4,8 @@ from pathlib import Path
 from typing import List, Optional
 from datetime import datetime
 
+from llm_backends import DEFAULT_API_MODEL
+
 
 def build_title_prompt(
     foundation: dict,
@@ -139,7 +141,7 @@ def generate_titles(
     # Initialize LLM
     backend = config.get("llm.backend", "codex")
     codex_bin = config.get("llm.codex_bin_path", "codex")
-    model = config.get("llm.model") or config.get("llm.openai_model", "gpt-5.5")
+    model = config.get("llm.model") or config.get("llm.openai_model", DEFAULT_API_MODEL)
     
     try:
         initialize_llm(backend=backend, codex_bin=codex_bin, model=model)
