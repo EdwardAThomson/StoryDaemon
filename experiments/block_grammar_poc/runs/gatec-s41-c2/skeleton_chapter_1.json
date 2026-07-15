@@ -1,0 +1,163 @@
+{
+ "arm": "skeleton",
+ "prose": "[1] The Alcyone sailed onward, its prow slicing through the glassy waters of the archipelago as the sun dipped low on the horizon, casting the volcanic peaks in hues of amber and shadow.\n\n[2] Sailors scrambled up the rigging, adjusting the sails to catch the evening breeze, while others leaned over the rails, scanning the water for signs of shoals or wreckage.\n\n[3] Captain Reeve stood at the helm, his broad shoulders squared beneath his navy coat, his face etched with a sternness that seemed carved from the same stone as the islands they passed.\n\n[4] \"Keep her steady,\" Reeve barked to the helmsman, his voice sharp as a whip crack. \"These waters aren\u2019t forgiving.\"\n\n[5] Elena Marsh emerged from below deck, her hair tied back in a loose braid, her hands clutching her brother\u2019s cipher notebook. \"Captain,\" she called, her voice steady but urgent, \"I\u2019ve found something in the notes.\"\n\n[6] Reeve\u2019s eyes narrowed as he turned to her. \"What is it, Miss Marsh?\"\n\n[7] Elena hesitated, her mind racing. The cipher hinted at a hidden cove, but she wasn\u2019t sure if she could trust Reeve with the information. His debt, whatever it was, hung over him like a storm cloud.\n\n[8] \"It\u2019s a possible location,\" she said carefully. \"A cove marked with a symbol I\u2019ve seen before. It could be where the Meridian expedition took shelter.\"\n\n[9] Reeve\u2019s jaw tightened. \"Yusuf,\" he called, his voice carrying across the deck. \"Have you seen this cove?\"\n\n[10] Yusuf, leaning against the rail, turned slowly. His dark eyes were unreadable. \"I\u2019ve sailed these waters,\" he said, his tone measured. \"But coves here are like ghosts. They appear and disappear with the tides.\"\n\n[11] Elena stepped closer to Yusuf. \"Do you recognize this symbol?\" She held the notebook open, revealing a strange mark resembling a spiral.\n\n[12] Yusuf\u2019s gaze lingered on the page, and for a moment, his expression flickered. \"It\u2019s familiar,\" he admitted. \"But the last time I saw it, the cove was swallowed by the sea.\"\n\n[13] Reeve\u2019s voice cut in. \"We don\u2019t have time for riddles. If there\u2019s a chance, we take it.\"\n\n[14] Yusuf straightened, his tone firm. \"It\u2019s dangerous, Captain. The currents around those coves are treacherous.\"\n\n[15] Reeve\u2019s eyes flashed. \"We\u2019re not turning back. Miss Marsh, plot the course. Yusuf, prepare the crew.\"\n\n[16] The Alcyone shifted direction, its sails catching the wind as Elena hurried to the chart table, her hands trembling slightly as she traced the route.\n\n[17] \"Are you sure about this?\" Yusuf asked quietly, appearing at her side.\n\n[18] Elena glanced up, her resolve hardening. \"It\u2019s the only lead we have.\"\n\n[19] The ship surged forward, cutting through the darkening waters as the crew worked in tense silence, their movements sharp and deliberate.\n\n[20] \"Keep an eye on the horizon,\" Reeve ordered, his voice low. \"We\u2019re not losing another expedition.\"\n\n[21] The Alcyone pressed on, its crew braced for whatever lay ahead, the volcanic peaks looming like sentinels in the gathering dusk.",
+ "paragraphs": [
+  "The Alcyone sailed onward, its prow slicing through the glassy waters of the archipelago as the sun dipped low on the horizon, casting the volcanic peaks in hues of amber and shadow.",
+  "Sailors scrambled up the rigging, adjusting the sails to catch the evening breeze, while others leaned over the rails, scanning the water for signs of shoals or wreckage.",
+  "Captain Reeve stood at the helm, his broad shoulders squared beneath his navy coat, his face etched with a sternness that seemed carved from the same stone as the islands they passed.",
+  "\"Keep her steady,\" Reeve barked to the helmsman, his voice sharp as a whip crack. \"These waters aren\u2019t forgiving.\"",
+  "Elena Marsh emerged from below deck, her hair tied back in a loose braid, her hands clutching her brother\u2019s cipher notebook. \"Captain,\" she called, her voice steady but urgent, \"I\u2019ve found something in the notes.\"",
+  "Reeve\u2019s eyes narrowed as he turned to her. \"What is it, Miss Marsh?\"",
+  "Elena hesitated, her mind racing. The cipher hinted at a hidden cove, but she wasn\u2019t sure if she could trust Reeve with the information. His debt, whatever it was, hung over him like a storm cloud.",
+  "\"It\u2019s a possible location,\" she said carefully. \"A cove marked with a symbol I\u2019ve seen before. It could be where the Meridian expedition took shelter.\"",
+  "Reeve\u2019s jaw tightened. \"Yusuf,\" he called, his voice carrying across the deck. \"Have you seen this cove?\"",
+  "Yusuf, leaning against the rail, turned slowly. His dark eyes were unreadable. \"I\u2019ve sailed these waters,\" he said, his tone measured. \"But coves here are like ghosts. They appear and disappear with the tides.\"",
+  "Elena stepped closer to Yusuf. \"Do you recognize this symbol?\" She held the notebook open, revealing a strange mark resembling a spiral.",
+  "Yusuf\u2019s gaze lingered on the page, and for a moment, his expression flickered. \"It\u2019s familiar,\" he admitted. \"But the last time I saw it, the cove was swallowed by the sea.\"",
+  "Reeve\u2019s voice cut in. \"We don\u2019t have time for riddles. If there\u2019s a chance, we take it.\"",
+  "Yusuf straightened, his tone firm. \"It\u2019s dangerous, Captain. The currents around those coves are treacherous.\"",
+  "Reeve\u2019s eyes flashed. \"We\u2019re not turning back. Miss Marsh, plot the course. Yusuf, prepare the crew.\"",
+  "The Alcyone shifted direction, its sails catching the wind as Elena hurried to the chart table, her hands trembling slightly as she traced the route.",
+  "\"Are you sure about this?\" Yusuf asked quietly, appearing at her side.",
+  "Elena glanced up, her resolve hardening. \"It\u2019s the only lead we have.\"",
+  "The ship surged forward, cutting through the darkening waters as the crew worked in tense silence, their movements sharp and deliberate.",
+  "\"Keep an eye on the horizon,\" Reeve ordered, his voice low. \"We\u2019re not losing another expedition.\"",
+  "The Alcyone pressed on, its crew braced for whatever lay ahead, the volcanic peaks looming like sentinels in the gathering dusk."
+ ],
+ "numbers": [
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9,
+  10,
+  11,
+  12,
+  13,
+  14,
+  15,
+  16,
+  17,
+  18,
+  19,
+  20,
+  21
+ ],
+ "annotations": [
+  {
+   "primary": "SETTING",
+   "secondary": null
+  },
+  {
+   "primary": "ACTION",
+   "secondary": null
+  },
+  {
+   "primary": "CHARACTER_DESC",
+   "secondary": null
+  },
+  {
+   "primary": "DIALOGUE",
+   "secondary": null
+  },
+  {
+   "primary": "ACTION",
+   "secondary": "DIALOGUE"
+  },
+  {
+   "primary": "DIALOGUE",
+   "secondary": null
+  },
+  {
+   "primary": "INTERIORITY",
+   "secondary": null
+  },
+  {
+   "primary": "DIALOGUE",
+   "secondary": null
+  },
+  {
+   "primary": "DIALOGUE",
+   "secondary": null
+  },
+  {
+   "primary": "DIALOGUE",
+   "secondary": null
+  },
+  {
+   "primary": "ACTION",
+   "secondary": "DIALOGUE"
+  },
+  {
+   "primary": "DIALOGUE",
+   "secondary": null
+  },
+  {
+   "primary": "DIALOGUE",
+   "secondary": null
+  },
+  {
+   "primary": "DIALOGUE",
+   "secondary": null
+  },
+  {
+   "primary": "DIALOGUE",
+   "secondary": null
+  },
+  {
+   "primary": "ACTION",
+   "secondary": null
+  },
+  {
+   "primary": "DIALOGUE",
+   "secondary": null
+  },
+  {
+   "primary": "DIALOGUE",
+   "secondary": null
+  },
+  {
+   "primary": "ACTION",
+   "secondary": null
+  },
+  {
+   "primary": "DIALOGUE",
+   "secondary": null
+  },
+  {
+   "primary": "SETTING",
+   "secondary": null
+  }
+ ],
+ "flags": {
+  "marker_retry": false,
+  "positional_fallback": false
+ },
+ "skeleton": [
+  "TRANSITION",
+  "ACTION",
+  "CHARACTER_DESC",
+  "DIALOGUE",
+  "DIALOGUE",
+  "DIALOGUE",
+  "INTERIORITY",
+  "DIALOGUE",
+  "DIALOGUE",
+  "DIALOGUE",
+  "DIALOGUE",
+  "DIALOGUE",
+  "DIALOGUE",
+  "DIALOGUE",
+  "DIALOGUE",
+  "ACTION",
+  "DIALOGUE",
+  "ACTION",
+  "ACTION",
+  "DIALOGUE",
+  "ACTION"
+ ]
+}

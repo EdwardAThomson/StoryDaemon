@@ -1,0 +1,100 @@
+{
+ "arm": "skeleton",
+ "prose": "[1] Captain Reeve stood at the helm, his broad shoulders framed by the fading light of the horizon. His weathered face bore deep lines, etched by years of squinting into the sun and salt-laden winds. His uniform, though worn, was impeccably maintained, the brass buttons gleaming faintly. His posture was rigid, his hands steady on the wheel, betraying no emotion save a quiet intensity.  \n\n[2] The Alcyone sliced through the choppy waters, its sails taut against the wind. Crew members scrambled across the deck, securing ropes and adjusting rigging as the ship navigated the narrow strait between two jagged islands. Smoke curled ominously from the peaks of distant volcanoes, and the air carried the faint scent of sulfur.  \n\n[3] \u201cKeep her steady,\u201d Reeve barked, his voice cutting through the wind. \u201cWe\u2019re too close to the rocks.\u201d Yusuf, standing nearby, nodded silently and gestured to the crew. \u201cAye, Captain,\u201d he murmured, his tone low and measured. Elena Marsh, clutching her brother\u2019s notebook, approached cautiously. \u201cCaptain, I\u2019ve deciphered part of the map,\u201d she said. \u201cWe need to head northwest.\u201d  \n\n[4] Reeve\u2019s eyes flicked to the notebook in Elena\u2019s hands, then to the horizon. He adjusted the wheel slightly, his movements deliberate. The ship groaned as it turned, the timbers creaking under the strain. Waves slapped against the hull, sending sprays of seawater onto the deck.  \n\n[5] \u201cAre you certain?\u201d Reeve asked, his voice tight. \u201cWe\u2019ve little room for error.\u201d Elena nodded. \u201cThe coordinates match the last known location of the Meridian. If we don\u2019t act now, we\u2019ll lose the trail.\u201d Yusuf stepped forward. \u201cThe currents here are treacherous,\u201d he warned. \u201cOne wrong move, and we\u2019ll be dashed against the rocks.\u201d  \n\n[6] \u201cThen we\u2019ll need to trust her,\u201d Reeve said, his gaze fixed on Elena. \u201cShe\u2019s got her brother\u2019s instincts.\u201d Elena\u2019s jaw tightened, but she held his gaze. \u201cI\u2019ll take full responsibility,\u201d she said. Yusuf\u2019s expression darkened. \u201cResponsibility won\u2019t save us if we\u2019re wrong,\u201d he muttered.  \n\n[7] Reeve ignored the comment, turning back to the wheel. \u201cNorthwest it is,\u201d he said firmly. The crew exchanged uneasy glances but obeyed, adjusting the sails. Elena clutched the notebook tighter, her knuckles whitening. Yusuf moved silently to the rail, his eyes scanning the horizon.  \n\n[8] \u201cYou\u2019ve sailed these waters before,\u201d Elena said, joining him. \u201cWhat do you think?\u201d Yusuf hesitated, his gaze distant. \u201cI think the sea takes what it wants,\u201d he said finally. \u201cAnd it doesn\u2019t care who\u2019s looking.\u201d Elena frowned. \u201cThat\u2019s not an answer.\u201d Yusuf turned to her, his expression unreadable. \u201cIt\u2019s the only one I\u2019ve got.\u201d  \n\n[9] The ship lurched suddenly, sending Elena stumbling. Reeve\u2019s voice rang out. \u201cHold steady!\u201d he shouted. Yusuf grabbed Elena\u2019s arm, steadying her. \u201cYou\u2019re not used to this,\u201d he said, his tone softer. Elena pulled away, her pride stinging. \u201cI\u2019ll manage,\u201d she snapped.  \n\n[10] Reeve glanced back at them, his expression grim. \u201cWe\u2019ve got a storm brewing,\u201d he said. \u201cIf we don\u2019t find shelter soon, we\u2019re in trouble.\u201d Yusuf nodded. \u201cThere\u2019s a cove not far from here,\u201d he said. \u201cIf we can reach it.\u201d Reeve\u2019s jaw tightened. \u201cThen we\u2019ll make for it.\u201d  \n\n[11] Elena stared out at the darkening sky, her mind racing. The notebook felt heavy in her hands, a reminder of the burden she carried. She couldn\u2019t afford to doubt herself now, not when so much was at stake. Her brother\u2019s fate\u2014and perhaps the Alcyone\u2019s survival\u2014depended on her.  \n\n[12] Reeve\u2019s thoughts were equally grim as he steered the ship toward the cove. He owed a debt, one he could never repay, and every decision weighed heavier because of it. The storm loomed on the horizon, a mirror to the turmoil within him. He clenched the wheel tighter, his resolve hardening. Failure was not an option.",
+ "paragraphs": [
+  "Captain Reeve stood at the helm, his broad shoulders framed by the fading light of the horizon. His weathered face bore deep lines, etched by years of squinting into the sun and salt-laden winds. His uniform, though worn, was impeccably maintained, the brass buttons gleaming faintly. His posture was rigid, his hands steady on the wheel, betraying no emotion save a quiet intensity.",
+  "The Alcyone sliced through the choppy waters, its sails taut against the wind. Crew members scrambled across the deck, securing ropes and adjusting rigging as the ship navigated the narrow strait between two jagged islands. Smoke curled ominously from the peaks of distant volcanoes, and the air carried the faint scent of sulfur.",
+  "\u201cKeep her steady,\u201d Reeve barked, his voice cutting through the wind. \u201cWe\u2019re too close to the rocks.\u201d Yusuf, standing nearby, nodded silently and gestured to the crew. \u201cAye, Captain,\u201d he murmured, his tone low and measured. Elena Marsh, clutching her brother\u2019s notebook, approached cautiously. \u201cCaptain, I\u2019ve deciphered part of the map,\u201d she said. \u201cWe need to head northwest.\u201d",
+  "Reeve\u2019s eyes flicked to the notebook in Elena\u2019s hands, then to the horizon. He adjusted the wheel slightly, his movements deliberate. The ship groaned as it turned, the timbers creaking under the strain. Waves slapped against the hull, sending sprays of seawater onto the deck.",
+  "\u201cAre you certain?\u201d Reeve asked, his voice tight. \u201cWe\u2019ve little room for error.\u201d Elena nodded. \u201cThe coordinates match the last known location of the Meridian. If we don\u2019t act now, we\u2019ll lose the trail.\u201d Yusuf stepped forward. \u201cThe currents here are treacherous,\u201d he warned. \u201cOne wrong move, and we\u2019ll be dashed against the rocks.\u201d",
+  "\u201cThen we\u2019ll need to trust her,\u201d Reeve said, his gaze fixed on Elena. \u201cShe\u2019s got her brother\u2019s instincts.\u201d Elena\u2019s jaw tightened, but she held his gaze. \u201cI\u2019ll take full responsibility,\u201d she said. Yusuf\u2019s expression darkened. \u201cResponsibility won\u2019t save us if we\u2019re wrong,\u201d he muttered.",
+  "Reeve ignored the comment, turning back to the wheel. \u201cNorthwest it is,\u201d he said firmly. The crew exchanged uneasy glances but obeyed, adjusting the sails. Elena clutched the notebook tighter, her knuckles whitening. Yusuf moved silently to the rail, his eyes scanning the horizon.",
+  "\u201cYou\u2019ve sailed these waters before,\u201d Elena said, joining him. \u201cWhat do you think?\u201d Yusuf hesitated, his gaze distant. \u201cI think the sea takes what it wants,\u201d he said finally. \u201cAnd it doesn\u2019t care who\u2019s looking.\u201d Elena frowned. \u201cThat\u2019s not an answer.\u201d Yusuf turned to her, his expression unreadable. \u201cIt\u2019s the only one I\u2019ve got.\u201d",
+  "The ship lurched suddenly, sending Elena stumbling. Reeve\u2019s voice rang out. \u201cHold steady!\u201d he shouted. Yusuf grabbed Elena\u2019s arm, steadying her. \u201cYou\u2019re not used to this,\u201d he said, his tone softer. Elena pulled away, her pride stinging. \u201cI\u2019ll manage,\u201d she snapped.",
+  "Reeve glanced back at them, his expression grim. \u201cWe\u2019ve got a storm brewing,\u201d he said. \u201cIf we don\u2019t find shelter soon, we\u2019re in trouble.\u201d Yusuf nodded. \u201cThere\u2019s a cove not far from here,\u201d he said. \u201cIf we can reach it.\u201d Reeve\u2019s jaw tightened. \u201cThen we\u2019ll make for it.\u201d",
+  "Elena stared out at the darkening sky, her mind racing. The notebook felt heavy in her hands, a reminder of the burden she carried. She couldn\u2019t afford to doubt herself now, not when so much was at stake. Her brother\u2019s fate\u2014and perhaps the Alcyone\u2019s survival\u2014depended on her.",
+  "Reeve\u2019s thoughts were equally grim as he steered the ship toward the cove. He owed a debt, one he could never repay, and every decision weighed heavier because of it. The storm loomed on the horizon, a mirror to the turmoil within him. He clenched the wheel tighter, his resolve hardening. Failure was not an option."
+ ],
+ "numbers": [
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9,
+  10,
+  11,
+  12
+ ],
+ "annotations": [
+  {
+   "primary": "CHARACTER_DESC",
+   "secondary": null
+  },
+  {
+   "primary": "SETTING",
+   "secondary": "ACTION"
+  },
+  {
+   "primary": "DIALOGUE",
+   "secondary": null
+  },
+  {
+   "primary": "ACTION",
+   "secondary": null
+  },
+  {
+   "primary": "DIALOGUE",
+   "secondary": null
+  },
+  {
+   "primary": "DIALOGUE",
+   "secondary": null
+  },
+  {
+   "primary": "ACTION",
+   "secondary": null
+  },
+  {
+   "primary": "DIALOGUE",
+   "secondary": null
+  },
+  {
+   "primary": "ACTION",
+   "secondary": "DIALOGUE"
+  },
+  {
+   "primary": "DIALOGUE",
+   "secondary": null
+  },
+  {
+   "primary": "INTERIORITY",
+   "secondary": null
+  },
+  {
+   "primary": "INTERIORITY",
+   "secondary": null
+  }
+ ],
+ "flags": {
+  "marker_retry": false,
+  "positional_fallback": false
+ },
+ "skeleton": [
+  "CHARACTER_DESC",
+  "ACTION",
+  "DIALOGUE",
+  "ACTION",
+  "DIALOGUE",
+  "DIALOGUE",
+  "DIALOGUE",
+  "DIALOGUE",
+  "DIALOGUE",
+  "DIALOGUE",
+  "INTERIORITY",
+  "INTERIORITY"
+ ]
+}

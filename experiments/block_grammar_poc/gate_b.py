@@ -136,7 +136,7 @@ class OpenRouterLLM:
             headers={"Authorization": f"Bearer {self.key}",
                      "Content-Type": "application/json"})
         last = None
-        for attempt in range(6):
+        for attempt in range(9):
             try:
                 with urllib.request.urlopen(req, timeout=300) as resp:
                     out = json.load(resp)
@@ -150,10 +150,16 @@ class OpenRouterLLM:
                     raise RuntimeError(
                         f"OpenRouter non-retryable HTTP {e.code}{hint}") from e
                 last = e
-                time.sleep(2 ** attempt)
+                # ride out sustained 429 bursts: capped exponential backoff,
+                # honoring Retry-After when the server sends one
+                delay = min(90, 2 ** attempt)
+                ra = e.headers.get("Retry-After") if e.headers else None
+                if ra and str(ra).isdigit():
+                    delay = max(delay, min(300, int(ra)))
+                time.sleep(delay)
             except (urllib.error.URLError, TimeoutError, KeyError) as e:
                 last = e
-                time.sleep(2 ** attempt)
+                time.sleep(min(90, 2 ** attempt))
         raise RuntimeError(f"OpenRouter call failed after retries: {last}")
 
     def __call__(self, prompt):
@@ -427,7 +433,7 @@ def main():
             print(f"chapter {i}: {rec['metrics']['n_blocks']} blocks -> "
                   f"{rec['metrics']['n_paragraphs']} paragraphs, "
                   f"coverage {rec['metrics']['marker_coverage']}, "
-                  f"agreement {rec['metrics']['agreement']}")
+                  f"agreement {rec['metrics']['agreement']}", flush=True)
     except PauseRun as e:
         print(f"PAUSED: {e}. Completed chapters are saved; every billed "
               f"response is cached. Re-run the same command to resume.")

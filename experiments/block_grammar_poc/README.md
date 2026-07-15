@@ -81,7 +81,39 @@ Artifacts (skeleton, prose, judged labels, metrics per chapter) live under
 `runs/`; LLM responses are disk-cached under `cache/` (gitignored), so
 re-scoring is free and re-runs only pay for changed prompts.
 
-## Gate C (this directory, BUILT; verdict pending scale): does skeleton guidance move the failure metrics?
+## Gate C (this directory, PASSED): does skeleton guidance move the failure metrics?
+
+**Verdict: ALL THREE CHECKS PASS**, pooled over 5 chunks (10 chapters per
+arm, seeds 31/37/41/43/47, DeepSeek writer, ~2.5 cents total):
+
+| metric | masters | baseline arm | skeleton arm |
+|---|---:|---:|---:|
+| interiority self-transition | 0.205 | 0.103 | **0.200** |
+| shading rate | 0.204 | 0.468 | **0.294** |
+| excursion-return rate | 0.355 | 0.320 | **0.356** |
+| dialogue share | 0.565 | 0.379 | 0.409 |
+| dialogue run mean | 3.32 | 1.63 | 1.64 |
+
+The headline is not that the skeleton cured the pre-registered disease
+(baseline interiority chaining never appeared with this writer; that
+failure mode looks specific to the original StoryDaemon pipeline) but that
+the skeleton arm CONVERGED ON THE MASTERS: interiority self-transition
+0.200 vs the masters' 0.205, return rate 0.356 vs 0.355. The skeleton was
+sampled from the masters' grammar, and the writer following it reproduces
+master statistics, which is the whole mechanism working end to end. The
+baseline arm meanwhile over-shades 2.3x, undershoots interiority
+structure, ignores word budgets (one chapter: 12.4k words on a ~7k
+request), and writes ~39-49-word micro-paragraphs.
+
+Caveats for the writeup: one writer model, one premise, one judge;
+~35 vs ~60 interiority events per arm (differences of ~0.10 are at the
+edge of resolution); the baseline's paragraph-sizing drift is itself a
+finding but also a confound for per-paragraph metrics; and both arms
+share one deficit no skeleton fixes, dialogue runs half master length
+(a writer-prompt problem; the few-shot exemplar experiment is the natural
+next lever).
+
+Original design notes follow.
 
 `gate_c.py` is the A/B that justifies (or blocks) wiring skeletons into
 `novel_agent`: baseline arm = premise + word budget only (today's

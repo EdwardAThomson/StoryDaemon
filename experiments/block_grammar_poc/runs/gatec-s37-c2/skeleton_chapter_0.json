@@ -1,0 +1,37 @@
+{
+ "arm": "skeleton",
+ "prose": "[1] The Alcyone sailed onward, its sails taut against the wind, as the volcanic peaks of the archipelago loomed closer on the horizon. The crew moved with practiced efficiency, their eyes occasionally darting to the plume of smoke rising from the nearest island. Elena Marsh stood at the rail, her fingers tracing the worn edges of her brother\u2019s cipher notebook, her thoughts drifting between the cryptic symbols within and the uncharted waters ahead. The ship\u2019s bell tolled softly, marking the passage of time, as the vessel cut through the choppy sea.\n\n[2] The Meridian expedition had vanished two years prior, leaving behind only whispers of its fate. Led by Dr. Thomas Marsh, Elena\u2019s brother, the expedition had sought to map the archipelago\u2019s volatile geology and uncover its secrets. They had last been sighted near the island of Pyros, where the ground was said to tremble daily and the air smelled perpetually of sulfur. Local legends spoke of a hidden cavern beneath the island, a place of both wonder and peril, where the earth itself seemed alive. The Alcyone\u2019s crew knew the risks, but the promise of discovery\u2014or closure\u2014compelled them forward.\n\n[3] Captain Reeve barked orders, his voice cutting through the hum of the ship. \u201cReady the longboats! We\u2019ll make landfall at Pyros by dusk.\u201d Yusuf moved swiftly, his hands steady as he secured ropes and checked supplies. Elena clutched her notebook tighter, her heart pounding as she watched the island grow larger. The crew lowered the longboats, the wooden hulls scraping against the brig\u2019s side. Waves slapped against the boats as they were rowed toward the shore, the team\u2019s anticipation palpable. Elena stepped onto the black sand beach, her boots sinking slightly, and took her first cautious steps toward the island\u2019s smoking heart.",
+ "paragraphs": [
+  "The Alcyone sailed onward, its sails taut against the wind, as the volcanic peaks of the archipelago loomed closer on the horizon. The crew moved with practiced efficiency, their eyes occasionally darting to the plume of smoke rising from the nearest island. Elena Marsh stood at the rail, her fingers tracing the worn edges of her brother\u2019s cipher notebook, her thoughts drifting between the cryptic symbols within and the uncharted waters ahead. The ship\u2019s bell tolled softly, marking the passage of time, as the vessel cut through the choppy sea.",
+  "The Meridian expedition had vanished two years prior, leaving behind only whispers of its fate. Led by Dr. Thomas Marsh, Elena\u2019s brother, the expedition had sought to map the archipelago\u2019s volatile geology and uncover its secrets. They had last been sighted near the island of Pyros, where the ground was said to tremble daily and the air smelled perpetually of sulfur. Local legends spoke of a hidden cavern beneath the island, a place of both wonder and peril, where the earth itself seemed alive. The Alcyone\u2019s crew knew the risks, but the promise of discovery\u2014or closure\u2014compelled them forward.",
+  "Captain Reeve barked orders, his voice cutting through the hum of the ship. \u201cReady the longboats! We\u2019ll make landfall at Pyros by dusk.\u201d Yusuf moved swiftly, his hands steady as he secured ropes and checked supplies. Elena clutched her notebook tighter, her heart pounding as she watched the island grow larger. The crew lowered the longboats, the wooden hulls scraping against the brig\u2019s side. Waves slapped against the boats as they were rowed toward the shore, the team\u2019s anticipation palpable. Elena stepped onto the black sand beach, her boots sinking slightly, and took her first cautious steps toward the island\u2019s smoking heart."
+ ],
+ "numbers": [
+  1,
+  2,
+  3
+ ],
+ "annotations": [
+  {
+   "primary": "SETTING",
+   "secondary": "INTERIORITY"
+  },
+  {
+   "primary": "LORE",
+   "secondary": null
+  },
+  {
+   "primary": "ACTION",
+   "secondary": null
+  }
+ ],
+ "flags": {
+  "marker_retry": false,
+  "positional_fallback": false
+ },
+ "skeleton": [
+  "TRANSITION",
+  "LORE",
+  "ACTION"
+ ]
+}

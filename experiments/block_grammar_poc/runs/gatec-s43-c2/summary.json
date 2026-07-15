@@ -1,0 +1,51 @@
+{
+ "masters": {
+  "int_self_transition": 0.205,
+  "shading_rate": 0.204,
+  "return_rate": 0.355,
+  "mode_share": {
+   "DIALOGUE": 0.565,
+   "ACTION": 0.232,
+   "INTERIORITY": 0.088
+  }
+ },
+ "arms": {
+  "baseline": {
+   "n_paragraphs": 72,
+   "mode_share": {
+    "SETTING": 0.139,
+    "DIALOGUE": 0.403,
+    "CHARACTER_DESC": 0.028,
+    "INTERIORITY": 0.153,
+    "ACTION": 0.264,
+    "LORE": 0.014
+   },
+   "shading_rate": 0.278,
+   "int_self_transition": 0.222,
+   "int_transitions_n": 9,
+   "dialogue_run_mean": 2.42,
+   "return_rate": 0.171
+  },
+  "skeleton": {
+   "n_paragraphs": 83,
+   "mode_share": {
+    "CHARACTER_DESC": 0.012,
+    "SETTING": 0.06,
+    "DIALOGUE": 0.47,
+    "ACTION": 0.289,
+    "INTERIORITY": 0.084,
+    "LORE": 0.084
+   },
+   "shading_rate": 0.289,
+   "int_self_transition": 0.167,
+   "int_transitions_n": 6,
+   "dialogue_run_mean": 1.62,
+   "return_rate": 0.441
+  }
+ },
+ "results": [
+  "INCONCLUSIVE",
+  "PASS",
+  "INCONCLUSIVE"
+ ]
+}

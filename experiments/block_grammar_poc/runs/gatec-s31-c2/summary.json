@@ -11,40 +11,41 @@
  },
  "arms": {
   "baseline": {
-   "n_paragraphs": 32,
+   "n_paragraphs": 564,
    "mode_share": {
-    "SETTING": 0.156,
-    "ACTION": 0.344,
-    "DIALOGUE": 0.406,
-    "INTERIORITY": 0.062,
-    "CHARACTER_DESC": 0.031
+    "SETTING": 0.204,
+    "ACTION": 0.284,
+    "DIALOGUE": 0.379,
+    "INTERIORITY": 0.113,
+    "CHARACTER_DESC": 0.018,
+    "LORE": 0.002
    },
-   "shading_rate": 0.719,
-   "int_self_transition": 0.0,
-   "int_transitions_n": 1,
-   "dialogue_run_mean": 2.17,
-   "return_rate": 0.176
+   "shading_rate": 0.468,
+   "int_self_transition": 0.103,
+   "int_transitions_n": 58,
+   "dialogue_run_mean": 1.63,
+   "return_rate": 0.32
   },
   "skeleton": {
-   "n_paragraphs": 28,
+   "n_paragraphs": 320,
    "mode_share": {
-    "LORE": 0.071,
-    "CHARACTER_DESC": 0.107,
-    "INTERIORITY": 0.143,
-    "ACTION": 0.214,
-    "SETTING": 0.071,
-    "DIALOGUE": 0.393
+    "LORE": 0.059,
+    "CHARACTER_DESC": 0.034,
+    "INTERIORITY": 0.119,
+    "ACTION": 0.287,
+    "SETTING": 0.091,
+    "DIALOGUE": 0.409
    },
-   "shading_rate": 0.321,
-   "int_self_transition": 0.0,
-   "int_transitions_n": 4,
-   "dialogue_run_mean": 1.57,
-   "return_rate": 0.211
+   "shading_rate": 0.294,
+   "int_self_transition": 0.2,
+   "int_transitions_n": 35,
+   "dialogue_run_mean": 1.64,
+   "return_rate": 0.356
   }
  },
  "results": [
-  "INCONCLUSIVE",
   "PASS",
-  "INCONCLUSIVE"
+  "PASS",
+  "PASS"
  ]
 }

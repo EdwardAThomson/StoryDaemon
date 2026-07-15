@@ -1,0 +1,35 @@
+{
+ "arm": "baseline",
+ "prose": "The Alcyone cut through the smoky haze that clung to the water like a shroud, her sails taut against the wind. Elena stood at the rail, her fingers tracing the edges of her brother\u2019s cipher notebook. The pages were filled with his cramped handwriting, symbols she couldn\u2019t decipher, and sketches of plants she had yet to identify. The archipelago loomed ahead, jagged peaks rising from the sea like broken teeth, their slopes cloaked in ash and steam. She squinted, trying to discern any sign of life\u2014or wreckage\u2014among the desolate islands.\n\nCaptain Reeve emerged from his cabin, his coat buttoned tight against the chill. He glanced at Elena, his expression unreadable, before turning his gaze to the horizon. \u201cWe\u2019ll make landfall by dusk,\u201d he said, his voice low. \u201cYusuf says there\u2019s a cove where we can anchor. Safe enough, if the winds hold.\u201d\n\nElena nodded, though she couldn\u2019t shake the unease that settled in her chest. Safe enough wasn\u2019t the same as safe. She glanced toward the quarterdeck, where Yusuf stood with his hands on the wheel, his eyes fixed on the water ahead. He had spoken little since they set sail, only offering terse directions when pressed. She wondered what he wasn\u2019t telling them\u2014what he had seen in these waters that made his jaw tighten and his silence deepen.\n\nThe ship groaned as it shifted course, the wind catching the sails with a sharp snap. Elena clutched the rail, her knuckles whitening. Somewhere out there, her brother had vanished. And somewhere out there, she would find answers\u2014or drown trying.",
+ "paragraphs": [
+  "The Alcyone cut through the smoky haze that clung to the water like a shroud, her sails taut against the wind. Elena stood at the rail, her fingers tracing the edges of her brother\u2019s cipher notebook. The pages were filled with his cramped handwriting, symbols she couldn\u2019t decipher, and sketches of plants she had yet to identify. The archipelago loomed ahead, jagged peaks rising from the sea like broken teeth, their slopes cloaked in ash and steam. She squinted, trying to discern any sign of life\u2014or wreckage\u2014among the desolate islands.",
+  "Captain Reeve emerged from his cabin, his coat buttoned tight against the chill. He glanced at Elena, his expression unreadable, before turning his gaze to the horizon. \u201cWe\u2019ll make landfall by dusk,\u201d he said, his voice low. \u201cYusuf says there\u2019s a cove where we can anchor. Safe enough, if the winds hold.\u201d",
+  "Elena nodded, though she couldn\u2019t shake the unease that settled in her chest. Safe enough wasn\u2019t the same as safe. She glanced toward the quarterdeck, where Yusuf stood with his hands on the wheel, his eyes fixed on the water ahead. He had spoken little since they set sail, only offering terse directions when pressed. She wondered what he wasn\u2019t telling them\u2014what he had seen in these waters that made his jaw tighten and his silence deepen.",
+  "The ship groaned as it shifted course, the wind catching the sails with a sharp snap. Elena clutched the rail, her knuckles whitening. Somewhere out there, her brother had vanished. And somewhere out there, she would find answers\u2014or drown trying."
+ ],
+ "numbers": [
+  null,
+  null,
+  null,
+  null
+ ],
+ "annotations": [
+  {
+   "primary": "SETTING",
+   "secondary": "ACTION"
+  },
+  {
+   "primary": "DIALOGUE",
+   "secondary": "ACTION"
+  },
+  {
+   "primary": "INTERIORITY",
+   "secondary": "ACTION"
+  },
+  {
+   "primary": "ACTION",
+   "secondary": "INTERIORITY"
+  }
+ ],
+ "flags": null
+}
