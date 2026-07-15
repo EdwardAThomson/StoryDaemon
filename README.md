@@ -49,6 +49,7 @@ An introduction and overview.
   - Google Gemini 3 (flash/pro preview) or 2.5 (pro/flash)
   - Self-hosted, OpenAI-compatible endpoint via `HOSTED_LLM_URL`, `HOSTED_LLM_PORT`, `HOSTED_LLM_API_KEY`, `HOSTED_LLM_MODEL` env variables (`hosted-llm`)
   - OpenRouter (https://openrouter.ai), a hosted OpenAI-compatible router over many models, via `OPENROUTER_API_KEY` and `OPENROUTER_MODEL` env variables (`openrouter`)
+  - Venice (https://venice.ai), an OpenAI-compatible host of open-weight models including uncensored variants, via `VENICE_API_KEY` and `VENICE_MODEL` env variables (`venice`)
 - (Optional) Gemini CLI installed (for `llm.backend = gemini-cli`)
   - https://github.com/google-gemini/gemini-cli
 - (Optional) Claude Code CLI installed (for `llm.backend = claude-cli`)
@@ -154,6 +155,7 @@ novel tick --llm-backend api --llm-model claude-sonnet-4.5  # Anthropic Claude S
 novel tick --llm-backend api --llm-model gemini-3-pro-preview  # Gemini 3 Pro
 novel tick --llm-backend api --llm-model hosted-llm      # Self-hosted OpenAI-compatible endpoint
 novel tick --llm-backend api --llm-model openrouter      # OpenRouter (routes to whatever OPENROUTER_MODEL names)
+novel tick --llm-backend api --llm-model venice          # Venice (uses whatever VENICE_MODEL names, e.g. venice-uncensored)
 
 # Use Gemini CLI backend (local `gemini` binary)
 novel tick --llm-backend gemini-cli --llm-model gemini-3-flash-preview
@@ -425,6 +427,8 @@ CLAUDE_API_KEY   # Anthropic Claude Sonnet 4.5 / Haiku 4.5
 GEMINI_API_KEY   # Google Gemini 3 / 2.5
 OPENROUTER_API_KEY   # OpenRouter (model "openrouter")
 OPENROUTER_MODEL     # OpenRouter model to route to, e.g. "anthropic/claude-3.7-sonnet"
+VENICE_API_KEY       # Venice (model "venice")
+VENICE_MODEL         # Venice model to use, e.g. "venice-uncensored" or "llama-3.3-70b"
 ```
 
 ## Development Status & Roadmap

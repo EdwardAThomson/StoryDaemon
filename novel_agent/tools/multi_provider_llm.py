@@ -19,6 +19,9 @@ Environment variables expected (if using those providers):
 - OPENROUTER_API_KEY / OPENROUTER_MODEL
                    – for OpenRouter, a hosted OpenAI-compatible router over many
                      providers (model "openrouter")
+- VENICE_API_KEY / VENICE_MODEL
+                   – for Venice (https://venice.ai), an OpenAI-compatible host of
+                     open-weight models including uncensored variants (model "venice")
 
 The rest of StoryDaemon can either call send_prompt(model=..., ...) directly
 or use the MultiProviderInterface wrapper, which exposes generate/
@@ -48,6 +51,7 @@ except ImportError:  # pragma: no cover - optional, only needed for Claude
 _openai_client: Optional["OpenAI"] = None
 _hosted_llm_client: Optional["OpenAI"] = None
 _openrouter_client: Optional["OpenAI"] = None
+_venice_client: Optional["OpenAI"] = None
 _anthropic_client: Optional["anthropic.Anthropic"] = None
 _gemini_configured: bool = False
 
@@ -155,6 +159,36 @@ def _get_openrouter_client() -> "OpenAI":
         )
 
     return _openrouter_client
+
+
+def _get_venice_client() -> "OpenAI":
+    """Return a shared OpenAI client pointed at Venice (https://venice.ai).
+
+    Venice is an OpenAI-compatible host of open-weight models, including
+    uncensored variants some writers want for unfiltered fiction. Configured
+    from VENICE_API_KEY. Kept separate from the other clients so the backends
+    can coexist in one process.
+    """
+    global _venice_client
+
+    if OpenAI is None:
+        raise RuntimeError(
+            "openai package is not installed. Install it with 'pip install openai' "
+            "or switch llm.backend to 'codex'."
+        )
+
+    if _venice_client is None:
+        api_key = os.environ.get("VENICE_API_KEY")
+        if not api_key:
+            raise RuntimeError(
+                "Environment variable 'VENICE_API_KEY' is not set. "
+                "Set your Venice API key or use a different backend (e.g. Codex)."
+            )
+        _venice_client = _construct_client(
+            OpenAI, base_url="https://api.venice.ai/api/v1", api_key=api_key
+        )
+
+    return _venice_client
 
 
 def _get_openai_client() -> "OpenAI":
@@ -372,6 +406,52 @@ def send_prompt_openrouter(*args, **kwargs) -> str:
     return send_prompt_openrouter_meta(*args, **kwargs)[0]
 
 
+def send_prompt_venice_meta(
+    prompt: str,
+    model: str = "",
+    max_tokens: int = 2000,
+    temperature: float = 0.7,
+    role_description: str = (
+        "You are a helpful fiction writing assistant. You will create original text only."
+    ),
+    timeout: Optional[float] = None,
+) -> Tuple[str, Optional[str]]:
+    """Send a prompt to Venice (https://venice.ai), an OpenAI-compatible host.
+
+    Returns (text, finish_reason): Venice responses are OpenAI-shaped.
+    ``timeout`` (seconds) is applied per request; None keeps the SDK default.
+    """
+    if model == "":
+        model = os.environ.get("VENICE_MODEL", None)
+    if not model:
+        raise ValueError(
+            "Model name must be specified either as a parameter or via VENICE_MODEL environment variable."
+        )
+    client = _get_venice_client()
+    response = _call_with_timeout(
+        client.chat.completions.create,
+        {"timeout": timeout} if timeout is not None else None,
+        model=model,
+        messages=[
+            {"role": "system", "content": role_description},
+            {"role": "user", "content": prompt},
+        ],
+        max_tokens=max_tokens,
+        temperature=temperature,
+        # Venice injects its own default system prompt unless told not to; this
+        # pipeline supplies its own system + writer prompts, so Venice's must not
+        # stack on top (per the Venice API docs' venice_parameters; an
+        # OpenAI-compatible server that doesn't know the field ignores it).
+        extra_body={"venice_parameters": {"include_venice_system_prompt": False}},
+    )
+    return response.choices[0].message.content, _openai_finish_reason(response)
+
+
+def send_prompt_venice(*args, **kwargs) -> str:
+    """Text-only wrapper around send_prompt_venice_meta (original contract)."""
+    return send_prompt_venice_meta(*args, **kwargs)[0]
+
+
 def send_prompt_openai_meta(
     prompt: str,
     model: str = "gpt-5.5",
@@ -493,6 +573,10 @@ _model_config_meta: Dict[str, ModelMetaFn] = {
     ),
     # OpenRouter, a hosted OpenAI-compatible router over many models (configured via OPENROUTER_* env vars)
     "openrouter": lambda prompt, max_tokens, timeout=None: send_prompt_openrouter_meta(
+        prompt=prompt, max_tokens=max_tokens, timeout=timeout,
+    ),
+    # Venice, an OpenAI-compatible host of open-weight/uncensored models (configured via VENICE_* env vars)
+    "venice": lambda prompt, max_tokens, timeout=None: send_prompt_venice_meta(
         prompt=prompt, max_tokens=max_tokens, timeout=timeout,
     ),
     # OpenAI GPT-5 family (kept in sync with LLM-Remote-Runner)

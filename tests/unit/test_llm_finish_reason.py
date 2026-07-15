@@ -20,6 +20,7 @@ from novel_agent.tools.multi_provider_llm import (
 @pytest.fixture(autouse=True)
 def reset_client_singletons(monkeypatch):
     monkeypatch.setattr(multi_provider_llm, "_openrouter_client", None)
+    monkeypatch.setattr(multi_provider_llm, "_venice_client", None)
     monkeypatch.setattr(multi_provider_llm, "_hosted_llm_client", None)
     monkeypatch.setattr(multi_provider_llm, "_openai_client", None)
     monkeypatch.setattr(multi_provider_llm, "_anthropic_client", None)
@@ -135,6 +136,25 @@ def test_openrouter_meta_is_openai_shaped(monkeypatch):
 
     assert multi_provider_llm.send_prompt_openrouter_meta("p") == ("routed", "stop")
     assert multi_provider_llm.send_prompt_openrouter("p") == "routed"
+
+
+def test_venice_meta_is_openai_shaped(monkeypatch):
+    client = _FakeChatClient(FakeOpenAIResponse("unfiltered", "stop"))
+    monkeypatch.setattr(multi_provider_llm, "_get_venice_client", lambda: client)
+    monkeypatch.setenv("VENICE_MODEL", "venice-uncensored")
+
+    assert multi_provider_llm.send_prompt_venice_meta("p") == ("unfiltered", "stop")
+    assert multi_provider_llm.send_prompt_venice("p") == "unfiltered"
+    # StoryDaemon's prompts must fully govern: Venice's own injected system
+    # prompt is disabled on every request.
+    vp = client.kwargs["extra_body"]["venice_parameters"]
+    assert vp == {"include_venice_system_prompt": False}
+
+
+def test_venice_requires_model(monkeypatch):
+    monkeypatch.delenv("VENICE_MODEL", raising=False)
+    with pytest.raises(ValueError):
+        multi_provider_llm.send_prompt_venice_meta("p")
 
 
 def test_hosted_llm_meta_is_openai_shaped(monkeypatch):
