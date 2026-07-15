@@ -273,6 +273,8 @@ StoryDaemon/
 │   │       └── errors/      # Error logs
 │   ├── experiments/     # Quick experiments
 │   └── scratch/         # Temporary files
+├── scripts/             # Analysis and maintenance scripts (corpus tables, repairs)
+├── experiments/         # Standalone research experiments (block grammar PoC)
 ├── tests/               # Test suite
 └── docs/                # Documentation
     ├── spec.md         # Technical specification
