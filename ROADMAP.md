@@ -51,6 +51,7 @@ strategic plan is `docs/EMERGENT_COHERENCE_PLAN.md`.
 
 ## Backlog
 
+- [ ] **EPUB and PDF export**: extend `novel compile` beyond Markdown/HTML to reader-ready formats — EPUB (chapter breaks from scenes, title page and metadata from the story foundation, TOC) and PDF (likely via the same intermediate; pandoc or ebooklib/weasyprint are the candidate routes, decide when picked up). Motivation: compiled drafts are already readable end to end (6.5k-word skeleton-guided draft, 2026-07-15); the export gap is now the last step between a run and an e-reader
 - [ ] Phase 4 — setup/payoff foresight (planted-element ledger for Chekhov's guns)
 - [ ] Plan explicit low-tension beats if arc-pressure proves insufficient (note: Slice 4 skeleton sampling already tension-conditions the prose-level block mix; this item concerns beat selection, which it does not touch)
 - [ ] Wedged-beat problem (noted, deliberately not auto-fixed): a beat whose contract keeps failing retries forever when `allow_beat_skip` and `rolling_horizon` are both off (observed live: 4 consecutive failures on one beat, 2026-07-10 smoke run). A bounded give-up rule was considered and rejected as dangerous (silently drifting off-outline); the preferred fix is making scenes comply with their tension targets (see forced low-tension scenes) so contracts stop failing in the first place

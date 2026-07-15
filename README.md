@@ -529,7 +529,8 @@ MIT License - See [LICENSE](LICENSE) file for details.
 ## Acknowledgments
 
 - Inspired by my own [NovelWriter](https://github.com/EdwardAThomson/NovelWriter)
-- Built with Codex CLI and multi-provider API backends (OpenAI, Claude, Gemini)
+- Originally built in Windsurf; later development with Claude Code
+- Runs on multi-provider LLM backends (OpenAI, Claude, Gemini, OpenRouter, Venice) and local agent CLIs (Codex, Claude Code, Gemini)
 - Uses Typer for CLI, Chroma for vector storage
 
 ---
