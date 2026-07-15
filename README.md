@@ -22,6 +22,7 @@ An introduction and overview.
 - 🎯 **Goal Hierarchy** - Protagonist goals emerge naturally or can be user-specified
 - 📋 **Plot-First Mode** - Optional emergent plot beats guide scene generation for forward momentum
 - ⚡ **Tension Tracking** - LLM-rated scene tension scoring (0-10) for pacing awareness
+- 🦴 **Scene Skeletons** (experimental, off by default) - typed paragraph plans sampled from a block grammar measured on 21 classic novels guide the writer toward master-like prose structure, with per-paragraph compliance tracking
 - 🎚️ **Coherence Pressures** - Arc-tension targeting, a throughline gate, and contradiction detection keep emergent prose on canon and on arc (see the Emergent Coherence roadmap)
 - 💰 **Flexible LLM Backends** - Codex CLI, Gemini CLI, Claude Code CLI (zero additional cost), or API backends (GPT-5.5, Claude Sonnet/Haiku 4.5, Gemini 3, a self-hosted endpoint, or OpenRouter)
 - 🔧 **Tool-Based System** - Extensible tool registry for character generation, memory search, etc.
@@ -228,6 +229,7 @@ StoryDaemon/
 │   │   ├── context.py          # Context builder
 │   │   ├── writer_context.py   # Writer context builder
 │   │   ├── writer.py           # Scene prose generator
+│   │   ├── scene_skeleton.py   # Masters-grammar paragraph plans (Slice 4)
 │   │   ├── evaluator.py        # Scene quality evaluator
 │   │   ├── scene_committer.py  # Scene persistence
 │   │   └── prompts.py          # LLM prompt templates
@@ -259,7 +261,8 @@ StoryDaemon/
 │   │       └── checkpoint.py   # Checkpoint management
 │   ├── configs/         # Configuration
 │   ├── data/            # Static data files
-│   │   └── names/       # Name generation syllables and titles
+│   │   ├── names/       # Name generation syllables and titles
+│   │   └── block_grammar_v1.json  # Masters block grammar (scene skeletons)
 │   └── utils/           # Utilities
 ├── work/                # Development working directory (gitignored)
 │   ├── recent_projects.json  # Recent projects tracker
@@ -397,6 +400,10 @@ generation:
   include_overall_summary: true    # Include story-wide summary
   # Scene length is flexible - planner can optionally suggest "brief", "short", "long", or "extended"
   
+  # Scene skeletons (experimental, disabled by default): typed paragraph
+  # plans sampled from the masters block grammar guide prose structure
+  enable_scene_skeleton: false
+
   # Plot-first mode (optional, disabled by default)
   use_plot_first: false            # Enable emergent plot-first architecture
   plot_beats_ahead: 5              # Generate this many beats at a time
@@ -428,7 +435,7 @@ The active roadmap is [docs/EMERGENT_COHERENCE_PLAN.md](docs/EMERGENT_COHERENCE_
 
 - **Phase 1 — Grounded identity** (the LLM *selects* names/IDs, never authors them) — **shipped.** Python-grounded `name.generate`, resolved entity references, similarity-pre-filtered + LLM-judged contradiction detection.
 - **Phase 2 — Rolling horizon** (lookahead emerges *from* the prose; beats are revisable) — **shipped.** Plus the `novel plot revise` trigger.
-- **Phase 3 — Constraint-as-pressure** — **in progress.** Shipped: the per-tick coherence rubric (`novel metrics`), contradiction enforcement (disputed-lore quarantine), an **LLM tension scorer** + **arc-pressure** (a target tension curve injected into planner and writer), and a **throughline gate** with an **LLM goal-relevance judge**. Still to come: loop-aging and the block/sub-block DSL.
+- **Phase 3 — Constraint-as-pressure** — **in progress.** Shipped: the per-tick coherence rubric (`novel metrics`), contradiction enforcement (disputed-lore quarantine), an **LLM tension scorer** + **arc-pressure** (a target tension curve injected into planner and writer), a **throughline gate** with an **LLM goal-relevance judge**, and the first slice of the **block/sub-block DSL**: scene skeletons (`generation.enable_scene_skeleton`), typed paragraph plans sampled from a block grammar measured on the masters corpus, validated by a production A/B (see [the grammar study](docs/MASTERS_BLOCK_GRAMMAR_STUDY.md) and [the Slice 4 results](docs/SLICE4_SCENE_SKELETON_RESULTS.md)). Still to come: loop-aging and the deeper DSL slices.
 - **Phase 4 — Setup/payoff foresight** (planted-element ledger for clues/reveals) — deferred until 1–3 prove out.
 
 Plot-first mode (Phase 5 of the *legacy* roadmap) is complete and available — automatic beat generation, beat-constrained writing, and beat verification — see the guide below. Note the two phase-numbering schemes differ: the legacy roadmap lives in [docs/plan.md](docs/plan.md), the active one in [docs/EMERGENT_COHERENCE_PLAN.md](docs/EMERGENT_COHERENCE_PLAN.md).
@@ -465,9 +472,9 @@ python tests/manual_tension_test.py
 
 ### Test Coverage
 
-- **Automated suite:** 250+ tests across `tests/unit/` and `tests/integration/`, covering the
+- **Automated suite:** 800+ tests across `tests/unit/` and `tests/integration/`, covering the
   tick loop, memory/entities, planner, tension scoring, arc-pressure, lore + contradiction
-  detection, the coherence rubric, and the CLI commands. Run with `pytest`.
+  detection, the coherence rubric, scene skeletons, and the CLI commands. Run with `pytest`.
 - **Manual checks:** `python tests/manual_tension_test.py` exercises tension scoring on real
   scene generation (not auto-discovered by pytest).
 
@@ -495,6 +502,8 @@ python tests/manual_tension_test.py
 - [Phase 7A: Bounded Emergence Framework](docs/archive/phase7a_bounded_emergence.md) - Story foundation and goal hierarchy
 - [Plot-First Mode Guide](docs/PLOT_FIRST_MODE_GUIDE.md) - User guide for emergent plot-first generation
 - [Phase 5 Implementation Summary](docs/PHASE5_IMPLEMENTATION_SUMMARY.md) - Technical details of plot-first implementation
+- [Masters Block Grammar Study](docs/MASTERS_BLOCK_GRAMMAR_STUDY.md) - Block-ordering statistics measured on 21 classic novels; the data behind scene skeletons
+- [Scene Skeleton Results](docs/SLICE4_SCENE_SKELETON_RESULTS.md) - Production A/B results, surface-quality pass, and reading notes for Slice 4
 - [Name Generator Implementation](docs/archive/name_generator_implementation_plan.md) - Syllable-based name generation
 - [Project Safety Improvements](docs/archive/project_safety_improvements.md) - UUID system and scene titles
 - [Resume Workflow](docs/archive/resume_workflow.md) - Recent projects and resume commands
