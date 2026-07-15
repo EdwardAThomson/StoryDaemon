@@ -254,6 +254,7 @@ Provider SDKs (`openai`, `anthropic`, `google.generativeai`) are imported **insi
 
 | Step | Repo | Work | Estimate |
 |---|---|---|---|
+| 0 | NW (interim hotfix, decoupled from extraction) | Port the analyzer's CLI key-stripping to NovelWriter's three CLI interfaces NOW, ahead of the package: NW is the one financially live exposure (load_dotenv keys + codex sandbox-bypassed with full inherited env). Deleted when step 4 lands. **DONE 2026-07-15** (`core/generation/llm_interface/_env.py` + the three call sites). CryptoAlertBot's dead Claude keys fail loudly, not expensively, so they wait for step 6 | 0.5 h |
 | 1 | (new repo) | Extract package: SD base + AN merges + NW probes; port SD + AN tests; add CLI fake-subprocess tests; lazy-import guard test | 2-3 days |
 | 2 | SD | Replace the six `novel_agent/tools/` modules with package imports; keep explicit-instance pattern; make `cli/main.py` / `commands/*.py` fallbacks read the package default (kills the dual-update footgun); update `CLAUDE.md:76` source-of-truth wording + add Venice | 1 day |
 | 3 | AN | Adopt at a pinned tag; `ai_helper.send_prompt` becomes a shim; keep `DEFAULT_MODELS`/`AVAILABLE_MODELS` reading from the package (restores the 1:1 registry check); payload-equality test; only between campaigns | 1 day |
