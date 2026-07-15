@@ -1151,16 +1151,16 @@ def compile(
         "-p",
         help="Path to novel project"
     ),
-    output: str = typer.Option(
-        "manuscript.md",
+    output: Optional[str] = typer.Option(
+        None,
         "--output",
         "-o",
-        help="Output file path"
+        help="Output file path (default: manuscript.<ext> for the chosen format)"
     ),
     format: str = typer.Option(
         "markdown",
         "--format",
-        help="Output format: markdown, html, prose (prose = clean text, no headers)"
+        help="Output format: markdown, html, prose, epub, pdf (prose = clean text, no headers)"
     ),
     include_metadata: bool = typer.Option(
         True,
@@ -1174,18 +1174,20 @@ def compile(
     )
 ):
     """Compile all scenes into a single manuscript.
-    
+
     Examples:
         novel compile
         novel compile --output draft.md --scenes 1-10
         novel compile --format html --output manuscript.html
         novel compile --format prose --output story.txt  # Clean prose, no headers
+        novel compile --format epub                      # -> manuscript.epub
+        novel compile --format pdf -o draft.pdf
     """
-    from .commands.compile import compile_manuscript
-    
+    from .commands.compile import compile_manuscript, default_output_for_format
+
     try:
         project_dir = Path(find_project_dir(project))
-        output_path = Path(output)
+        output_path = Path(output) if output else Path(default_output_for_format(format))
         
         success = compile_manuscript(
             project_dir,

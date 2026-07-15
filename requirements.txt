@@ -3,6 +3,10 @@ typer>=0.9.0
 pyyaml>=6.0.0
 jsonschema>=4.0.0
 openai>=1.0.0
+ebooklib>=0.18,<1.0
+
+# PDF export is optional: pip install storydaemon[export]
+# (WeasyPrint also needs the Pango/Cairo system libraries.)
 
 # Vector DB (Phase 2)
 chromadb>=0.4.0

@@ -27,11 +27,17 @@ setup(
         "pyyaml>=6.0.0",
         "jsonschema>=4.0.0",
         "openai>=1.0.0",
+        "ebooklib>=0.18,<1.0",
     ],
     extras_require={
         "dev": [
             "pytest>=7.0.0",
             "pytest-cov>=4.0.0",
+        ],
+        # WeasyPrint needs the Pango/Cairo system libraries, so PDF export
+        # stays an opt-in extra; pandoc is used automatically if present.
+        "export": [
+            "weasyprint>=61",
         ],
     },
     entry_points={

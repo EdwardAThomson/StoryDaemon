@@ -345,35 +345,116 @@ def compile_to_html(project_dir: Path, scene_files: List[Path],
     return "\n".join(html_parts)
 
 
+def default_output_for_format(format: str) -> str:
+    """Default output filename for a compile format."""
+    return {
+        'markdown': 'manuscript.md',
+        'html': 'manuscript.html',
+        'prose': 'manuscript.txt',
+        'epub': 'manuscript.epub',
+        'pdf': 'manuscript.pdf',
+    }.get(format, 'manuscript.md')
+
+
+def build_appendix_html(project_dir: Path, scene_files: List[Path]) -> str:
+    """Build the metadata appendix body shared by the EPUB and PDF exports."""
+    char_count, loc_count = count_entities(project_dir)
+    total_words = sum(
+        count_words(read_scene_content(f, strip_header=True)) for f in scene_files
+    )
+    return "\n".join([
+        f"<p><strong>Characters:</strong> {char_count}</p>",
+        f"<p><strong>Locations:</strong> {loc_count}</p>",
+        f"<p><strong>Total Words:</strong> {total_words:,}</p>",
+    ])
+
+
+def compile_to_book(project_dir: Path, scene_files: List[Path], output: Path,
+                    format: str, include_metadata: bool = True,
+                    config=None) -> bool:
+    """Compile scenes to a binary book format (epub or pdf).
+
+    Args:
+        project_dir: Path to project directory
+        scene_files: List of scene files to compile
+        output: Output file path
+        format: 'epub' or 'pdf'
+        include_metadata: Include the metadata appendix chapter/page
+        config: Config object; None loads the project config
+
+    Returns:
+        True if successful, False otherwise
+    """
+    from ...export import build_chapters, build_book_metadata, write_epub, write_pdf
+
+    if config is None:
+        from ..project import get_project_config
+        config = get_project_config(str(project_dir))
+
+    chapters = build_chapters(scene_files)
+    metadata = build_book_metadata(project_dir, config)
+    appendix_html = build_appendix_html(project_dir, scene_files) if include_metadata else None
+
+    try:
+        if format == "epub":
+            success = write_epub(output, metadata, chapters, appendix_html=appendix_html)
+        else:
+            success = write_pdf(
+                output, metadata, chapters,
+                appendix_html=appendix_html,
+                page_size=config.get('export.page_size', 'a5'),
+                engine=config.get('export.pdf_engine', 'auto'),
+            )
+    except Exception as e:
+        print(f"❌ Error writing output: {e}")
+        return False
+
+    if success:
+        total_words = sum(
+            count_words(read_scene_content(f, strip_header=True)) for f in scene_files
+        )
+        print(f"✅ Compiled {len(scene_files)} scenes to {output}")
+        print(f"📊 Total words: {total_words:,}")
+    return success
+
+
 def compile_manuscript(project_dir: Path, output: Path, format: str = "markdown",
-                      include_metadata: bool = True, scene_range: Optional[str] = None) -> bool:
+                      include_metadata: bool = True, scene_range: Optional[str] = None,
+                      config=None) -> bool:
     """Compile all scenes into a single manuscript.
-    
+
     Args:
         project_dir: Path to project directory
         output: Output file path
-        format: Output format (markdown, html, prose, pdf)
+        format: Output format (markdown, html, prose, epub, pdf)
         include_metadata: Include metadata appendix
         scene_range: Optional scene range filter
-        
+        config: Optional Config object for the epub/pdf export settings
+
     Returns:
         True if successful, False otherwise
     """
     scenes_dir = project_dir / "scenes"
-    
+
     if not scenes_dir.exists():
         print("❌ No scenes directory found")
         return False
-    
+
     # Get scene files
     scene_files = get_scene_files(scenes_dir, scene_range)
-    
+
     if not scene_files:
         print("❌ No scenes found to compile")
         return False
-    
+
     print(f"📝 Compiling {len(scene_files)} scenes...")
-    
+
+    # Binary book formats write their own output files; keep them ahead of
+    # the text-open block below.
+    if format in ("epub", "pdf"):
+        return compile_to_book(project_dir, scene_files, output, format,
+                               include_metadata, config)
+
     # Compile based on format
     if format == "markdown":
         content = compile_to_markdown(project_dir, scene_files, include_metadata)
@@ -381,11 +462,8 @@ def compile_manuscript(project_dir: Path, output: Path, format: str = "markdown"
         content = compile_to_html(project_dir, scene_files, include_metadata)
     elif format == "prose":
         content = compile_to_prose(project_dir, scene_files, include_metadata)
-    elif format == "pdf":
-        print("❌ PDF format requires pandoc (not yet implemented)")
-        return False
     else:
-        print(f"❌ Unknown format: {format}. Supported: markdown, html, prose")
+        print(f"❌ Unknown format: {format}. Supported: markdown, html, prose, epub, pdf")
         return False
     
     # Write output

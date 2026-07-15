@@ -280,6 +280,14 @@ DEFAULT_CONFIG = {
         'calm_threshold': 4,          # demand-gap: the calm band's top
         'serve_margin': 2,            # demand-gap: a thread serves a target within this
     },
+    'export': {
+        # Book export settings for `novel compile --format epub|pdf`
+        # (docs/EPUB_PDF_EXPORT_PLAN.md).
+        'author': 'StoryDaemon',   # dc:creator / title-page byline
+        'language': 'en',          # dc:language and html lang (enables hyphenation)
+        'page_size': 'a5',         # @page size for PDF; any CSS size token
+        'pdf_engine': 'auto',      # auto | weasyprint | pandoc
+    },
     'plot': {
         # Beat integration mode: controls how strongly the agent treats plot beats.
         #
