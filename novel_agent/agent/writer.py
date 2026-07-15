@@ -67,6 +67,30 @@ class SceneWriter:
         # Parse and return scene data plus generation metadata
         scene_data = self._parse_scene_response(text, writer_context)
         scene_data.update(meta)
+
+        # Scene skeleton (Slice 4, experimental): strip the [n] paragraph
+        # markers from the prose and record compliance. Guarded: a stripping
+        # failure must never cost the scene.
+        skeleton = writer_context.get("scene_skeleton")
+        if skeleton:
+            try:
+                from .scene_skeleton import strip_skeleton_markers
+                clean, stats = strip_skeleton_markers(scene_data["text"])
+                scene_data["text"] = clean
+                scene_data["word_count"] = len(clean.split())
+                scene_data["skeleton_compliance"] = {
+                    "plan_blocks": len(skeleton),
+                    "markers_found": stats["markers_found"],
+                    "markers_distinct": stats["markers_distinct"],
+                    "compliant": stats["markers_distinct"] == len(skeleton),
+                }
+                print(f"        scene skeleton: "
+                      f"{stats['markers_distinct']}/{len(skeleton)} plan "
+                      f"markers present"
+                      + ("" if stats["markers_distinct"] == len(skeleton)
+                         else " (non-compliant)"))
+            except Exception as e:
+                logger.warning(f"skeleton marker stripping failed: {e}")
         return scene_data
 
     def _generate_segment(self, prompt: str, max_tokens: int) -> Tuple[str, Optional[str]]:

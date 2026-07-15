@@ -96,6 +96,19 @@ PLAN_SCHEMA = {
         "metadata": {
             "type": "object",
             "description": "Optional metadata for planner hints (e.g. scene_length)"
+        },
+        "scene_skeleton": {
+            "type": ["array", "null"],
+            "items": {
+                "type": "string",
+                "enum": ["SETTING", "CHARACTER_DESC", "LORE", "DIALOGUE",
+                         "ACTION", "INTERIORITY", "TRANSITION"]
+            },
+            "description": (
+                "Optional typed paragraph plan (Slice 4 scene skeletons, "
+                "agent/scene_skeleton.py). Normally attached agent-side when "
+                "generation.enable_scene_skeleton is on, not planner-emitted."
+            )
         }
     }
 }

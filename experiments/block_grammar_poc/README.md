@@ -153,6 +153,49 @@ transitions per arm needs roughly 8 chapters at full skeleton lengths.
 Structural metrics only in v1; st1 surface scoring (slop/MTLD/cliche) via
 the analyzer venv is a follow-up.
 
+## Production A/B (Slice 4 wired into novel_agent, judged 2026-07-15)
+
+Twin novel projects (gitignored work/skeltest), 4 ticks each, writer =
+openai/gpt-5.5 via OpenRouter, differing only in
+generation.enable_scene_skeleton; scenes judged with the corpus protocol
+by judge_scenes.py (results in runs/judge_scenes_last.json; a DeepSeek
+twin pair was scored alongside as a secondary comparison).
+
+| metric | masters | gpt-5.5 + skeleton | gpt-5.5 unguided |
+|---|---:|---:|---:|
+| words per paragraph | 90 | **101.4** | 16.9 |
+| dialogue share | 0.565 | **0.500** | 0.351 |
+| dialogue run mean | 3.32 | **2.91** | 1.98 |
+| shading rate | 0.204 | **0.266** | 0.099 |
+| interiority self-trans | 0.205 | 0.000 (n=4, indicative) | 0.261 (n=111) |
+| return rate | 0.355 | 0.154 (small n) | 0.247 |
+
+Result: **the skeleton moved every solidly-measured block statistic
+toward the masters**, most dramatically paragraph shape: unguided
+gpt-5.5 fragments scenes into 112-177 paragraphs of ~17 words (and
+overshoots the word target by 80%), while the skeleton arm wrote 16
+master-sized paragraphs per scene (96-105 w/para), on target
+(1541-1675 words), with 16/16 plan markers on all 13 production scenes
+run to date and zero markers leaking into saved prose.
+
+Two honest findings against expectations: the pilot's interiority-
+chaining disease (~0.40) did NOT replicate in raw-API gpt-5.5 (0.261 on
+a solid n=111, inside the 26-book band); the real unguided failure is
+fragmentation and under-shading (0.099 vs masters 0.204). And the
+skeleton arm's return rate reads low (0.154), on too few switch events
+to weigh heavily; worth rechecking when more scenes accumulate.
+
+Caveats: one premise, 4 scenes per cell, single judge; interiority
+metrics in the skeleton cells are indicative only (few events by
+construction: on-plan scenes carry ~1-2 INTERIORITY blocks each).
+
+Parked next steps from this run: per-block repair pass (expand
+undersized paragraphs by targeted per-[n] calls; unnecessary for
+gpt-5.5, the designed escalation valve if a future writer ignores
+paragraph fullness, and the natural first step toward Slice 5 per-block
+generation); promote the 26-book grammar (Gate A already passes 25/25
+against it); score cells against nd1_reference.json z-scores.
+
 ## Write, stop, resume
 
 Real runs are interruptible at two levels, tested without network by

@@ -77,7 +77,19 @@ class WriterContextBuilder:
         # the prompt AND used by the writer to size the request ceiling, so the
         # instructed length and the allowed length finally agree.
         scene_length_guidance, word_target = self._get_length_guidance(plan)
-        
+
+        # Scene skeleton (Slice 4 of the block DSL, experimental, gated by
+        # generation.enable_scene_skeleton). The plan section rides the
+        # length-guidance slot, following the sacred-finale precedent: no new
+        # template placeholder, so hand-built writer contexts keep working.
+        scene_skeleton = self._build_scene_skeleton(plan, word_target,
+                                                    current_tick)
+        if scene_skeleton:
+            from .scene_skeleton import skeleton_prompt_section
+            scene_length_guidance = (
+                scene_length_guidance + skeleton_prompt_section(scene_skeleton)
+            )
+
         # Format plot beat section (Phase 5)
         plot_beat_section = self._format_plot_beat_section(plan)
 
@@ -125,6 +137,7 @@ class WriterContextBuilder:
             "tool_results_summary": tool_results_summary,
             "scene_length_guidance": scene_length_guidance,
             "word_target": word_target,
+            "scene_skeleton": scene_skeleton,
             "existing_characters": existing_characters,
             "approved_new_names": approved_new_names
         }
@@ -149,6 +162,39 @@ class WriterContextBuilder:
         ):
             return ""
         return arc_pressure_guidance_for_writer(current_tick, self.config)
+
+    def _build_scene_skeleton(self, plan: Dict[str, Any], word_target: int,
+                              current_tick: int) -> Optional[List[str]]:
+        """Typed paragraph plan for this scene (Slice 4, experimental).
+
+        Gated by generation.enable_scene_skeleton (default off). A plan that
+        already carries a valid scene_skeleton wins; otherwise one is sampled
+        from the masters' block grammar, sized by the scene's word target and
+        conditioned on the tension target (a fresh beat target first, else
+        the arc-pressure schedule). Never raises: a skeleton failure must not
+        cost the scene, it just loses the guidance.
+        """
+        if not self.config.get('generation.enable_scene_skeleton', False):
+            return None
+        try:
+            from .arc_pressure import compute_target_tension
+            from .scene_skeleton import generate_skeleton
+
+            provided = plan.get("scene_skeleton")
+            if provided:
+                return list(provided)
+            beat = plan.get("plot_beat") or {}
+            tension = beat.get("tension_target")
+            if tension is None or beat_target_is_stale(
+                tension, current_tick, self.config
+            ):
+                tension = compute_target_tension(current_tick, self.config)
+            return generate_skeleton(word_target, tension=tension)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(
+                f"scene skeleton generation failed; writing without one: {e}")
+            return None
 
     def _build_finale_section(self, plan: Dict[str, Any]) -> str:
         """Ending-mode instruction for the story's final scene (Phase 3 sacred finale).

@@ -80,6 +80,15 @@ DEFAULT_CONFIG = {
         'scene_budget_multiplier': 2.0,   # ceiling headroom over the stated word target
         'scene_max_segments': 3,          # total segments per scene (first render + continuations)
 
+        # Scene skeletons (Slice 4 of the block DSL, experimental). When on, a
+        # typed paragraph plan sampled from the masters' block grammar
+        # (agent/scene_skeleton.py; evidence: experiments/block_grammar_poc
+        # Gates A-C, docs/MASTERS_BLOCK_GRAMMAR_STUDY.md) rides the writer
+        # prompt with the [n] marker protocol; markers are stripped from the
+        # prose and compliance is recorded on the scene result. Off = the
+        # pipeline is byte-identical to before.
+        'enable_scene_skeleton': False,
+
         # Beat-level dedup at authoring time (Phase 3 hardening,
         # docs/progress_report_20260712.md section 8.2): a freshly authored beat
         # whose description fuzzy-matches a pending / recently completed beat, or

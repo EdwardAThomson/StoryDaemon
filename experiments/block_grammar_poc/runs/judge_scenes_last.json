@@ -1,0 +1,78 @@
+{
+ "masters": {
+  "int_self": 0.2047486894850447,
+  "shading": 0.20386383111318843,
+  "return": 0.3550575543568926,
+  "dlg_share": 0.5647746460579296,
+  "dlg_run": 3.32,
+  "words_per_para": 90.0
+ },
+ "cells": {
+  "prod-on_9566053d": {
+   "n_paragraphs": 64,
+   "mode_share": {
+    "INTERIORITY": 0.062,
+    "SETTING": 0.062,
+    "ACTION": 0.25,
+    "DIALOGUE": 0.5,
+    "CHARACTER_DESC": 0.031,
+    "LORE": 0.094
+   },
+   "shading_rate": 0.266,
+   "int_self_transition": 0.0,
+   "int_transitions_n": 4,
+   "dialogue_run_mean": 2.91,
+   "return_rate": 0.154,
+   "words_per_para": 101.4
+  },
+  "prod-off_87078390": {
+   "n_paragraphs": 609,
+   "mode_share": {
+    "SETTING": 0.1,
+    "ACTION": 0.319,
+    "LORE": 0.028,
+    "INTERIORITY": 0.186,
+    "DIALOGUE": 0.351,
+    "CHARACTER_DESC": 0.016
+   },
+   "shading_rate": 0.099,
+   "int_self_transition": 0.261,
+   "int_transitions_n": 111,
+   "dialogue_run_mean": 1.98,
+   "return_rate": 0.247,
+   "words_per_para": 16.9
+  },
+  "skel-on_43ddd73a": {
+   "n_paragraphs": 48,
+   "mode_share": {
+    "SETTING": 0.146,
+    "INTERIORITY": 0.104,
+    "DIALOGUE": 0.438,
+    "ACTION": 0.271,
+    "LORE": 0.042
+   },
+   "shading_rate": 0.125,
+   "int_self_transition": 0.0,
+   "int_transitions_n": 4,
+   "dialogue_run_mean": 1.91,
+   "return_rate": 0.345,
+   "words_per_para": 33.2
+  },
+  "skel-off_464a7e73": {
+   "n_paragraphs": 70,
+   "mode_share": {
+    "SETTING": 0.071,
+    "ACTION": 0.271,
+    "INTERIORITY": 0.143,
+    "DIALOGUE": 0.429,
+    "LORE": 0.086
+   },
+   "shading_rate": 0.271,
+   "int_self_transition": 0.25,
+   "int_transitions_n": 8,
+   "dialogue_run_mean": 2.5,
+   "return_rate": 0.205,
+   "words_per_para": 26.4
+  }
+ }
+}
