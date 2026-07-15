@@ -308,11 +308,10 @@ class StoryAgent:
             if eval_result["warnings"]:
                 # Warnings are logged but don't fail the tick
                 pass
-            
-            # Fail if critical issues found
-            if not eval_result["passed"]:
-                raise ValueError(f"Scene evaluation failed: {eval_result['issues']}")
-            
+
+            # Fail only on critical issues
+            self._gate_on_evaluation(eval_result)
+
             # Step 7.5: Evaluate tension (Phase 7A.3)
             print("   7.5. Evaluating tension...")
             tension_result = self.tension_evaluator.evaluate_tension(
@@ -640,11 +639,10 @@ class StoryAgent:
             # Log evaluation warnings (non-blocking)
             if eval_result["warnings"]:
                 pass
-            
-            # Fail if critical issues found
-            if not eval_result["passed"]:
-                raise ValueError(f"Scene evaluation failed: {eval_result['issues']}")
-            
+
+            # Fail only on critical issues
+            self._gate_on_evaluation(eval_result)
+
             print("   10. Committing scene...")
             scene_id = self.committer.commit_scene(scene_data, tick, plan)
 
@@ -865,6 +863,25 @@ class StoryAgent:
             "success": entity_results.get("success", True) and remaining_results.get("success", True)
         }
     
+    def _gate_on_evaluation(self, eval_result: Dict[str, Any]) -> None:
+        """Raise only when the evaluation carries concrete critical issues.
+
+        A failing verdict with an EMPTY issues list carries nothing actionable
+        (heuristic checks that only append warnings, or an evaluator response
+        that failed to parse) and must not cost the scene: warn and continue,
+        like the other degradable steps. Non-empty issues still abort the tick.
+        """
+        if eval_result.get("passed"):
+            return
+        issues = eval_result.get("issues") or []
+        if issues:
+            raise ValueError(f"Scene evaluation failed: {issues}")
+        logging.getLogger(__name__).warning(
+            "Scene evaluation reported failure with no issues; "
+            "treating as warnings and continuing. Warnings: %s",
+            eval_result.get("warnings"),
+        )
+
     def _update_beats_from_evaluation(self, scene_id: str, plan: Dict[str, Any], eval_result: Dict[str, Any]) -> None:
         if isinstance(self.config, dict):
             mode = self.config.get("plot", {}).get("beat_mode", "soft_hint")

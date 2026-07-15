@@ -127,6 +127,35 @@ def test_extract_facts_llm_error(fact_extractor, mock_llm):
     assert facts["location_updates"] == []
 
 
+def test_extract_facts_null_response(fact_extractor, mock_llm):
+    """A null LLM response degrades to empty facts without raising."""
+    mock_llm.generate.return_value = None
+
+    facts = fact_extractor.extract_facts(
+        "Test scene", {"pov_character_id": "C0", "location_id": "L0"}
+    )
+
+    assert facts == fact_extractor._empty_facts()
+
+
+def test_extract_facts_null_json_fields(fact_extractor, mock_llm):
+    """Explicit JSON nulls normalize to lists (len() is called downstream)."""
+    mock_llm.generate.return_value = json.dumps({
+        "character_updates": None,
+        "location_updates": None,
+        "open_loops_created": None,
+        "open_loops_resolved": None,
+        "relationship_changes": None
+    })
+
+    facts = fact_extractor.extract_facts(
+        "Test scene", {"pov_character_id": "C0", "location_id": "L0"}
+    )
+
+    for value in facts.values():
+        assert value == []
+
+
 def test_format_open_loops(fact_extractor, mock_memory):
     """Test formatting open loops for prompt."""
     from novel_agent.memory.entities import OpenLoop

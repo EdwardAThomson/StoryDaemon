@@ -51,7 +51,16 @@ class FactExtractor:
             # Call LLM
             logger.info("Extracting facts from scene prose...")
             response = self.llm.generate(prompt, max_tokens=max_tokens)
-            
+
+            # A provider can return None (e.g. an empty/filtered completion);
+            # degrade cleanly instead of letting a TypeError drive control flow.
+            if response is None:
+                logger.warning(
+                    "Fact extraction got a null LLM response; "
+                    "continuing without dynamic entity updates."
+                )
+                return self._empty_facts()
+
             # Parse response
             facts = self._parse_extraction_response(response)
             
@@ -152,13 +161,15 @@ class FactExtractor:
             # Parse JSON
             facts = json.loads(cleaned)
             
-            # Validate and normalize structure
+            # Validate and normalize structure. "or []" (not a .get default):
+            # a key present with an explicit JSON null would otherwise pass
+            # None downstream, where len() raises TypeError.
             return {
-                "character_updates": facts.get("character_updates", []),
-                "location_updates": facts.get("location_updates", []),
-                "open_loops_created": facts.get("open_loops_created", []),
-                "open_loops_resolved": facts.get("open_loops_resolved", []),
-                "relationship_changes": facts.get("relationship_changes", [])
+                "character_updates": facts.get("character_updates") or [],
+                "location_updates": facts.get("location_updates") or [],
+                "open_loops_created": facts.get("open_loops_created") or [],
+                "open_loops_resolved": facts.get("open_loops_resolved") or [],
+                "relationship_changes": facts.get("relationship_changes") or []
             }
             
         except json.JSONDecodeError as e:

@@ -55,7 +55,7 @@ class WriterContextBuilder:
         
         # Get POV character details
         pov_character_name, pov_character_details = self._get_character_details(
-            pov_character_id
+            pov_character_id, project_state
         )
         
         # Get location details
@@ -240,21 +240,46 @@ class WriterContextBuilder:
         approved_new_names = "\n".join(f"- {n}" for n in pool) if pool else "(use a role descriptor instead)"
         return existing_characters, approved_new_names
     
-    def _get_character_details(self, character_id: str) -> tuple[str, str]:
+    def _protagonist_fallback(self, project_state: Optional[Dict[str, Any]]) -> tuple[str, str]:
+        """POV stand-in when the plan's character id resolves to nothing.
+
+        A raw id ("C0") in pov_character_name ends up as the character's literal
+        name in prose (the writer prompt says "use this name"), so the fallback
+        must always be a real name or a neutral descriptor, never the id. The
+        story foundation's protagonist_archetype often leads with a proper name
+        ("Elena Marsh, a naturalist ..."); use it only when it looks like one.
+        """
+        foundation = (project_state or {}).get("story_foundation") or {}
+        archetype = (foundation.get("protagonist_archetype") or "").strip()
+        if archetype:
+            candidate = archetype.split(",")[0].strip()
+            words = candidate.split()
+            if 1 <= len(words) <= 3 and all(w[:1].isupper() for w in words):
+                details = (f"**Name:** {candidate}\n\n"
+                           f"**Description:** {archetype}")
+                return candidate, details
+            return "the protagonist", f"**Description:** {archetype}"
+        return ("the protagonist",
+                "The story's protagonist (details not yet established).")
+
+    def _get_character_details(
+        self, character_id: str, project_state: Optional[Dict[str, Any]] = None
+    ) -> tuple[str, str]:
         """Get character name and formatted details.
-        
+
         Args:
             character_id: Character ID
-        
+            project_state: Project state (for the missing-entity fallback)
+
         Returns:
             Tuple of (character_name, formatted_details)
         """
         if not character_id:
-            return "Unknown", "No POV character specified."
-        
+            return self._protagonist_fallback(project_state)
+
         character = self.memory.load_character(character_id)
         if not character:
-            return character_id, f"Character {character_id} not found."
+            return self._protagonist_fallback(project_state)
         
         # Format character details
         details = f"**Name:** {character.display_name} (full name: {character.full_name})\n"
@@ -288,7 +313,9 @@ class WriterContextBuilder:
         
         location = self.memory.load_location(location_id)
         if not location:
-            return location_id, f"Location {location_id} not found."
+            # Same guarantee as the POV fallback: a raw id ("L0") must never
+            # reach the prose as a place name.
+            return "Unknown Location", "Location to be determined during scene."
         
         # Format location details
         details = f"**Name:** {location.name}\n"
