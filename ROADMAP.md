@@ -1,6 +1,6 @@
 # Roadmap — StoryDaemon
 
-_Status: active · updated 2026-07-15_
+_Status: active · updated 2026-07-16_
 
 An agentic long-form fiction generator: an autonomous LLM agent runs iterative
 "story tick" cycles (plan → tools → write → evaluate) that grow characters, lore,
@@ -22,12 +22,13 @@ strategic plan is `docs/EMERGENT_COHERENCE_PLAN.md`.
 - [x] Beat-generation bridge: arc tension targets + phase feed plot beat generation (per-beat schedule, per-phase authoring directives, sanitize-not-trust reconciliation of authored targets; both generation paths) (Phase 3)
 - [x] Contracts Slice 1: beat-embedded pre/postconditions authored at beat-generation time from a closed checker vocabulary, evaluated at beat verification (`generation.use_contracts`, default off) (Phase 3)
 - [x] OpenRouter support in the `api` backend (model `openrouter`, `OPENROUTER_API_KEY`/`OPENROUTER_MODEL`), live-validated
+- [x] Venice support in the `api` backend (model `venice`, `VENICE_API_KEY`/`VENICE_MODEL`; Venice's injected system prompt disabled per request)
 - [x] Contradiction detection (lore contradictions, dispute quarantine)
 - [x] Per-tick coherence rubric (loop churn, contradictions, tension vs. target, goal relevance) via `novel metrics`
 - [x] Goal hierarchy (immediate / arc / story goals, auto-promotion, throughline gate + LLM goal-relevance judge)
 - [x] Lore system (rules, constraints, facts, capabilities per tick, dedup)
 - [x] Checkpointing (project snapshots + restore)
-- [x] Manuscript compilation (Markdown / HTML export, scene filtering)
+- [x] Manuscript compilation (Markdown / HTML / prose / EPUB / PDF export, scene filtering)
 - [x] Grounded name generator (syllable-based, culture/era banks) (Phase 1)
 - [x] Full CLI (`novel new`, `tick`, `run`, `resume`, `status`, `goals`, `lore`, `compile`, `plot`, …)
 - [x] Neutral-CWD isolation for CLI backends (avoid repo-awareness derailment)
@@ -51,7 +52,6 @@ strategic plan is `docs/EMERGENT_COHERENCE_PLAN.md`.
 
 ## Backlog
 
-- [ ] **EPUB and PDF export**: extend `novel compile` beyond Markdown/HTML to reader-ready formats — EPUB (chapter breaks from scenes, title page and metadata from the story foundation, TOC) and PDF (likely via the same intermediate; pandoc or ebooklib/weasyprint are the candidate routes, decide when picked up). Motivation: compiled drafts are already readable end to end (6.5k-word skeleton-guided draft, 2026-07-15); the export gap is now the last step between a run and an e-reader
 - [ ] Phase 4 — setup/payoff foresight (planted-element ledger for Chekhov's guns)
 - [ ] Plan explicit low-tension beats if arc-pressure proves insufficient (note: Slice 4 skeleton sampling already tension-conditions the prose-level block mix; this item concerns beat selection, which it does not touch)
 - [ ] Wedged-beat problem (noted, deliberately not auto-fixed): a beat whose contract keeps failing retries forever when `allow_beat_skip` and `rolling_horizon` are both off (observed live: 4 consecutive failures on one beat, 2026-07-10 smoke run). A bounded give-up rule was considered and rejected as dangerous (silently drifting off-outline); the preferred fix is making scenes comply with their tension targets (see forced low-tension scenes) so contracts stop failing in the first place
