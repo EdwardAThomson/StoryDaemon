@@ -28,7 +28,7 @@ An introduction and overview.
 - 🔧 **Tool-Based System** - Extensible tool registry for character generation, memory search, etc.
 - 🔍 **Rich Inspection Tools** - Status, list, inspect, goals commands for full project visibility
 - 💾 **Automatic Checkpointing** - Snapshot and restore project state at any point
-- 📝 **Manuscript Compilation** - Export to Markdown or HTML with scene filtering
+- 📝 **Manuscript Compilation** - Export to Markdown, HTML, prose, EPUB, or PDF with scene filtering
 - 🎲 **Unique Name Generation** - Syllable-based name generator with 4M+ combinations
 - 🔄 **Resume Workflow** - Easily continue recent projects with `novel resume`
 - 🆔 **UUID Safety** - Automatic project IDs prevent accidental overwrites
@@ -71,6 +71,11 @@ pip install -e .
 
 # Or install with development dependencies
 pip install -e ".[dev]"
+
+# For PDF export, add the optional export extra (pulls in WeasyPrint, which
+# also needs the Pango/Cairo system libraries; pandoc is used automatically if
+# present). EPUB export works out of the box.
+pip install -e ".[export]"
 ```
 
 ### Create Your First Novel
@@ -261,6 +266,7 @@ StoryDaemon/
 │   │       ├── plan.py         # Plan preview
 │   │       ├── compile.py      # Manuscript compilation
 │   │       └── checkpoint.py   # Checkpoint management
+│   ├── export/          # Manuscript writers (Markdown, HTML, prose, EPUB, PDF)
 │   ├── configs/         # Configuration
 │   ├── data/            # Static data files
 │   │   ├── names/       # Name generation syllables and titles
@@ -362,7 +368,7 @@ novel inspect --file <path> [--raw]
 novel plan [--save <file>] [-v] [--project <path>]
 
 # Compile scenes into manuscript
-novel compile [--output <file>] [--format markdown|html] [--scenes <range>] [--project <path>]
+novel compile [--output <file>] [--format markdown|html|prose|epub|pdf] [--include-metadata/--no-metadata] [--scenes <range>] [--project <path>]
 
 # Generate LLM title suggestions from the story's foundation and content
 novel titles [--count 10] [--output <file>] [--project <path>]
