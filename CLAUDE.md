@@ -28,7 +28,7 @@ novel tick                                              # single tick in CWD pro
 novel run --n 5 --checkpoint-interval 10                # multi-tick + auto-checkpoint
 novel resume                                            # most-recently-touched project
 novel tick --save-prompts                               # dumps prompts/ for debugging
-novel tick --llm-backend api --llm-model claude-4.5     # one-off backend override
+novel tick --llm-backend api --llm-model claude-sonnet-4-5  # one-off backend override
 ```
 
 There is no lint/format/typecheck configured in the repo.

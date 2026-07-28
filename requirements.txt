@@ -5,7 +5,7 @@
 #     pip install -e ../llm-backends
 # Once the repo is pushed to GitHub and tagged, replace the editable install
 # with the pinned git-URL form (uncomment the line below):
-#     llm-backends @ git+https://github.com/EdwardAThomson/llm-backends@v0.1.0
+#     llm-backends @ git+https://github.com/EdwardAThomson/llm-backends@v0.2.0
 # Not yet listed in setup.py install_requires because the repo may not be
 # public; add it there in the same git-URL form when it is.
 

@@ -18,7 +18,7 @@ def preview_plan(project_dir: Path, save: Optional[Path] = None, verbose: bool =
         True if successful, False otherwise
     """
     from ...cli.project import load_project_state, get_project_config
-    from ...tools.llm_interface import initialize_llm
+    from ...tools.llm_setup import initialize_llm_with_persona
     from ...tools.registry import ToolRegistry
     from ...tools.memory_tools import (
         MemorySearchTool,
@@ -50,7 +50,7 @@ def preview_plan(project_dir: Path, save: Optional[Path] = None, verbose: bool =
             or config.get('llm.openai_model', DEFAULT_API_MODEL)
         )
         try:
-            llm = initialize_llm(
+            llm = initialize_llm_with_persona(
                 backend=backend,
                 codex_bin=codex_bin,
                 model=model,

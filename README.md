@@ -156,7 +156,7 @@ novel plot clear                 # Clear all beats (with confirmation)
 
 # Use API backend instead of Codex
 novel tick --llm-backend api --llm-model gpt-5.5          # OpenAI GPT-5.5 (default)
-novel tick --llm-backend api --llm-model claude-sonnet-4.5  # Anthropic Claude Sonnet 4.5
+novel tick --llm-backend api --llm-model claude-sonnet-4-5  # Anthropic Claude Sonnet 4.5
 novel tick --llm-backend api --llm-model gemini-3-pro-preview  # Gemini 3 Pro
 novel tick --llm-backend api --llm-model hosted-llm      # Self-hosted OpenAI-compatible endpoint
 novel tick --llm-backend api --llm-model openrouter      # OpenRouter (routes to whatever OPENROUTER_MODEL names)
@@ -166,7 +166,7 @@ novel tick --llm-backend api --llm-model venice          # Venice (uses whatever
 novel tick --llm-backend gemini-cli --llm-model gemini-3-flash-preview
 
 # Use Claude Code CLI backend (local `claude` binary, headless mode)
-novel tick --llm-backend claude-cli --llm-model claude-sonnet-4.5
+novel tick --llm-backend claude-cli --llm-model claude-sonnet-4-5
 ```
 
 ## How It Works
@@ -394,7 +394,7 @@ Global configuration in `~/.storydaemon/config.yaml`:
 llm:
   backend: codex              # "codex" (Codex CLI), "api" (multi-provider API), "gemini-cli" (Gemini CLI), or "claude-cli" (Claude Code CLI)
   codex_bin_path: codex
-  model: gpt-5.5             # Generic API model (gpt-5.5/5.4/5.2, claude-sonnet-4.5, claude-haiku-4.5, gemini-3-pro-preview, gemini-3-flash-preview, gemini-2.5-pro)
+  model: gpt-5.5             # Generic API model (gpt-5.5/5.4/5.2, claude-sonnet-4-5, claude-haiku-4-5, gemini-3-pro-preview, gemini-3-flash-preview, gemini-2.5-pro)
   openai_model: gpt-5.5       # Legacy OpenAI-specific key (still honored)
   planner_max_tokens: 1000
   writer_max_tokens: 3000
@@ -429,7 +429,7 @@ For API backends, set these environment variables (e.g., in a `.env` file):
 
 ```text
 OPENAI_API_KEY   # OpenAI GPT-5.5 / 5.4 / 5.2
-CLAUDE_API_KEY   # Anthropic Claude Sonnet 4.5 / Haiku 4.5
+ANTHROPIC_API_KEY   # Anthropic Claude Sonnet 4.5 / Haiku 4.5 (legacy CLAUDE_API_KEY still works as a deprecated fallback)
 GEMINI_API_KEY   # Google Gemini 3 / 2.5
 OPENROUTER_API_KEY   # OpenRouter (model "openrouter")
 OPENROUTER_MODEL     # OpenRouter model to route to, e.g. "anthropic/claude-3.7-sonnet"

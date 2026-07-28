@@ -30,7 +30,7 @@ def project(tmp_path, monkeypatch):
     # Stub out every heavy collaborator the run loop constructs; the only behavior
     # under test is the retry control flow around agent.tick().
     for name in [
-        "initialize_llm", "ToolRegistry", "MemoryManager", "VectorStore",
+        "initialize_llm_with_persona", "ToolRegistry", "MemoryManager", "VectorStore",
         "NameGeneratorTool", "MemorySearchTool", "CharacterGenerateTool",
         "LocationGenerateTool", "RelationshipCreateTool", "RelationshipUpdateTool",
         "RelationshipQueryTool", "FactionGenerateTool", "RecentProjects",

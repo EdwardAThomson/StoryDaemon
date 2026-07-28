@@ -3,6 +3,8 @@ import os
 import yaml
 from typing import Dict, Any, Optional
 
+from llm_backends import DEFAULT_API_MODEL
+
 
 # Default configuration
 DEFAULT_CONFIG = {
@@ -25,8 +27,9 @@ DEFAULT_CONFIG = {
                          # connection ran 22.4 minutes, docs/progress_report_20260712.md
                          # section 8.1). Any positive int; no hard max, but huge values
                          # just delay failure when a call derails.
-        'model': 'gpt-5.5',  # Generic model name for API backend (OpenAI/Gemini/Claude)
-        'openai_model': 'gpt-5.5',
+        'model': DEFAULT_API_MODEL,  # Generic model name for API backend (OpenAI/Gemini/Claude);
+                                     # canonical default read from the llm-backends package
+        'openai_model': DEFAULT_API_MODEL,
         'openai_api_key_env': 'OPENAI_API_KEY',
     },
     'paths': {

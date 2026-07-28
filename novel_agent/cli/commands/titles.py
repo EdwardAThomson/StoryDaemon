@@ -131,7 +131,8 @@ def generate_titles(
         List of title suggestions
     """
     from ..project import load_project_state, get_project_config
-    from ...tools.llm_interface import initialize_llm, send_prompt
+    from ...tools.llm_interface import send_prompt
+    from ...tools.llm_setup import initialize_llm_with_persona
     from ...memory.manager import MemoryManager
     
     # Load state and config
@@ -144,7 +145,7 @@ def generate_titles(
     model = config.get("llm.model") or config.get("llm.openai_model", DEFAULT_API_MODEL)
     
     try:
-        initialize_llm(backend=backend, codex_bin=codex_bin, model=model)
+        initialize_llm_with_persona(backend=backend, codex_bin=codex_bin, model=model)
     except RuntimeError as e:
         print(f"❌ Failed to initialize LLM: {e}")
         return []

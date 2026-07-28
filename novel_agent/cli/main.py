@@ -17,7 +17,8 @@ from .foundation import (
 )
 from llm_backends import DEFAULT_API_MODEL
 
-from ..tools.llm_interface import initialize_llm, send_prompt
+from ..tools.llm_interface import send_prompt
+from ..tools.llm_setup import initialize_llm_with_persona
 from ..tools.registry import ToolRegistry
 from ..tools.memory_tools import (
     MemorySearchTool,
@@ -160,7 +161,7 @@ def _prompt_for_llm_selection() -> tuple[str, str]:
     if backend == "gemini-cli":
         default_model = "gemini-2.5-pro"
     elif backend == "claude-cli":
-        default_model = "claude-4.5"
+        default_model = "claude-sonnet-4-5"
     else:
         # codex or api: fall back to configured defaults
         default_model = (
@@ -355,7 +356,7 @@ def tick(
     llm_model: Optional[str] = typer.Option(
         None,
         "--llm-model",
-        help="Model name for API backend (e.g., gpt-5.5, claude-sonnet-4.5, claude-haiku-4.5, gemini-3-flash-preview)"
+        help="Model name for API backend (e.g., gpt-5.5, claude-sonnet-4-5, claude-haiku-4-5, gemini-3-flash-preview)"
     ),
     codex_bin: Optional[str] = typer.Option(
         None,
@@ -420,7 +421,7 @@ def tick(
         
         # Initialize LLM backend
         try:
-            llm = initialize_llm(
+            llm = initialize_llm_with_persona(
                 backend=backend,
                 codex_bin=codex_bin_effective,
                 model=model,
@@ -562,7 +563,7 @@ def run(
     llm_model: Optional[str] = typer.Option(
         None,
         "--llm-model",
-        help="Model name for API backend (e.g., gpt-5.5, claude-sonnet-4.5, claude-haiku-4.5, gemini-3-flash-preview)"
+        help="Model name for API backend (e.g., gpt-5.5, claude-sonnet-4-5, claude-haiku-4-5, gemini-3-flash-preview)"
     ),
     codex_bin: Optional[str] = typer.Option(
         None,
@@ -651,7 +652,7 @@ def run(
                         or config.get('llm.model')
                         or config.get('llm.openai_model', DEFAULT_API_MODEL)
                     )
-                    llm = initialize_llm(
+                    llm = initialize_llm_with_persona(
                         backend=backend,
                         codex_bin=codex_bin_effective,
                         model=model,
@@ -1291,7 +1292,7 @@ def plot_generate(
 
         # Initialize LLM and generate beats
         try:
-            initialize_llm(backend=backend, codex_bin=codex_bin_effective, model=model)
+            initialize_llm_with_persona(backend=backend, codex_bin=codex_bin_effective, model=model)
         except RuntimeError as e:
             typer.echo(f"❌ Failed to initialize LLM backend: {e}", err=True)
             raise typer.Exit(1)
@@ -1348,7 +1349,7 @@ def plot_revise(
         typer.echo(f"🔧 Using LLM backend: {backend} (model={model})")
 
         try:
-            initialize_llm(backend=backend, codex_bin=codex_bin_effective, model=model)
+            initialize_llm_with_persona(backend=backend, codex_bin=codex_bin_effective, model=model)
         except RuntimeError as e:
             typer.echo(f"❌ Failed to initialize LLM backend: {e}", err=True)
             raise typer.Exit(1)
