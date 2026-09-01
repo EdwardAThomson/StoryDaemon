@@ -24,7 +24,7 @@ An introduction and overview.
 - ⚡ **Tension Tracking** - LLM-rated scene tension scoring (0-10) for pacing awareness
 - 🦴 **Scene Skeletons** (experimental, off by default) - typed paragraph plans sampled from a block grammar measured on 21 classic novels guide the writer toward master-like prose structure, with per-paragraph compliance tracking
 - 🎚️ **Coherence Pressures** - Arc-tension targeting, a throughline gate, and contradiction detection keep emergent prose on canon and on arc (see the Emergent Coherence roadmap)
-- 💰 **Flexible LLM Backends** - Codex CLI, Gemini CLI, Claude Code CLI (zero additional cost), or API backends (GPT-5.5, Claude Sonnet/Haiku 4.5, Gemini 3, a self-hosted endpoint, or OpenRouter)
+- 💰 **Flexible LLM Backends** - Codex CLI, Gemini CLI, Claude Code CLI (zero additional cost), or API backends (GPT-5.x, Claude Fable 5 / Opus 4.8 / Sonnet / Haiku, Gemini 3.x and 2.5, a self-hosted endpoint, OpenRouter, or Venice), shared with the sibling `llm-backends` package
 - 🔧 **Tool-Based System** - Extensible tool registry for character generation, memory search, etc.
 - 🔍 **Rich Inspection Tools** - Status, list, inspect, goals commands for full project visibility
 - 💾 **Automatic Checkpointing** - Snapshot and restore project state at any point
@@ -44,9 +44,9 @@ An introduction and overview.
   codex auth
   ```
 - (Optional) API access for OpenAI / Claude / Gemini backends
-  - OpenAI GPT-5.5 (default) / 5.4 / 5.2
-  - Anthropic Claude Sonnet 4.5 / Haiku 4.5
-  - Google Gemini 3 (flash/pro preview) or 2.5 (pro/flash)
+  - OpenAI GPT-5.5 (default) / 5.4 / 5.4-mini / 5.2
+  - Anthropic Claude Fable 5 / Opus 4.8 / Sonnet 4.6 / Sonnet 4.5 / Haiku 4.5
+  - Google Gemini 3.1 or 3 (flash/pro preview) or 2.5 (pro/flash)
   - Self-hosted, OpenAI-compatible endpoint via `HOSTED_LLM_URL`, `HOSTED_LLM_PORT`, `HOSTED_LLM_API_KEY`, `HOSTED_LLM_MODEL` env variables (`hosted-llm`)
   - OpenRouter (https://openrouter.ai), a hosted OpenAI-compatible router over many models, via `OPENROUTER_API_KEY` and `OPENROUTER_MODEL` env variables (`openrouter`)
   - Venice (https://venice.ai), an OpenAI-compatible host of open-weight models including uncensored variants, via `VENICE_API_KEY` and `VENICE_MODEL` env variables (`venice`)
@@ -152,6 +152,7 @@ novel lore list --importance high
 novel plot generate --count 5    # Generate plot beats
 novel plot status --detailed     # View beat status
 novel plot next                  # See next pending beat
+novel plot revise                # Abandon pending beats and regenerate from current canon
 novel plot clear                 # Clear all beats (with confirmation)
 
 # Use API backend instead of Codex
@@ -224,6 +225,7 @@ Each novel maintains its own working directory with:
 - **Open Loops** - Unresolved narrative threads with mention tracking
 - **Goal Hierarchy** - Protagonist immediate/arc/story goals with progress tracking
 - **Lore** - World rules, constraints, and capabilities with contradiction detection
+- **Story Threads** - Registry of persistent narrative strands each beat serves (`novel threads`)
 - **Vector Index** - Semantic search for context retrieval
 
 ## Project Structure
@@ -250,7 +252,9 @@ StoryDaemon/
 │   │   └── checkpoint.py       # Checkpoint system
 │   ├── plot/            # Plot management (emergent plotting)
 │   │   ├── manager.py          # PlotOutlineManager
+│   │   ├── dedup.py            # Beat-level dedup at authoring time
 │   │   └── entities.py         # PlotBeat, PlotOutline
+│   ├── contracts/       # Beat contracts (closed checker vocabulary, Slice 1)
 │   ├── cli/             # Command-line interface
 │   │   ├── main.py             # CLI entry point
 │   │   ├── project.py          # Project management
@@ -288,12 +292,12 @@ StoryDaemon/
 ├── experiments/         # Standalone research experiments (block grammar PoC)
 ├── tests/               # Test suite
 └── docs/                # Documentation
-    ├── spec.md         # Technical specification
-    ├── plan.md         # Implementation plan
-    ├── name_generator_implementation_plan.md  # Name generator design
-    ├── project_safety_improvements.md         # UUID and title improvements
-    ├── resume_workflow.md                     # Resume command workflow
-    └── phase*_*.md     # Phase-specific documentation
+    ├── spec.md                      # Technical specification
+    ├── plan.md                      # Legacy implementation plan
+    ├── EMERGENT_COHERENCE_PLAN.md   # Active roadmap
+    ├── PLOT_FIRST_MODE_GUIDE.md     # Plot-first user guide
+    ├── progress_report_*.md         # Dated run reports
+    └── archive/                     # Superseded phase documentation
 ```
 
 ## CLI Commands
@@ -383,6 +387,7 @@ novel checkpoint delete --id <checkpoint_id> [--project <path>]
 novel plot generate [--count 5] [--project <path>]
 novel plot status [--detailed] [--project <path>]
 novel plot next [--project <path>]
+novel plot revise [--project <path>]
 novel plot clear [--yes] [--project <path>]
 ```
 
@@ -394,10 +399,12 @@ Global configuration in `~/.storydaemon/config.yaml`:
 llm:
   backend: codex              # "codex" (Codex CLI), "api" (multi-provider API), "gemini-cli" (Gemini CLI), or "claude-cli" (Claude Code CLI)
   codex_bin_path: codex
-  model: gpt-5.5             # Generic API model (gpt-5.5/5.4/5.2, claude-sonnet-4-5, claude-haiku-4-5, gemini-3-pro-preview, gemini-3-flash-preview, gemini-2.5-pro)
+  model: gpt-5.5             # Generic API model (gpt-5.5/5.4/5.4-mini/5.2, claude-fable-5, claude-opus-4-8, claude-sonnet-4-6, claude-sonnet-4-5, claude-haiku-4-5, gemini-3.1-pro-preview, gemini-3-pro-preview, gemini-3-flash-preview, gemini-2.5-pro)
   openai_model: gpt-5.5       # Legacy OpenAI-specific key (still honored)
   planner_max_tokens: 1000
-  writer_max_tokens: 3000
+  writer_max_tokens: 3000     # Legacy flat ceiling; superseded by generation.scene_word_targets
+                              # (kept so old project configs load, nothing reads it)
+  timeout: 300                # Per-call timeout (seconds), applied on CLI and api backends
 
 paths:
   novels_dir: ~/novels
@@ -445,7 +452,7 @@ The active roadmap is [docs/EMERGENT_COHERENCE_PLAN.md](docs/EMERGENT_COHERENCE_
 
 - **Phase 1 — Grounded identity** (the LLM *selects* names/IDs, never authors them) — **shipped.** Python-grounded `name.generate`, resolved entity references, similarity-pre-filtered + LLM-judged contradiction detection.
 - **Phase 2 — Rolling horizon** (lookahead emerges *from* the prose; beats are revisable) — **shipped.** Plus the `novel plot revise` trigger.
-- **Phase 3 — Constraint-as-pressure** — **in progress.** Shipped: the per-tick coherence rubric (`novel metrics`), contradiction enforcement (disputed-lore quarantine), an **LLM tension scorer** + **arc-pressure** (a target tension curve injected into planner and writer), a **throughline gate** with an **LLM goal-relevance judge**, and the first slice of the **block/sub-block DSL**: scene skeletons (`generation.enable_scene_skeleton`), typed paragraph plans sampled from a block grammar measured on the masters corpus, validated by a production A/B (see [the grammar study](docs/MASTERS_BLOCK_GRAMMAR_STUDY.md) and [the Slice 4 results](docs/SLICE4_SCENE_SKELETON_RESULTS.md)). Still to come: loop-aging and the deeper DSL slices.
+- **Phase 3 — Constraint-as-pressure** — **in progress.** Shipped: the per-tick coherence rubric (`novel metrics`), contradiction enforcement (disputed-lore quarantine), an **LLM tension scorer** + **arc-pressure** (a target tension curve injected into planner and writer, with named `coherence.curve_preset` control-point sets), the **arc-phase planner mandate**, a **throughline gate** with an **LLM goal-relevance judge**, **honest loop accounting** (judged loop closure, creation dedup and cap), the **sacred finale** (`coherence.sacred_finale`: on plot-first runs Python owns the last scene), the **write-until-concluded scene loop** (scenes are sized from `generation.scene_word_targets` and continued rather than truncated), the **story-thread registry** with thread identity by selection and a construction-pressure detector (`novel threads`), and the first slice of the **block/sub-block DSL**: scene skeletons (`generation.enable_scene_skeleton`), typed paragraph plans sampled from a block grammar measured on the masters corpus, validated by a production A/B (see [the grammar study](docs/MASTERS_BLOCK_GRAMMAR_STUDY.md) and [the Slice 4 results](docs/SLICE4_SCENE_SKELETON_RESULTS.md)). Still to come: loop-aging, thread construction itself, and the deeper DSL slices.
 - **Phase 4 — Setup/payoff foresight** (planted-element ledger for clues/reveals) — deferred until 1–3 prove out.
 
 Plot-first mode (Phase 5 of the *legacy* roadmap) is complete and available — automatic beat generation, beat-constrained writing, and beat verification — see the guide below. Note the two phase-numbering schemes differ: the legacy roadmap lives in [docs/plan.md](docs/plan.md), the active one in [docs/EMERGENT_COHERENCE_PLAN.md](docs/EMERGENT_COHERENCE_PLAN.md).

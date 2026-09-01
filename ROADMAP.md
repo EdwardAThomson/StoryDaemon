@@ -1,6 +1,6 @@
 # Roadmap — StoryDaemon
 
-_Status: active · updated 2026-07-16_
+_Status: active · updated 2026-09-01_
 
 An agentic long-form fiction generator: an autonomous LLM agent runs iterative
 "story tick" cycles (plan → tools → write → evaluate) that grow characters, lore,
@@ -23,6 +23,13 @@ strategic plan is `docs/EMERGENT_COHERENCE_PLAN.md`.
 - [x] Contracts Slice 1: beat-embedded pre/postconditions authored at beat-generation time from a closed checker vocabulary, evaluated at beat verification (`generation.use_contracts`, default off) (Phase 3)
 - [x] OpenRouter support in the `api` backend (model `openrouter`, `OPENROUTER_API_KEY`/`OPENROUTER_MODEL`), live-validated
 - [x] Venice support in the `api` backend (model `venice`, `VENICE_API_KEY`/`VENICE_MODEL`; Venice's injected system prompt disabled per request)
+- [x] Shared `llm-backends` package: the six `novel_agent/tools/` backend modules are now compatibility shims over it; the fiction persona is passed explicitly on the `api` backend (`tools/llm_setup.py`) and `DEFAULT_API_MODEL` is read from the package instead of hardcoded
+- [x] Write-until-concluded scene loop: scenes are sized from `generation.scene_word_targets` and continued in bounded segments instead of truncating at a flat token ceiling (Phase 3)
+- [x] Honest loop accounting (interleaving Slice 0): judged loop closure (`coherence.loop_closure`), creation-time dedup and a per-tick creation cap, judged extractor resolutions (Phase 3)
+- [x] Sacred finale (`coherence.sacred_finale`): on plot-first runs Python owns the final tick — guaranteed beat ask, fresh re-rolls against a finale tension cap, and quarantine of the finale's freshly minted loops (Phase 3)
+- [x] Story-thread registry (interleaving Slices T1/T1.5): threads minted in Python and selected by the beat author via `thread_id`, per-tick attribution, `novel threads` (Phase 3)
+- [x] Tension-curve presets (`coherence.curve_preset`) grounded in the masters decile tables, plus the construction-pressure detector (instrumentation only, Slice T4a) (Phase 3)
+- [x] Hardening batch: beat-level dedup at authoring time (`generation.beat_dedup`), a per-call `llm.timeout` honored on the api backend, loop-dedup threshold recalibration (Phase 3)
 - [x] Contradiction detection (lore contradictions, dispute quarantine)
 - [x] Per-tick coherence rubric (loop churn, contradictions, tension vs. target, goal relevance) via `novel metrics`
 - [x] Goal hierarchy (immediate / arc / story goals, auto-promotion, throughline gate + LLM goal-relevance judge)
@@ -40,7 +47,7 @@ strategic plan is `docs/EMERGENT_COHERENCE_PLAN.md`.
 ## Next
 
 - [ ] **Loop-aging pressure** (older open loops surface louder for payoff): now twice-evidenced (the descent re-run's resolution ticks opened 8 loops and closed 0; contracts can check `loop_resolved` but nothing pressures the planner to close loops)
-- [ ] **Thread interleaving (tension by scene selection)**: the tension curve becomes a scene-selection policy over a portfolio of story threads; a calm page comes from cutting away to a calmer thread (leaving a cliffhanger), never from becalming a hot event. Design: `docs/THREAD_INTERLEAVING_DESIGN.md`. Replaces the "forced low-tension scenes" idea, which the fork experiment falsified (`progress_report_20260710.md` Addendum 2: pruning 80 percent of the writer prompt moved mean tension by 0.0; the overshoot lives in the assigned event, not the prompt). Empirical grounding now available: the masters corpus thread-architecture data (thread counts, run lengths, convergence shapes) and the nd1 26-book reference bands
+- [ ] **Thread interleaving (tension by scene selection)** — *partly landed:* the registry, thread identity by selection, and the construction-pressure detector are in (see Shipped); construction itself (Slice T4b) and selection are not. The tension curve becomes a scene-selection policy over a portfolio of story threads; a calm page comes from cutting away to a calmer thread (leaving a cliffhanger), never from becalming a hot event. Design: `docs/THREAD_INTERLEAVING_DESIGN.md`. Replaces the "forced low-tension scenes" idea, which the fork experiment falsified (`progress_report_20260710.md` Addendum 2: pruning 80 percent of the writer prompt moved mean tension by 0.0; the overshoot lives in the assigned event, not the prompt). Empirical grounding now available: the masters corpus thread-architecture data (thread counts, run lengths, convergence shapes) and the nd1 26-book reference bands
 - [ ] Contracts Slice 2: precondition pressure (unmet preconditions become planner setup pressure at beat selection, never a hard raise)
 - [ ] Contracts Slice 3: bounded contract repair (mirror the tension-rewrite pattern) plus an `event_occurs` LLM-judge checker
 - [ ] Per-sub-block generation experiment (contracts Slice 5, own flag): explicitly a measured A/B per `docs/BLOCKS_CONTRACTS_LANDING_SKETCH.md`. De-risked by Slice 4: the [n] marker protocol gives every block an address, and the designed entry point is a selective per-block repair pass (expand deficient paragraphs only), documented in `docs/SLICE4_SCENE_SKELETON_RESULTS.md`. Production evidence says it is NOT currently needed for gpt-5.5 (single-shot honors paragraph fullness); build only if a chosen writer model does not

@@ -296,7 +296,7 @@ After each writing tick:
 | Tests         | Pytest                                     |
 | Optional      | SQLite layer for tracking history          |
 
-**Note:** Codex CLI provides zero-additional-cost access to its underlying model. Direct API support (OpenAI, Anthropic, Gemini, a self-hosted OpenAI-compatible `hosted-llm` endpoint, and `openrouter` for OpenRouter's hosted router) is implemented via the `api` backend, and local `claude-cli` / `gemini-cli` backends are also available.
+**Note:** Codex CLI provides zero-additional-cost access to its underlying model. Direct API support (OpenAI, Anthropic, Gemini, a self-hosted OpenAI-compatible `hosted-llm` endpoint, `openrouter` for OpenRouter's hosted router, and `venice` for Venice's open-weight models) is implemented via the `api` backend, and local `claude-cli` / `gemini-cli` backends are also available. All backends live in the shared `llm-backends` package; the `novel_agent/tools/` modules are compatibility shims over it.
 
 ---
 

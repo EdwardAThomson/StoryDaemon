@@ -67,6 +67,21 @@ The agent will now:
 - Regenerate beats when pending count drops below this
 - Lower values = more frequent regeneration
 
+**`plot_first_start_tick`** (default: `2`)
+- Delay beats until this tick, so characters and world exist before beats are authored
+
+**`beat_dedup`** (default: `true`) / **`beat_dedup_threshold`** (default: `0.65`)
+- Drop a freshly authored beat whose description fuzzy-matches a pending, recently
+  completed, or same-batch beat (deterministic, no LLM)
+
+**`rolling_horizon`** (default: `false`)
+- When a beat diverges from the written scene, abandon the pending horizon and
+  regenerate it from current canon (the automatic form of `novel plot revise`)
+
+**`use_contracts`** (default: `false`)
+- Author pre/postconditions with each beat from a closed checker vocabulary and check
+  the postconditions at beat verification (see `docs/BLOCKS_CONTRACTS_LANDING_SKETCH.md`)
+
 ### Verification Settings
 
 **`verify_beat_execution`** (default: `true`)
@@ -161,6 +176,17 @@ novel plot status --detailed
 novel plot next
 ```
 
+### Revise or Clear Beats
+
+```bash
+# Abandon the pending beats and regenerate them from current canon
+# (the manual rolling-horizon trigger)
+novel plot revise
+
+# Remove every beat from the outline (asks for confirmation; --yes skips it)
+novel plot clear
+```
+
 ### Manual Beat Management
 
 You can manually edit `plot_outline.json` to:
@@ -176,21 +202,25 @@ Format:
     {
       "id": "PB001",
       "description": "Character discovers the secret",
-      "characters_involved": ["C0"],
-      "location": "L1",
+      "characters_involved": ["C000"],
+      "location": "L001",
       "plot_threads": ["mystery_thread"],
+      "thread_id": "TH001",
       "tension_target": 7,
       "status": "pending",
       "prerequisites": [],
       "created_at": "2025-11-24T19:00:00Z",
       "executed_in_scene": null,
-      "execution_notes": ""
+      "execution_notes": "",
+      "resolves_loops": [],
+      "advances_loops": [],
+      "creates_loops": [],
+      "preconditions": [],
+      "postconditions": []
     }
   ],
   "created_at": "2025-11-24T19:00:00Z",
-  "last_updated": "2025-11-24T19:00:00Z",
-  "current_arc": "",
-  "arc_progress": 0.0
+  "last_updated": "2025-11-24T19:00:00Z"
 }
 ```
 
@@ -205,7 +235,7 @@ Watch for these indicators:
     Generated 5 new plot beats
 🎯 Executing beat: Character discovers the hidden message
 ...
-8.5. Verifying beat execution...
+11.5. Verifying beat execution...
     ✓ Beat PB001 accomplished
 ```
 

@@ -179,9 +179,48 @@ instrumentation so every pressure below is measurable (see §5).
   `ContractManager`/`contracts.json` store is retired (two contract stores would be
   worse than one). Live smoke run confirmed LLM-authored conditions on all beats after
   two fixes (beat-JSON parse retry; the prompt's shape block now carries a
-  postconditions example). Remaining: Slice 2 (precondition pressure), Slice 3 (bounded
-  repair + an `event_occurs` LLM-judge checker), Slice 4 (scene skeletons), Slice 5
-  (per-sub-block generation, a measured A/B).
+  postconditions example). **Slice 4 (scene skeletons) also shipped** 2026-07, default
+  off (`generation.enable_scene_skeleton`): a typed paragraph plan sampled from the
+  masters block grammar (`agent/scene_skeleton.py`, data in
+  `novel_agent/data/block_grammar_v1.json`) rides the writer prompt with the `[n]`
+  marker protocol, markers are stripped and compliance recorded; the production A/B
+  moved every solidly measured block statistic toward the masters with no surface
+  regression (`docs/SLICE4_SCENE_SKELETON_RESULTS.md`). Remaining: Slice 2
+  (precondition pressure), Slice 3 (bounded repair + an `event_occurs` LLM-judge
+  checker), Slice 5 (per-sub-block generation, a measured A/B).
+- **Honest loop accounting** (interleaving Slice 0) — *shipped.* Loop closure is now
+  judged rather than claimed: a beat's `resolves_loops` claims each get one focused
+  LLM check against the scene and close only on a confirmed yes with an auditable
+  summary (`agent/loop_closure.py`, `coherence.loop_closure`), the same gate covering
+  the judged extractor-resolution path and finale loop expiry. Creation hygiene came
+  with it: deterministic dedup of new loops against open ones
+  (`coherence.loop_dedup_threshold`) and a per-tick creation cap. `PlotBeat` also
+  carries `advances_loops` (moved forward without answering on the page), stored and
+  sanitized as future loop-aging fuel.
+- **Sacred finale** — *shipped* (`coherence.sacred_finale`, default True). On the
+  finale tick of a plot-first run (`current_tick == coherence.target_story_length`)
+  Python owns the ending: the beat ask is guaranteed (pending-beat screen, then an
+  authored finale beat, then a deterministic template), the scene gets bounded fresh
+  re-rolls against the finale tension cap (`coherence.finale_retries`) in place of the
+  prose rewrite, and a settled ending (`coherence.ending_hook: false`) quarantines the
+  finale's freshly minted open loops.
+- **Write-until-concluded scene loop** — *shipped.* The flat writer token ceiling
+  truncated 8 of 16 scenes mid-sentence (`progress_report_20260711.md`); the writer now
+  sizes each request from `generation.scene_word_targets` x `tokens_per_word` x
+  `scene_budget_multiplier` and runs bounded continuation segments
+  (`agent/segments.py`) until the scene concludes, trimming and flagging only after
+  `scene_max_segments`.
+- **Thread interleaving groundwork** — *Slices T1 / T1.5 / T4a shipped.* A thread
+  registry (`agent/thread_registry.py`, `memory/threads.json`, viewable via
+  `novel threads`) mints thread identity in Python; the beat prompt carries a roster of
+  exact `TH` ids and each beat names the ONE thread it serves via `thread_id`
+  ("select, don't invent" applied to threads, `coherence.thread_identity`). A
+  construction-pressure detector records per tick whether thread construction *would*
+  fire (`coherence.thread_construction_detector`, `construction_would_fire` in the
+  rubric) and named tension-curve presets (`coherence.curve_preset`) come from the
+  masters decile tables. All instrumentation so far: nothing constructs or selects
+  threads yet (Slice T4b), see `docs/THREAD_INTERLEAVING_DESIGN.md` and
+  `docs/THREAD_CONSTRUCTION_DESIGN.md`.
 
 *Why third:* tunable pressures layered on a *working* emergent loop; easy to
 add/remove/dial in.
@@ -232,7 +271,9 @@ The `claude-cli` backend runs `claude -p` — a full repo-aware agent, not a
 completion API. **Confirmed empirically:** run from the StoryDaemon repo it loads
 `CLAUDE.md` + the codebase and starts *acting* on the repo, derailing/timing out
 on open-ended prompts (a planner call went from a 300s timeout to a clean ~5.5s
-answer once the cwd changed). **Hardened (`tools/claude_cli_interface.py`):** it
+answer once the cwd changed). **Hardened (`llm_backends/claude_cli_interface.py`;
+the `novel_agent/tools/` modules named below are now compatibility shims over the
+shared `llm-backends` package):** it
 now runs from a neutral temp scratch dir (no `.git`/`CLAUDE.md`), forwards a
 Claude `--model` (use `llm.model: haiku` for speed), and has a configurable
 `llm.timeout` (default 300s). With those, a multi-tick run completed cleanly.
@@ -251,9 +292,12 @@ further hardening; the neutral cwd was the decisive fix.)
 Phases 1 and 2 are shipped. Phase 3 is in progress: the coherence rubric,
 contradiction enforcement, the LLM tension scorer, arc-pressure, the arc-phase
 planner mandate (validated on the descent re-run), the arc-into-beats bridge,
-contracts Slice 1 (default off), the throughline gate, and its LLM goal-relevance
-judge are all in; loop-aging and the remaining contract slices (2-5) are not yet
-started.
+contracts Slice 1 (default off) and Slice 4 (scene skeletons, default off), the
+throughline gate and its LLM goal-relevance judge, honest loop accounting, the
+sacred finale, the write-until-concluded scene loop, and the thread-interleaving
+groundwork (registry, thread identity by selection, construction-pressure
+detector) are all in; loop-aging, thread construction/selection itself, and
+contract Slices 2, 3 and 5 are not yet started.
 
 Next, in rough priority:
 1. ~~**Arc-_phase_ planner mandate** — *validated 2026-06* (`progress_report_20260602.md`):
@@ -273,8 +317,8 @@ Next, in rough priority:
    re-run's resolution ticks opened 8 loops and closed 0, and contracts can check
    `loop_resolved` but nothing pressures the planner to close loops.
 3. **Remaining contract slices** (Slice 2: precondition pressure; Slice 3: bounded
-   repair + `event_occurs` judge; Slices 4-5: scene skeletons, per-sub-block A/B), per
-   the landing sketch.
+   repair + `event_occurs` judge; Slice 5: per-sub-block A/B), per the landing sketch.
+   Slice 4 (scene skeletons) is done.
 4. **Validate the throughline gate** — re-run the on/off A/B now that the gauge is
    an LLM judge. *First pass (2026-05) was inconclusive*: a goal-aligned foundation keeps
    `goal_relevance` high (~7-10) with the pressure on *or* off — a ceiling effect, not a
