@@ -1477,6 +1477,100 @@
    "TRANSITION": 0.014351093282106334
   }
  },
+ "paragraph_words": {
+  "source": "per-paragraph labels aligned to work/corpus/extracted/*.md",
+  "n_books": 21,
+  "books": [
+   "austen-emma",
+   "austen-persuasion",
+   "austen-pride",
+   "bronte-janeeyre",
+   "buchan-greenmantle",
+   "buchan-thirtyninesteps",
+   "childers-riddlesands",
+   "collins-moonstone",
+   "conrad-heartofdarkness",
+   "conrad-lordjim",
+   "conrad-secretagent",
+   "dickens-taleoftwocities",
+   "dunsany-elfland",
+   "eddison-ouroboros",
+   "haggard-ksm",
+   "haggard-she",
+   "sabatini-captainblood",
+   "sabatini-scaramouche",
+   "stoker-dracula",
+   "wells-timemachine",
+   "wells-warofworlds"
+  ],
+  "skipped": [],
+  "overall": {
+   "mean": 59.78618002337966,
+   "median": 35,
+   "p25": 14,
+   "p75": 78,
+   "p90": 140,
+   "n": 38495
+  },
+  "by_mode": {
+   "SETTING": {
+    "mean": 104.70019096117123,
+    "median": 85,
+    "p25": 47,
+    "p75": 137,
+    "p90": 209,
+    "n": 1571
+   },
+   "CHARACTER_DESC": {
+    "mean": 91.32017937219732,
+    "median": 69,
+    "p25": 32,
+    "p75": 123,
+    "p90": 197,
+    "n": 1115
+   },
+   "LORE": {
+    "mean": 114.99535603715171,
+    "median": 85.0,
+    "p25": 34,
+    "p75": 149,
+    "p90": 243,
+    "n": 1292
+   },
+   "DIALOGUE": {
+    "mean": 41.466951842141576,
+    "median": 22,
+    "p25": 11,
+    "p75": 48,
+    "p90": 94,
+    "n": 21741
+   },
+   "ACTION": {
+    "mean": 74.29062220232767,
+    "median": 53.0,
+    "p25": 25,
+    "p75": 97,
+    "p90": 158,
+    "n": 8936
+   },
+   "INTERIORITY": {
+    "mean": 93.61875184856551,
+    "median": 72,
+    "p25": 38,
+    "p75": 122,
+    "p90": 191,
+    "n": 3381
+   },
+   "TRANSITION": {
+    "mean": 10.174291938997822,
+    "median": 5,
+    "p25": 4,
+    "p75": 7,
+    "p90": 25,
+    "n": 459
+   }
+  }
+ },
  "shading": {
   "rate": 0.20386383111318843,
   "top_pairs": [

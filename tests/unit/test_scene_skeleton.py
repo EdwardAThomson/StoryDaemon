@@ -18,14 +18,44 @@ def test_generator_deterministic_and_valid():
     b = sk.generate_skeleton(1400, seed=7)
     assert a == b
     assert all(m in LABELS for m in a)
-    assert len(a) == round(1400 / sk.WORDS_PER_BLOCK)
 
 
 def test_generator_length_clamps():
     assert len(sk.generate_skeleton(50, seed=1)) == sk.MIN_BLOCKS
     assert len(sk.generate_skeleton(100000, seed=1)) == sk.MAX_BLOCKS
-    assert len(sk.generate_skeleton(None, seed=1)) == round(
-        1400 / sk.WORDS_PER_BLOCK)  # default sizing
+
+
+def test_generator_defaults_to_the_default_word_target():
+    assert (sk.generate_skeleton(None, seed=1)
+            == sk.generate_skeleton(sk.DEFAULT_WORD_TARGET, seed=1))
+
+
+# ---- mode-aware sizing -------------------------------------------------------
+
+def test_measured_paragraph_lengths_differ_by_mode():
+    w = sk.mode_word_stats()
+    # The whole point: a dialogue paragraph is a speech turn, a lore
+    # paragraph is a block of exposition. One flat figure cannot serve both.
+    assert w["DIALOGUE"]["mean"] < w["ACTION"]["mean"] < w["LORE"]["mean"]
+    assert w["TRANSITION"]["mean"] < w["DIALOGUE"]["mean"]
+
+
+def test_skeletons_are_sized_by_word_budget_not_block_count():
+    for target in (400, 800, 1400, 2200):
+        got = [sk.expected_words(sk.generate_skeleton(target, seed=s))
+               for s in range(40)]
+        mean = sum(got) / len(got)
+        assert abs(mean - target) / target < 0.15, (target, mean)
+
+
+def test_dialogue_heavy_plans_buy_more_paragraphs_than_exposition():
+    # Same word target, different mix: at measured lengths a dialogue scene
+    # needs far more paragraphs than an exposition one. The old flat divisor
+    # gave both the same count, which a dialogue scene could only reach by
+    # overfilling its paragraphs.
+    dialogue = sk.expected_words(["DIALOGUE"] * 20)
+    lore = sk.expected_words(["LORE"] * 20)
+    assert dialogue < lore / 2
 
 
 def test_tension_reweights_toward_action():
@@ -48,7 +78,32 @@ def test_prompt_section_carries_plan_and_gate_b_rules():
     assert "square brackets" in s          # marker protocol
     assert "Do not compress" in s          # no-compression rule
     assert "One plan item = one paragraph" in s
-    assert "60-130 words" in s             # paragraph fullness (shakedown fix)
+
+
+def test_prompt_gives_each_item_its_own_measured_word_range():
+    s = sk.skeleton_prompt_section(["LORE", "DIALOGUE"])
+    lo_lore, hi_lore = sk._word_range("LORE")
+    lo_dlg, hi_dlg = sk._word_range("DIALOGUE")
+    assert f"1. LORE, {lo_lore}-{hi_lore} words" in s
+    assert f"2. DIALOGUE, {lo_dlg}-{hi_dlg} words" in s
+    # A dialogue turn is short; the old flat rule demanded 60-130 of every mode.
+    assert hi_dlg < lo_lore + hi_lore
+    assert "60-130 words" not in s
+
+
+def test_prompt_declares_one_speech_turn_per_dialogue_item():
+    flat = " ".join(
+        sk.skeleton_prompt_section(["DIALOGUE"] * 3).split())  # unwrap
+    assert "each item is ONE character speaking" in flat
+    assert "Never pack several exchanges into a single paragraph." in flat
+    # The clause that caused the defect must be gone.
+    assert "may hold several exchanges" not in flat
+
+
+def test_prompt_states_the_plans_own_word_target():
+    plan = ["DIALOGUE"] * 8
+    s = sk.skeleton_prompt_section(plan)
+    assert f"roughly {round(sk.expected_words(plan))} words" in s
 
 
 # ---- marker stripping --------------------------------------------------------

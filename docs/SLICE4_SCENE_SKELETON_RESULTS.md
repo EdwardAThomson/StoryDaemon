@@ -1,6 +1,7 @@
 # Slice 4 Scene Skeletons: Production Results and Reading Notes
 
 **Status:** Evaluation complete; flag remains default-off pending adoption decision
+**Update 2026-09-10:** section 6.1 addressed (mode-aware sizing and the one-turn-per-item dialogue rule); the masters words-per-paragraph figure in section 2 is corrected below. Re-validation not yet run.
 **Date:** 2026-07-15
 **Feature:** `generation.enable_scene_skeleton` (agent/scene_skeleton.py), Slice 4 of the block DSL
 **Method provenance:** grammar and gates in `MASTERS_BLOCK_GRAMMAR_STUDY.md` and `experiments/block_grammar_poc/README.md`; raw run artifacts under gitignored `work/skeltest/`; judged metrics in `experiments/block_grammar_poc/runs/judge_scenes_last.json`
@@ -26,12 +27,23 @@ annotated the masters corpus:
 
 | metric | masters | gpt-5.5 + skeleton | gpt-5.5 unguided |
 |---|---:|---:|---:|
-| words per paragraph | 90 | **101.4** | 16.9 |
+| words per paragraph | ~~90~~ **59.8** | 101.4 | 16.9 |
 | dialogue share | 0.565 | **0.500** | 0.351 |
 | dialogue run mean | 3.32 | **2.91** | 1.98 |
 | shading rate | 0.204 | **0.266** | 0.099 |
 | interiority self-trans | 0.205 | 0.000 (n=4, indicative) | 0.261 (n=111) |
 | return rate | 0.355 | 0.154 (small n, see 6.1) | 0.247 |
+
+**Correction (2026-09-10).** The masters' words-per-paragraph entry above was
+not measured: `words_per_para` was hardcoded at 90.0 in `judge_scenes.py`
+alongside five values that *were* read from the grammar, and 90 is
+`WORDS_PER_BLOCK`, the word budget the Gate C harness gave both arms. Measured
+over all 38,495 masters paragraphs the figure is **59.8 mean, 35 median**
+(`MASTERS_BLOCK_GRAMMAR_STUDY.md` section 5b). So the skeleton arm's 101.4 was
+an overshoot of roughly 70%, not a near-hit, and the direction of the finding
+survives: the unguided arm's 16.9 is still badly fragmented, and the skeleton
+still moves toward the masters, just past them. Every other row was read from
+the corpus and is unaffected.
 
 **The skeleton moved every solidly measured statistic toward the
 masters.** The headline is paragraph shape: unguided gpt-5.5 fragments a
@@ -107,7 +119,7 @@ given novel should want is an authorial choice; the skeleton makes it a
 ## 6. Weak points and backlog (ranked)
 
 1. **Dialogue paragraphing (top craft item, found by reading, not by
-   metrics).** The one-item-one-paragraph rule makes the writer pack
+   metrics). ADDRESSED 2026-09-10, not yet re-validated.** The one-item-one-paragraph rule makes the writer pack
    5-6 speaker exchanges into single paragraphs. The masters mostly give
    each speaker turn its own paragraph within a run of DIALOGUE blocks;
    our skeletons have such runs, but the rule forces compression anyway.
@@ -116,6 +128,22 @@ given novel should want is an authorial choice; the skeleton makes it a
    flattens exactly the texture that metric measures. Precise fix to
    test: for consecutive DIALOGUE blocks, instruct one exchange per
    paragraph. Small prompt change, PoC-testable before production.
+
+   *What shipped.* Measuring the corpus first (section 5b of the study)
+   showed the cause was not only the packing clause but the flat sizing
+   underneath it. Both are gone: every plan item now carries its own measured
+   word range (DIALOGUE 10-50, LORE 35-150), consecutive DIALOGUE items are
+   declared one speech turn each, and the sampler fills a *word budget* using
+   measured per-mode lengths instead of dividing the target by a flat 90, so
+   a dialogue-heavy 1,400-word scene buys ~34 paragraphs rather than 16. Under
+   the old sizing a 16-item dialogue plan was worth 663 words at masters'
+   lengths, so the writer could only reach 1,400 by overfilling paragraphs;
+   packing was the arithmetically forced outcome, not a stray instruction.
+   Expected length now tracks the target within a few percent across all four
+   `scene_word_targets`. **The predicted effect on the return rate is
+   untested**: it needs a PoC or production re-run, and the PoC harness's own
+   writer prompt (`gate_b.py:writer_prompt`) still carries the old flat rules,
+   so it has to be synced before an A/B means anything.
 2. **Statistics are not quality.** The st1 pass and the reading close
    part of this gap, but human judgment on longer stretches (does a
    whole skeleton-guided novel *read* better?) remains untested.

@@ -42,8 +42,20 @@ MODE_GUIDE = {
     "TRANSITION": "brief connective tissue moving time or place",
 }
 
-WORDS_PER_BLOCK = 90        # matches the Gate C word-budget convention
 MIN_BLOCKS, MAX_BLOCKS = 4, 60
+DEFAULT_WORD_TARGET = 1400
+
+# Fallback paragraph lengths, used only if the grammar file predates the
+# measured `paragraph_words` section. Same shape as the measured stats.
+_FALLBACK_WORDS = {
+    "SETTING": {"mean": 104.7, "p25": 47, "p75": 137},
+    "CHARACTER_DESC": {"mean": 91.3, "p25": 32, "p75": 123},
+    "LORE": {"mean": 115.0, "p25": 34, "p75": 149},
+    "DIALOGUE": {"mean": 41.5, "p25": 11, "p75": 48},
+    "ACTION": {"mean": 74.3, "p25": 25, "p75": 97},
+    "INTERIORITY": {"mean": 93.6, "p25": 38, "p75": 122},
+    "TRANSITION": {"mean": 10.2, "p25": 4, "p75": 7},
+}
 
 # Hand-defined scene layer (Gate A): each type anchors a carrier mode and a
 # mean length in blocks; freq is the pick weight at scene boundaries.
@@ -66,6 +78,26 @@ def _grammar() -> dict:
         g["_kernel2"] = {tuple(k.split("|")): v["next"]
                          for k, v in g.get("second_order", {}).items()}
     return _grammar_cache
+
+
+def mode_word_stats() -> Dict[str, Dict[str, float]]:
+    """Measured paragraph length per block mode (words).
+
+    A flat words-per-paragraph figure is the wrong instrument: in the masters
+    a DIALOGUE paragraph runs 22 words at the median and a LORE paragraph 85,
+    so one number forces short modes long and long modes short. Told "60-130
+    words" for every item, the writer packed five or six speech turns into a
+    single DIALOGUE paragraph, which is the craft defect Slice 4's reading
+    notes flagged (docs/SLICE4_SCENE_SKELETON_RESULTS.md section 6.1).
+    """
+    stats = _grammar().get("paragraph_words") or {}
+    return stats.get("by_mode") or _FALLBACK_WORDS
+
+
+def expected_words(skeleton: List[str]) -> float:
+    """The prose length a plan should produce, at measured paragraph lengths."""
+    w = mode_word_stats()
+    return sum(w.get(m, {}).get("mean", 0.0) for m in skeleton)
 
 
 def _weighted(rng: random.Random, dist: Dict[str, float]) -> str:
@@ -109,18 +141,27 @@ def _next_dist(prev: Optional[str], cur: str,
 
 def generate_skeleton(word_target: int, tension: Optional[float] = None,
                       seed: Optional[int] = None) -> List[str]:
-    """Sample a typed paragraph plan sized for ``word_target`` words.
+    """Sample a typed paragraph plan whose measured length is ``word_target``.
 
-    The generative stack is the Gate-A sampler: measured opener
-    distribution, a persistent scene layer, within-scene steps from the
-    measured second-order kernel (optionally reweighted by the scene's
-    tension target), and a measured closer bias on the final block.
+    The generative stack is the Gate-A sampler: measured opener distribution,
+    a persistent scene layer, within-scene steps from the measured
+    second-order kernel (optionally reweighted by the scene's tension
+    target), and a measured closer on the final block.
+
+    Sizing is by *word budget*, not by a flat block count. Mode mix decides
+    how many paragraphs a target buys: at measured lengths a 1400-word
+    dialogue scene is roughly 34 paragraphs and the same target in exposition
+    is roughly 12. The old flat divisor gave both 16, which a dialogue scene
+    can only reach by overfilling paragraphs.
     """
     g = _grammar()
     rng = random.Random(seed)
     ratio = _tension_ratio(tension)
-    n = max(MIN_BLOCKS, min(MAX_BLOCKS,
-                            round((word_target or 1400) / WORDS_PER_BLOCK)))
+    words = mode_word_stats()
+    budget = word_target or DEFAULT_WORD_TARGET
+
+    def cost(mode):
+        return words.get(mode, {}).get("mean", 0.0)
 
     def scene_for(mode):
         for name, carrier, mean_len, _ in _SCENE_TYPES:
@@ -141,16 +182,28 @@ def generate_skeleton(word_target: int, tension: Optional[float] = None,
     out = [_weighted(rng, g["unit_openers"])]
     scene = scene_for(out[0])
     remaining = scene_len(scene[2]) if scene else 0
+    spent = cost(out[0])
 
-    while len(out) < n:
+    # The closing paragraph is appended after the loop, so its expected cost
+    # is held back rather than overshooting the target by a whole block.
+    closers = g["unit_closers"]
+    reserve = sum(w * cost(m) for m, w in closers.items()) / sum(closers.values())
+
+    def room_left():
+        """Budget still to fill, holding back the closing paragraph's share."""
+        if len(out) < MIN_BLOCKS - 1:
+            return True
+        if len(out) >= MAX_BLOCKS - 1:
+            return False
+        return spent + reserve < budget
+
+    while room_left():
         prev = out[-2] if len(out) >= 2 else None
         cur = out[-1]
-        if len(out) == n - 1:
-            out.append(_weighted(rng, g["unit_closers"]))
-            break
         if scene is None:
             nxt = _weighted(rng, _next_dist(prev, cur, ratio))
             out.append(nxt)
+            spent += cost(nxt)
             scene = scene_for(nxt)
             if scene:
                 remaining = scene_len(scene[2])
@@ -160,18 +213,34 @@ def generate_skeleton(word_target: int, tension: Optional[float] = None,
             remaining = scene_len(scene[2])
             if rng.random() < 0.04:
                 out.append("TRANSITION")
+                spent += cost("TRANSITION")
                 continue
             if rng.random() < 0.18:
-                out.append(_weighted(rng, {"SETTING": 0.5,
-                                           "CHARACTER_DESC": 0.2,
-                                           "LORE": 0.3}))
+                nxt = _weighted(rng, {"SETTING": 0.5,
+                                      "CHARACTER_DESC": 0.2,
+                                      "LORE": 0.3})
+                out.append(nxt)
+                spent += cost(nxt)
                 continue
             out.append(scene[1])
+            spent += cost(scene[1])
             remaining -= 1
             continue
-        out.append(_weighted(rng, _next_dist(prev, cur, ratio)))
+        nxt = _weighted(rng, _next_dist(prev, cur, ratio))
+        out.append(nxt)
+        spent += cost(nxt)
         remaining -= 1
+
+    out.append(_weighted(rng, g["unit_closers"]))
     return out
+
+
+def _word_range(mode: str) -> Tuple[int, int]:
+    """The item's word range: the measured interquartile band, rounded to 5."""
+    w = mode_word_stats().get(mode) or _FALLBACK_WORDS.get(mode, {})
+    lo = max(5, int(round(w.get("p25", 40) / 5.0)) * 5)
+    hi = max(lo + 5, int(round(w.get("p75", 120) / 5.0)) * 5)
+    return lo, hi
 
 
 def skeleton_prompt_section(skeleton: List[str]) -> str:
@@ -180,14 +249,24 @@ def skeleton_prompt_section(skeleton: List[str]) -> str:
     The marker rules are the Gate B lessons verbatim: per-item markers (the
     naive exactly-N-paragraphs instruction failed 0/4), one item = one
     paragraph, and an explicit no-compression rule.
+
+    Each item also carries its own measured word range, and consecutive
+    DIALOGUE items are declared one-speech-turn-each. The previous flat
+    "60-130 words" rule applied a single length to every mode and told the
+    writer a DIALOGUE paragraph could hold several exchanges, which packed
+    five or six speech turns into one paragraph: nonstandard on the page and
+    the likely cause of the skeleton arm's low excursion-return rate.
     """
-    lines = [f"{i + 1}. {m}: {MODE_GUIDE[m]}"
-             for i, m in enumerate(skeleton)]
+    lines = []
+    for i, m in enumerate(skeleton):
+        lo, hi = _word_range(m)
+        lines.append(f"{i + 1}. {m}, {lo}-{hi} words: {MODE_GUIDE[m]}")
+    target = round(expected_words(skeleton))
     return f"""
 
 **Paragraph Plan (structural guidance):** follow this {len(skeleton)}-item
 paragraph plan EXACTLY; each numbered item names the single dominant mode
-that paragraph must have.
+that paragraph must have, and the length that paragraph should run.
 
 {chr(10).join(lines)}
 
@@ -197,12 +276,16 @@ Plan rules:
   order. The markers are removed mechanically afterwards; never refer to
   them in the prose.
 - One plan item = one paragraph. Never split an item into several
-  paragraphs; a DIALOGUE paragraph may hold several exchanges of quoted
-  speech inside one paragraph.
+  paragraphs, and never merge two items into one.
+- Consecutive DIALOGUE items are consecutive speech turns: each item is ONE
+  character speaking, with its dialogue tag and any accompanying beat of
+  business. When the speaker changes, the item changes. Never pack several
+  exchanges into a single paragraph.
 - Do not compress, summarize, or wrap the scene up early: all
   {len(skeleton)} items, one paragraph each.
-- Write full paragraphs, roughly 60-130 words each: reach the scene's
-  word target through paragraph fullness, never by adding paragraphs.
+- Write each paragraph to its own stated range; those ranges add up to the
+  scene's target of roughly {target} words. Reach the target through the
+  plan, never by adding, dropping or merging paragraphs.
 - A paragraph's dominant mode must match its plan item."""
 
 

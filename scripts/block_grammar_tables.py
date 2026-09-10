@@ -7,6 +7,14 @@ and prints every table as Markdown, or dumps the full statistics as JSON for
 downstream consumers (experiments/block_grammar_poc reads that JSON).
 No LLM calls; pure aggregation.
 
+Paragraph *word* statistics (per mode) need the source prose, which the
+sidecars do not carry, so they are measured by aligning each book's
+per-paragraph labels to the extracted markdown in work/corpus/extracted.
+Alignment is accepted only when a unit offset reproduces every unit's
+paragraph count exactly; books that do not align are skipped and named. The
+whole section is optional: with no extracted corpus on disk (work/ is
+gitignored) the word tables are omitted and everything else is unaffected.
+
 Usage:
     python scripts/block_grammar_tables.py                   # Markdown tables
     python scripts/block_grammar_tables.py --include-giants  # + judged giants
@@ -21,11 +29,14 @@ import argparse
 import glob
 import json
 import os
+import re
 import statistics
 from collections import Counter, defaultdict
 
 SIDE_DIR = os.path.join(os.path.dirname(__file__), "..",
                         "work", "corpus", "scores", "nd1_ab", "deepseek")
+MD_DIR = os.path.join(os.path.dirname(__file__), "..",
+                      "work", "corpus", "extracted")
 GIANTS = {"collins-womaninwhite", "eliot-middlemarch", "dickens-bleakhouse",
           "dumas-montecristo", "tolstoy-warandpeace"}
 MODES = ["SETTING", "CHARACTER_DESC", "LORE", "DIALOGUE", "ACTION",
@@ -44,6 +55,83 @@ def load_books(include_giants):
         with open(path) as f:
             books[name] = json.load(f)
     return books
+
+
+_HEADING = re.compile(r"^#{1,6}\s+\S")
+
+
+def _md_units(path):
+    """The extracted markdown as units of paragraphs, the way nd1 segments it:
+    an ATX heading opens a unit, paragraphs are blank-line separated."""
+    units, cur = [], []
+    for line in open(path, encoding="utf-8").read().split("\n"):
+        if _HEADING.match(line):
+            if cur:
+                units.append(cur)
+            cur = [line]
+        else:
+            cur.append(line)
+    if cur:
+        units.append(cur)
+    out = []
+    for u in units:
+        body = "\n".join(u[1:]) if _HEADING.match(u[0]) else "\n".join(u)
+        out.append([p.strip() for p in re.split(r"\n\s*\n", body) if p.strip()])
+    return out
+
+
+def _align_offset(per_unit, md_units):
+    """The offset at which md_units reproduces every unit's paragraph count.
+
+    Books carry a variable amount of front matter ahead of the first judged
+    unit, so the offset is searched rather than assumed. Exact match only:
+    a partial match means the paragraph split disagrees with the judge's,
+    and a misaligned book would silently poison the word statistics.
+    """
+    expected = [u["n_paragraphs"] for u in per_unit]
+    for off in range(0, max(1, len(md_units) - len(per_unit) + 1)):
+        if [len(x) for x in md_units[off:off + len(per_unit)]] == expected:
+            return off
+    return None
+
+
+def measure_paragraph_words(books):
+    """Words per paragraph by mode, over the books that align exactly.
+
+    Returns (stats, aligned, skipped) with stats[mode] a list of word counts;
+    an empty stats dict means no extracted corpus was found.
+    """
+    words = defaultdict(list)
+    aligned, skipped = [], []
+    for name, d in books.items():
+        md = os.path.join(MD_DIR, name + ".md")
+        if not os.path.exists(md):
+            skipped.append((name, "no extracted markdown"))
+            continue
+        per_unit = sorted(d["metrics"]["block_rhythm"]["per_unit"],
+                          key=lambda u: u["index"])
+        md_units = _md_units(md)
+        off = _align_offset(per_unit, md_units)
+        if off is None:
+            skipped.append((name, "no exact paragraph alignment"))
+            continue
+        aligned.append(name)
+        for unit, paras in zip(per_unit, md_units[off:off + len(per_unit)]):
+            for label, para in zip(unit["labels"], paras):
+                mode = label[0] if label else None
+                if mode in MODES:
+                    words[mode].append(len(para.split()))
+    return words, sorted(aligned), skipped
+
+
+def _word_stats(values):
+    s = sorted(values)
+
+    def q(f):
+        return s[min(len(s) - 1, int(len(s) * f))]
+
+    return {"mean": statistics.mean(s), "median": statistics.median(s),
+            "p25": q(0.25), "p75": q(0.75), "p90": q(0.90), "n": len(s)}
 
 
 def compute(books):
@@ -108,6 +196,8 @@ def compute(books):
     agg["row_tot"] = row_tot
     agg["p"] = lambda a, b: (agg["trans"][(a, b)] / row_tot[a]
                              if row_tot[a] else 0.0)
+    (agg["para_words"], agg["para_words_books"],
+     agg["para_words_skipped"]) = measure_paragraph_words(books)
     return agg
 
 
@@ -187,6 +277,33 @@ def print_tables(books, agg):
     for dlt, a, b, cnt, o, e in sorted(rows, reverse=True):
         print(f"| {a} -> {b} -> back | {cnt:,} | {o:.3f} | {e:.3f} | {dlt:+.3f} |")
 
+    _print_paragraph_words(agg)
+
+
+def _print_paragraph_words(agg):
+    words = agg["para_words"]
+    print("\n## Paragraph length by block mode (words)\n")
+    if not words:
+        print("_No extracted corpus on disk; word statistics skipped._\n")
+        return
+    everything = [w for m in MODES for w in words.get(m, ())]
+    o = _word_stats(everything)
+    print(f"Measured on {len(agg['para_words_books'])} aligned books, "
+          f"{o['n']:,} paragraphs. Pooled mean {o['mean']:.1f}, "
+          f"median {o['median']:.0f}.\n")
+    if agg["para_words_skipped"]:
+        print("Skipped: " + ", ".join(f"{b} ({r})"
+                                      for b, r in agg["para_words_skipped"])
+              + "\n")
+    print("| mode | n | mean | p25 | median | p75 | p90 |")
+    print("|---|---:|---:|---:|---:|---:|---:|")
+    for m in MODES:
+        if not words.get(m):
+            continue
+        w = _word_stats(words[m])
+        print(f"| {m} | {w['n']:,} | {w['mean']:.1f} | {w['p25']} | "
+              f"{w['median']:.0f} | {w['p75']} | {w['p90']} |")
+
 
 def _second_order(agg, min_n):
     """P(next | prev, current) for contexts with enough support.
@@ -209,6 +326,29 @@ def _second_order(agg, min_n):
                      for c in MODES if agg["trans2"][(a, b, c)]},
         }
     return out
+
+
+def _paragraph_words_json(agg):
+    """Per-mode paragraph word statistics, or None with no extracted corpus.
+
+    These size the scene skeleton and its per-item word guidance: a flat
+    words-per-paragraph figure forces short modes long and long modes short,
+    which is what made DIALOGUE paragraphs pack several speech turns each
+    (docs/SLICE4_SCENE_SKELETON_RESULTS.md section 6.1).
+    """
+    words = agg["para_words"]
+    if not words:
+        return None
+    everything = [w for m in MODES for w in words.get(m, ())]
+    return {
+        "source": "per-paragraph labels aligned to work/corpus/extracted/*.md",
+        "n_books": len(agg["para_words_books"]),
+        "books": agg["para_words_books"],
+        "skipped": [{"book": b, "reason": r}
+                    for b, r in agg["para_words_skipped"]],
+        "overall": _word_stats(everything),
+        "by_mode": {m: _word_stats(words[m]) for m in MODES if words.get(m)},
+    }
 
 
 def dump_json(books, agg, path):
@@ -262,6 +402,7 @@ def dump_json(books, agg, path):
             band: {m: c[m] / sum(c.values()) for m in MODES}
             for band, c in agg["tension_band"].items()
         },
+        "paragraph_words": _paragraph_words_json(agg),
         "shading": {
             "rate": agg["sec_total"] / agg["prim_total"],
             "top_pairs": [

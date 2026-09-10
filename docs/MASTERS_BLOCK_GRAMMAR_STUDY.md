@@ -125,6 +125,45 @@ Sampling from the matrix reproduces the masters' run lengths. Persistence and
 long-range structure must therefore come from levels above the block, which
 Section 7 shows is also what the data demands.
 
+## 5b. Paragraph length is a property of the mode, not of the book
+
+Added 2026-09-10. Block *counts* say nothing about how long a scene will run,
+because a paragraph's length depends almost entirely on which mode it is. The
+labels carry no word counts, so these are measured by aligning each book's
+per-paragraph labels back to the extracted markdown; alignment is accepted
+only where a unit offset reproduces every unit's paragraph count exactly, and
+all 21 books align.
+
+| mode | n | mean | p25 | median | p75 | p90 |
+|---|---:|---:|---:|---:|---:|---:|
+| SETTING | 1,571 | 104.7 | 47 | 85 | 137 | 209 |
+| CHARACTER_DESC | 1,115 | 91.3 | 32 | 69 | 123 | 197 |
+| LORE | 1,292 | 115.0 | 34 | 85 | 149 | 243 |
+| DIALOGUE | 21,741 | 41.5 | 11 | 22 | 48 | 94 |
+| ACTION | 8,936 | 74.3 | 25 | 53 | 97 | 158 |
+| INTERIORITY | 3,381 | 93.6 | 38 | 72 | 122 | 191 |
+| TRANSITION | 459 | 10.2 | 4 | 5 | 7 | 25 |
+
+Pooled over all 38,495 paragraphs the mean is **59.8 words, median 35**.
+
+Two consequences, both load-bearing for Slice 4:
+
+1. **A dialogue paragraph is a speech turn.** At a 22-word median it holds one
+   character's words plus a tag, which is why DIALOGUE is 56.5% of all
+   paragraphs while being far short of 56.5% of the words. Any instruction
+   that asks for a uniformly "full" paragraph is asking the writer to pack
+   several turns together, and that is exactly what it does.
+2. **Scene length must be budgeted by mode mix, not by block count.** At these
+   lengths 1,400 words is roughly 34 dialogue paragraphs or roughly 12
+   exposition paragraphs. A flat words-per-paragraph divisor gives both the
+   same count and silently distorts whichever mode it is wrong about.
+
+Note on the earlier figure: the "90 words per paragraph" that appeared in the
+Slice 4 masters column was `WORDS_PER_BLOCK`, the shared word budget the Gate C
+harness set for both arms. It was a convention, never a measurement, and it was
+hardcoded next to values that were genuinely read from this corpus. The
+measured figure is 59.8.
+
 ## 6. Position and tension condition the mix only mildly
 
 **By book position** (paragraph deciles, pooled): the mix is nearly

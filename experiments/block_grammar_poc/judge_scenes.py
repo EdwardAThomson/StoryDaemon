@@ -49,7 +49,11 @@ def main():
         "return": g.raw["aba"]["overall_observed"],
         "dlg_share": g.base["DIALOGUE"],
         "dlg_run": 3.32,
-        "words_per_para": 90.0,
+        # Measured, not assumed. This was hardcoded at 90.0 while every other
+        # entry read the grammar, so the masters column reported a convention
+        # (gate_c's shared word budget) as if it were a corpus statistic; the
+        # real pooled figure over 38,495 masters paragraphs is 59.8.
+        "words_per_para": g.raw["paragraph_words"]["overall"]["mean"],
     }
 
     cells = {}
