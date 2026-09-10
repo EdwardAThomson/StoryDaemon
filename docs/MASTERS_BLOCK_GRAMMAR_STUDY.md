@@ -502,16 +502,81 @@ its purity threshold:
 It can bracket the hand-tuned constants (they sit near a 0.7 threshold) but it
 cannot determine them.
 
+### Scope: this measures the plan generator, not the control the DSL exists for
+
+Worth stating plainly, because the negative result above is easy to over-read.
+
+The DSL exists to make generated prose resemble human prose: to hold the mix
+of dialogue, action and exposition near the masters' proportions and to make
+the rhythm read as written rather than assembled. On that purpose the evidence
+is positive and unaffected by anything in this section. Slice 4's production
+A/B found unguided gpt-5.5 writing a dialogue share of 0.351 against the
+masters' 0.565, in paragraphs of 17 words against a measured 59.8, and the
+paragraph plan pulled both back (0.500 and roughly 100). The proportion control
+works, and it lives in the *writer prompt*.
+
+Everything in Section 12 is one level up from that, inside the sampler that
+*builds* the plan. Whether a plan's runs come from a hidden scene state or from
+two blocks of context is invisible to the writer, which sees an ordered list of
+paragraph types either way. So "the hidden layer is not needed" is a statement
+about sampler internals. It is not a statement about whether the system needs a
+concept of a scene.
+
+And on that second question the data leans the other way. The induced
+conversation state persists for 24.3 blocks at K=5 and 35.2 at K=8, which at
+measured paragraph lengths is roughly 1,000 to 1,500 words: scene-sized. Scenes
+are a real, measurable unit in this corpus. What the analysis shows is only
+that reproducing one statistic about interruptions does not require modelling
+them.
+
+#### Commitment, the statistic that actually matters here
+
+`BLOCK_DECOMPOSITION_STUDY.md` named the real gap as rhythm and *commitment*:
+masters sustain carrier set-pieces of 565 to 1,618 words where generated prose
+managed 204 to 346. None of the statistics compared above measure that, so the
+"drop `_SCENE_TYPES`" reading was drawn from the wrong evidence. Measuring it
+directly, as maximal stretches where one carrier holds at least 0.7 of the
+blocks, priced in words at measured per-mode lengths:
+
+| generator | mean set-piece | p90 | longest |
+|---|---:|---:|---:|
+| masters | 820 | 2,324 | 12,095 |
+| shipped hybrid | 539 | 1,563 | 3,204 |
+| second-order only | 666 | 1,804 | 10,401 |
+
+The scene layer does not win on commitment either. **Caveat, and it is not a
+small one:** the hybrid's skeletons averaged 42 blocks against the corpus's
+58.4, and shorter sequences mechanically shorten set-pieces, so this comparison
+is not clean. It is a reason to run the Gate A experiment, not a result on its
+own.
+
+#### The open question about scenes is not a statistical one
+
+A scene in the authorial sense is one continuous dramatic unit: same place,
+same cast, one purpose. Block labels carry none of that. A plan can say
+"paragraph 7 is DIALOGUE" but nothing in it says "paragraphs 1 to 24 are one
+conversation in the captain's cabin about the missing chart." So the pipeline
+can produce a plan that is scene-shaped by every statistic in this document
+while the prose wanders in *intent*, and no block-sequence analysis will ever
+detect it, because intent is not in the labels.
+
+That is the scene question worth answering, it is not what inducing L2 from
+block labels would have delivered, and measuring it at all needs a different
+annotation pass over the corpus.
+
 ### What this means for the design
 
-1. **Section 7 no longer carries the hierarchy argument.** L2 may still be
-   worth building, but on its own merits: control over scene entry, exit,
-   length and *intent*, which is what the section's closing sentence actually
-   worries about ("aimless drift between scene intents"). Drift of intent is
-   not visible in block labels at all, so no amount of block-sequence
-   statistics will settle it. That is a different study, and it needs a
-   different annotation pass.
-2. **A scene layer exists, but it is small and already approximated.** The
+1. **The scene question that matters is about intent, and it is still open.**
+   Section 7's closing sentence names the real worry ("aimless drift between
+   scene intents"), and nothing here addresses it: intent is not in the block
+   labels, so no amount of block-sequence statistics will settle it. Scenes
+   are real and scene-sized in this corpus (the induced conversation state
+   runs 1,000 to 1,500 words). What is retired is inducing L2 *from block
+   labels*, not the idea of a scene.
+2. **Section 7 no longer carries the hierarchy argument.** The excursion-return
+   excess is second-order memory. Reading 1 of that section (rapid A-B-A
+   alternation is master behaviour, not a defect) stands unchanged.
+3. **A scene layer exists, but it is small and already approximated.** The
    induced states recover three recognisable types whose dwell lengths sit
    close to the hand-tuned constants (conversation 24.3 against 21.0,
    exposition 4.8 against 3.8), plus a narration state that takes most chapter
@@ -519,7 +584,7 @@ cannot determine them.
    description, and simultaneously a reason not to invest in fitting it more
    precisely: the payoff over what is already in the code is small, and the
    generator does not improve.
-3. **The scene layer is not what makes the shipped sampler work.** Comparing
+4. **The scene layer is not what makes the shipped sampler work.** Comparing
    the shipped hybrid against a pure second-order sampler over the statistics
    Gate A checks, second-order matches the masters better on every base rate,
    every run length, and the return rate. The hybrid's one decisive advantage
@@ -538,8 +603,11 @@ cannot determine them.
    So the load-bearing parts of the sampler are the second-order kernel and
    the explicit opener/closer treatment. The hand-defined scene layer costs a
    little accuracy on shares and run lengths and earns none of the return rate.
-4. **Concrete next step, not taken here:** re-run Gate A's 25 checks against a
+5. **Concrete next step, not taken here:** re-run Gate A's 25 checks against a
    sampler that keeps the second-order kernel and the measured openers and
    closers but drops `_SCENE_TYPES`. Gate A's 25/25 was scored against the
    hybrid, so the comparison has to be made on the same instrument before
-   anything is removed from a shipping path.
+   anything is removed from a shipping path, and the run must include a
+   commitment measure at matched sequence lengths (see above): the statistics
+   Gate A checks today would not notice a sampler that stopped sustaining
+   set-pieces.
