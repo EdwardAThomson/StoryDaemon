@@ -239,6 +239,14 @@ bearing for the DSL:
    block-level flip-flop but aimless drift between scene intents, one level
    up.
 
+   > **Superseded, 2026-09-10 (see Section 12).** Reading 2 compares against
+   > the wrong null. The excess over a *first-order* prediction is fully
+   > accounted for by a **second-order** chain (0.353 against the observed
+   > 0.355), so it is evidence for one block of memory, not for a level above
+   > the block. Reading 1 stands unchanged, and the closing sentence here about
+   > drift of *intent* is still the real argument for L2, but intent is not
+   > visible in block labels, so this statistic cannot support it.
+
 ## 8. Secondary shading (the sub-block seed data)
 
 7,851 of 38,495 paragraphs (20.4%) carry a secondary label; blocks are not
@@ -360,13 +368,18 @@ masters do" is unchanged and if anything sharper.
    `scripts/block_grammar_tables.py --json`). Gates B (skeleton-to-prose
    round-trip) and C (does skeleton guidance move the known failure metrics)
    are specified in its README.
-1. **Induce the scene layer (L2).** Nothing labels scenes in the corpus. Two
-   routes, both LLM-free: heuristic segmentation (maximal stretches whose
-   carrier-mode share stays above a threshold), or fitting a small
-   hidden-state HMM/HSMM by EM over the 38k-paragraph label sequences and
-   checking the emergent states read as scene types. Expected outcome: 4-6
-   scene types plus their emission matrices, entry/exit vectors, and length
-   distributions. This is the missing piece of Section 9.
+1. ~~**Induce the scene layer (L2).**~~ **Done 2026-09-10, negative: see
+   Section 12.** Both proposed routes were run
+   (`scripts/scene_layer_hmm.py`). The statistic that motivated the search
+   turns out to be second-order memory rather than hierarchy, and no fitted
+   HMM generates block sequences as well as a plain second-order table. Three
+   recognisable scene types do emerge (a long conversation, an exposition
+   passage, a mixed narration opening) and they sit close to the hand-tuned
+   constants already shipping; the additional states are dwell-1 oscillators
+   encoding alternation, not scene identity. The heuristic route's answer is
+   set by its own threshold. What remains open is not "induce L2 from block
+   labels" (block labels cannot settle it) but whether scene *intent* needs
+   explicit control, which needs a different annotation.
 2. **Register/genre-conditioned matrices.** The corpus supports a two-way
    split now (dialogue-led vs narration-led books); proper per-genre matrices
    need corpus growth. Rerun `scripts/block_grammar_tables.py` over subsets.
@@ -375,3 +388,158 @@ masters do" is unchanged and if anything sharper.
 4. **Order within blocks.** If sub-block sequencing matters to the DSL, the
    secondary labels are insufficient (unordered); a finer-grained annotation
    pass (sentence-level, sampled chapters only) would be the follow-up study.
+
+## 12. Inducing the scene layer: the excursion-return excess is memory, not hierarchy
+
+Added 2026-09-10, closing gap 1 of Section 11 ("induce the scene layer").
+Tooling: `scripts/scene_layer_hmm.py` (Baum-Welch over the label sequences,
+numpy only, no LLM calls). Both routes Section 11 proposed were run.
+
+**The result is negative, and it lands on Section 7's argument.** Section 7
+infers a hidden persistent state from the excursion-return excess: the masters
+return to an interrupted mode 0.355 of the time against a first-order
+prediction of 0.238, and "a flat block-level matrix cannot represent 'we are
+still in the conversation'." That inference compares against the wrong null. A
+plain **second-order** chain, `P(next | prev, current)` with backoff on thin
+cells, reproduces the rate almost exactly:
+
+| generator | return rate | vs masters 0.355 |
+|---|---:|---:|
+| first-order Markov | 0.234 | -0.121 |
+| **second-order Markov** | **0.353** | **-0.002** |
+| shipped hybrid sampler (scene layer + second-order kernel) | 0.335 | -0.020 |
+| best fitted HMM (K=5, K=8) | 0.321 to 0.326 | -0.034 to -0.029 |
+
+Cross-validated by book, so this is not the 343-cell table memorising its own
+corpus. Trained on three quarters of the books, simulating the held-out
+quarter's unit-length profile:
+
+| fold | held-out books | observed | first-order | second-order |
+|---|---:|---:|---:|---:|
+| 0 | 6 | 0.356 | 0.237 | 0.355 |
+| 1 | 5 | 0.326 | 0.238 | 0.356 |
+| 2 | 5 | 0.366 | 0.234 | 0.344 |
+| 3 | 5 | 0.365 | 0.229 | 0.356 |
+
+One extra block of context, not a scene, accounts for the entire excess. The
+beat idiom Section 7 describes is real and still master behaviour; what is not
+supported is treating it as *evidence for a level above the block*.
+
+Half of this correction was already in the document. Section 9's L3 entry
+records that the Gate A PoC revised the first-order hypothesis precisely
+because it "undershoots the return rate," and the shipped sampler has used the
+second-order kernel ever since. Section 7's hierarchy argument was simply never
+revisited against that finding.
+
+### The HMM route: some real scene types, and states spent on memory
+
+Fitting hidden states directly (`scripts/scene_layer_hmm.py`, Baum-Welch,
+held-out by book) gives a more interesting answer than a flat negative.
+
+A caveat first, because it bit this analysis. Baum-Welch collapses to a
+degenerate fit from roughly half of random starts on this data (two states
+dominated by one mode, a non-sticky transition matrix, no convergence inside
+the iteration cap). The highest-likelihood restart is reliably the correct one,
+so restart count is what buys reliability, and a first pass at four restarts
+produced a spurious pattern: return rate apparently flat near 0.30 through K=7
+then jumping at K=8. At six restarts that jump disappears. **It was
+under-optimisation, not signal.** The numbers below are the ones to trust; a
+full K sweep at a trustworthy restart count has not been run, because the
+second-order result above already settles the question it was asked to answer.
+
+| K | train ll/blk | held-out ll/blk | return rate |
+|---|---:|---:|---:|
+| 5 | -1.1208 | -1.1949 | 0.326 |
+| 8 | -1.1063 | -1.1858 | 0.321 |
+
+No fitted HMM reached the masters' 0.355, and none came near plain
+second-order's 0.353. As a generator of block sequences the hidden layer is
+simply worse than one extra block of context.
+
+The induced states are worth reading anyway. At K=5:
+
+| state | share | dwell | dominant emission | self-transition |
+|---|---:|---:|---|---:|
+| DIALOGUE_1 | 0.573 | 24.3 | DIALOGUE 0.860 | 0.938 |
+| ACTION_1 | 0.222 | 5.6 | ACTION 0.407, INTERIORITY 0.241, SETTING 0.159 | 0.743 |
+| ACTION_2 | 0.110 | 1.4 | ACTION 0.472, DIALOGUE 0.334 | 0.341 |
+| DIALOGUE_2 | 0.070 | 1.0 | DIALOGUE 0.896 | 0.053 |
+| LORE | 0.026 | 4.8 | LORE 0.734 | 0.725 |
+
+Three of these read as scene types, and match the hand-defined layer more
+closely than expected. `DIALOGUE_1` is a long sticky conversation with a dwell
+of 24.3 blocks, against the hand-tuned `DIALOGUE_SCENE` mean of 21.0. `LORE` is
+an exposition passage at 4.8 blocks against a hand-tuned 3.8. `ACTION_1` is a
+mixed narration state carrying action, interiority and setting together, and it
+takes 0.728 of the chapter entries: chapters open by orienting, exactly as
+Section 4 measured.
+
+The other two are not scene types at all. `DIALOGUE_2` and `ACTION_2` both have
+a dwell of 1.0 to 1.4 and transition into each other at 0.842 and 0.559: a
+two-state oscillator whose entire job is to alternate. That is the A-B-A beat
+idiom of Section 7, encoded in hidden state because the emission model has no
+other way to remember what the previous block was. At K=8 the pattern is
+sharper still: one dominant conversation state (share 0.672, dwell 35.2,
+self-transition 0.930) plus a second dwell-1.0 oscillator pair transitioning
+into each other at 0.762 in both directions.
+
+So the extra states past the recognisable few are memory in disguise, which is
+why held-out likelihood keeps improving with K while the return rate does not,
+and why a second-order table beats all of them. The scene layer that *is*
+present in the data is small, and the shipped hand-tuned constants already
+approximate it.
+
+The heuristic route is inconclusive by construction, since its answer is set by
+its purity threshold:
+
+| carrier-share threshold | DIALOGUE | ACTION | INTERIORITY | LORE |
+|---|---:|---:|---:|---:|
+| 0.5 | 49.6 | 8.8 | 4.6 | 4.8 |
+| 0.7 | 24.8 | 5.5 | 3.8 | 5.4 |
+| 0.9 | 6.8 | 2.7 | 2.6 | 3.6 |
+| *hand-tuned `_SCENE_TYPES` today* | *21.0* | *9.0* | *3.8* | *3.8* |
+
+It can bracket the hand-tuned constants (they sit near a 0.7 threshold) but it
+cannot determine them.
+
+### What this means for the design
+
+1. **Section 7 no longer carries the hierarchy argument.** L2 may still be
+   worth building, but on its own merits: control over scene entry, exit,
+   length and *intent*, which is what the section's closing sentence actually
+   worries about ("aimless drift between scene intents"). Drift of intent is
+   not visible in block labels at all, so no amount of block-sequence
+   statistics will settle it. That is a different study, and it needs a
+   different annotation pass.
+2. **A scene layer exists, but it is small and already approximated.** The
+   induced states recover three recognisable types whose dwell lengths sit
+   close to the hand-tuned constants (conversation 24.3 against 21.0,
+   exposition 4.8 against 3.8), plus a narration state that takes most chapter
+   entries. That is a modest vindication of the shipped scene layer as a
+   description, and simultaneously a reason not to invest in fitting it more
+   precisely: the payoff over what is already in the code is small, and the
+   generator does not improve.
+3. **The scene layer is not what makes the shipped sampler work.** Comparing
+   the shipped hybrid against a pure second-order sampler over the statistics
+   Gate A checks, second-order matches the masters better on every base rate,
+   every run length, and the return rate. The hybrid's one decisive advantage
+   is the chapter boundary, where it applies the measured closer distribution:
+   closing on DIALOGUE is 0.238 in the masters and 0.226 under the hybrid, but
+   0.589 under pure second-order, which simply runs off the end of the unit.
+
+   | statistic | masters | hybrid (shipped) | second-order only |
+   |---|---:|---:|---:|
+   | return rate | 0.355 | 0.335 | 0.359 |
+   | close on DIALOGUE | 0.238 | 0.226 | 0.589 |
+   | DIALOGUE share | 0.565 | 0.536 | 0.561 |
+   | DIALOGUE run mean | 3.317 | 3.004 | 3.176 |
+   | LORE run mean | 1.591 | 1.511 | 1.635 |
+
+   So the load-bearing parts of the sampler are the second-order kernel and
+   the explicit opener/closer treatment. The hand-defined scene layer costs a
+   little accuracy on shares and run lengths and earns none of the return rate.
+4. **Concrete next step, not taken here:** re-run Gate A's 25 checks against a
+   sampler that keeps the second-order kernel and the measured openers and
+   closers but drops `_SCENE_TYPES`. Gate A's 25/25 was scored against the
+   hybrid, so the comparison has to be made on the same instrument before
+   anything is removed from a shipping path.
