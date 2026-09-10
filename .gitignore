@@ -19,6 +19,9 @@ venv/
 current_work/
 temp/
 
+# Claude Code local state (agent worktrees, per-user settings)
+.claude/
+
 # Working directory for test novels and experiments
 work/*
 !work/README.md
