@@ -333,6 +333,112 @@ def format_scene_continuation_prompt(scene_so_far: str, writer_context: dict = N
     )
 
 
+SCENE_SECTION_PROMPT_TEMPLATE = """You are a creative fiction writer writing ONE SECTION of a scene, against a paragraph plan.
+
+## Scene Intention
+
+{scene_intention}
+
+## POV Character
+
+{pov_character_name}
+
+{pov_character_details}
+
+## Setting
+
+{location_details}
+
+## Cast
+
+{existing_characters}
+{scene_so_far_section}
+## Your Section: paragraphs {first} to {last}
+
+{plan_lines}
+
+{plan_rules}
+
+## Your Task
+
+{position_instruction}
+
+{continuity_rules}
+
+**OUTPUT FORMAT:** Output ONLY the prose for paragraphs {first} to {last}, each opening with its [n] marker. No title, no notes, no commentary, no text outside your section.
+
+Write paragraphs {first} to {last} now:"""
+
+
+SCENE_SO_FAR_SECTION_TEMPLATE = """
+## The Scene So Far (complete text, paragraphs 1 to {prior_last})
+
+{scene_so_far}
+"""
+
+
+def format_scene_section_prompt(writer_context: dict, plan_lines: str,
+                                plan_rules: str, first: int, last: int,
+                                scene_so_far: str = "",
+                                is_first: bool = False,
+                                is_last: bool = False) -> str:
+    """Format one section request for sectioned scene writing (DSL Slice 5).
+
+    A masters-length chapter is roughly 3,165 words and a single request does
+    not reliably produce one, so the scene is written in plan-addressed
+    sections. Each call gets the whole brief, the prose so far, and only the
+    slice of the plan it owns.
+    """
+    ctx = writer_context or {}
+    if is_first:
+        position = ("This is the OPENING of the scene. Establish it and carry it "
+                    "to the end of your section. Do NOT bring the scene to a close.")
+    elif is_last:
+        position = ("This is the FINAL section. Continue seamlessly from where the "
+                    "text above stops, and land the scene's ending on the last "
+                    "paragraph of your section.")
+    else:
+        position = ("This is a MIDDLE section. Continue seamlessly from where the "
+                    "text above stops. Do NOT bring the scene to a close and do "
+                    "NOT open threads the remaining paragraphs cannot carry.")
+
+    continuity = ["Firm rules:"]
+    if not is_first:
+        continuity += [
+            "1. Do NOT repeat, rephrase, or summarize any text above; pick up "
+            "exactly where it stops.",
+            "2. If it stops mid-sentence, finish that sentence first.",
+            "3. Match the prose style, tense, and deep POV of the text above, "
+            "including its narrative distance and sentence rhythm.",
+        ]
+    else:
+        continuity += [
+            "1. Open in deep POV, in scene, without preamble or summary.",
+        ]
+    if not is_last:
+        continuity.append(f"{len(continuity)}. Stop at the end of paragraph "
+                          f"{last}. Later paragraphs are not yours to write.")
+
+    so_far = ("" if not scene_so_far else
+              SCENE_SO_FAR_SECTION_TEMPLATE.format(
+                  scene_so_far=scene_so_far, prior_last=first - 1))
+
+    return SCENE_SECTION_PROMPT_TEMPLATE.format(
+        scene_intention=ctx.get("scene_intention") or "(as established by the scene)",
+        pov_character_name=ctx.get("pov_character_name") or "the established POV character",
+        pov_character_details=ctx.get("pov_character_details") or "",
+        location_details=ctx.get("location_details") or "",
+        existing_characters=ctx.get("existing_characters") or "",
+        scene_so_far_section=so_far,
+        first=first,
+        last=last,
+        plan_lines=plan_lines,
+        plan_rules=plan_rules,
+        position_instruction=position,
+        continuity_rules=chr(10).join(continuity),
+    )
+
+
 def format_planner_prompt(context: dict) -> str:
     """Format the planner prompt with context variables.
 

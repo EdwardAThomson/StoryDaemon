@@ -243,6 +243,51 @@ def _word_range(mode: str) -> Tuple[int, int]:
     return lo, hi
 
 
+def skeleton_lines(skeleton: List[str], first: int = 1,
+                   last: Optional[int] = None) -> str:
+    """Numbered plan lines for blocks ``first``..``last`` (1-based inclusive).
+
+    Numbers are absolute positions in the whole plan, so a section rendered on
+    its own keeps the same [n] addresses the full plan would have given it.
+    """
+    last = len(skeleton) if last is None else last
+    out = []
+    for i in range(first, last + 1):
+        mode = skeleton[i - 1]
+        lo, hi = _word_range(mode)
+        out.append(f"{i}. {mode}, {lo}-{hi} words: {MODE_GUIDE[mode]}")
+    return chr(10).join(out)
+
+
+def plan_rules(count: int, target_words: int, sectioned: bool = False) -> str:
+    """The plan rules block, shared by the whole-scene and per-section prompts.
+
+    Single source of truth deliberately: these rules encode the Gate B lessons
+    (per-item markers, one item one paragraph, no compression) and the
+    one-speech-turn-per-item dialogue rule, and a copy that drifted out of sync
+    would silently undo either.
+    """
+    scope = "section" if sectioned else "scene"
+    whole = ("" if sectioned else
+             f"\n- Do not compress, summarize, or wrap the scene up early: all\n"
+             f"  {count} items, one paragraph each.")
+    return f"""Plan rules:
+- Begin every paragraph with its plan number in square brackets and a
+  space, e.g. "[7] ", then the prose. Every item appears exactly once, in
+  order. The markers are removed mechanically afterwards; never refer to
+  them in the prose.
+- One plan item = one paragraph. Never split an item into several
+  paragraphs, and never merge two items into one.
+- Consecutive DIALOGUE items are consecutive speech turns: each item is ONE
+  character speaking, with its dialogue tag and any accompanying beat of
+  business. When the speaker changes, the item changes. Never pack several
+  exchanges into a single paragraph.{whole}
+- Write each paragraph to its own stated range; those ranges add up to this
+  {scope}'s target of roughly {target_words} words. Reach the target through the
+  plan, never by adding, dropping or merging paragraphs.
+- A paragraph's dominant mode must match its plan item."""
+
+
 def skeleton_prompt_section(skeleton: List[str]) -> str:
     """Writer-prompt guidance carrying the plan with the [n] marker protocol.
 
@@ -257,36 +302,15 @@ def skeleton_prompt_section(skeleton: List[str]) -> str:
     five or six speech turns into one paragraph: nonstandard on the page and
     the likely cause of the skeleton arm's low excursion-return rate.
     """
-    lines = []
-    for i, m in enumerate(skeleton):
-        lo, hi = _word_range(m)
-        lines.append(f"{i + 1}. {m}, {lo}-{hi} words: {MODE_GUIDE[m]}")
-    target = round(expected_words(skeleton))
     return f"""
 
 **Paragraph Plan (structural guidance):** follow this {len(skeleton)}-item
 paragraph plan EXACTLY; each numbered item names the single dominant mode
 that paragraph must have, and the length that paragraph should run.
 
-{chr(10).join(lines)}
+{skeleton_lines(skeleton)}
 
-Plan rules:
-- Begin every paragraph with its plan number in square brackets and a
-  space, e.g. "[7] ", then the prose. Every item appears exactly once, in
-  order. The markers are removed mechanically afterwards; never refer to
-  them in the prose.
-- One plan item = one paragraph. Never split an item into several
-  paragraphs, and never merge two items into one.
-- Consecutive DIALOGUE items are consecutive speech turns: each item is ONE
-  character speaking, with its dialogue tag and any accompanying beat of
-  business. When the speaker changes, the item changes. Never pack several
-  exchanges into a single paragraph.
-- Do not compress, summarize, or wrap the scene up early: all
-  {len(skeleton)} items, one paragraph each.
-- Write each paragraph to its own stated range; those ranges add up to the
-  scene's target of roughly {target} words. Reach the target through the
-  plan, never by adding, dropping or merging paragraphs.
-- A paragraph's dominant mode must match its plan item."""
+{plan_rules(len(skeleton), round(expected_words(skeleton)))}"""
 
 
 _MARKER = re.compile(r"^[ \t]*\[(\d+)\][ \t]*", re.M)

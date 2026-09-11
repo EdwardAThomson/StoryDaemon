@@ -87,6 +87,15 @@ DEFAULT_CONFIG = {
         'scene_budget_multiplier': 2.0,   # ceiling headroom over the stated word target
         'scene_max_segments': 3,          # total segments per scene (first render + continuations)
 
+        # Sectioned scene writing (DSL Slice 5, experimental). One request does
+        # not reliably produce a masters-length chapter (~3,165 words), so when
+        # on, the scene is written across several calls, each owning a named
+        # slice of the skeleton's [n] blocks and seeing all prose so far.
+        # Requires enable_scene_skeleton. section_blocks 1 is the landing
+        # sketch's literal per-sub-block mode.
+        'subblock_generation': False,
+        'subblock_section_blocks': 10,
+
         # Scene skeletons (Slice 4 of the block DSL, experimental). When on, a
         # typed paragraph plan sampled from the masters' block grammar
         # (agent/scene_skeleton.py; evidence: experiments/block_grammar_poc

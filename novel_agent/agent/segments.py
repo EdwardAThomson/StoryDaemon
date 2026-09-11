@@ -155,6 +155,55 @@ def word_target_for(scene_length: Optional[str], config=None) -> int:
     return targets[label]
 
 
+DEFAULT_SECTION_BLOCKS = 10   # plan items per generation call in sectioned mode
+MIN_SECTION_BLOCKS = 1        # 1 = the landing sketch's literal per-sub-block mode
+
+
+def partition_skeleton(n_blocks: int, section_blocks: int) -> list:
+    """Split an n-block plan into contiguous 1-based inclusive block ranges.
+
+    Sectioned writing exists because a single call will not reliably produce a
+    masters-length chapter: the corpus median is 3,165 words (study section 13)
+    and asking for that in one response gets a short one. Each section is a
+    modest, achievable ask against a named slice of the plan, which is what the
+    [n] marker protocol made addressable.
+
+    A trailing stub is merged into its predecessor rather than left to stand:
+    a one-block final call would be asked to open, sustain and land a section
+    at once, and the scene's ending is the part that can least afford it.
+    """
+    if n_blocks <= 0:
+        return []
+    size = max(MIN_SECTION_BLOCKS, int(section_blocks or DEFAULT_SECTION_BLOCKS))
+    bounds = []
+    start = 1
+    while start <= n_blocks:
+        end = min(start + size - 1, n_blocks)
+        bounds.append((start, end))
+        start = end + 1
+    if len(bounds) > 1:
+        last_start, last_end = bounds[-1]
+        if (last_end - last_start + 1) * 2 <= size:
+            prev_start, _ = bounds[-2]
+            bounds[-2:] = [(prev_start, last_end)]
+    return bounds
+
+
+def section_word_target(skeleton: list, start: int, end: int,
+                        mode_words: dict) -> int:
+    """Words this section should run, at measured per-mode paragraph lengths.
+
+    Sized from the section's own mode mix rather than an even split, for the
+    same reason the whole plan is (study section 5b): a dialogue section and an
+    exposition section of equal block count are not equal amounts of prose.
+    """
+    total = 0.0
+    for mode in skeleton[start - 1:end]:
+        entry = mode_words.get(mode) or {}
+        total += entry.get("mean", 0.0)
+    return int(round(total))
+
+
 def token_budget_for(word_target: int, config=None) -> int:
     """Size a request ceiling from a word target.
 

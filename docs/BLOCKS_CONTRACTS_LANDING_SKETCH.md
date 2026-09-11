@@ -202,6 +202,19 @@ boundaries Slice 5 generates against).
 
 ### Slice 5 (experiment, behind its own flag): per-sub-block generation
 
+> **Built 2026-09-11 at section granularity, unvalidated.**
+> `generation.subblock_generation` ships, but the motivation changed. The
+> richness hypothesis below was answered "not needed for gpt-5.5" by the Slice
+> 4 production runs; what forced the mode instead was *length*. Scene maps to
+> chapter 1:1, a masters chapter is 3,165 words at the median
+> (`MASTERS_BLOCK_GRAMMAR_STUDY.md` section 13), and one request does not
+> reliably produce one. So the unit is a *section* of the plan, not a single
+> sub-block: `generation.subblock_section_blocks` (default 10) sets the
+> granularity and 1 gives the literal per-sub-block mode described here. There
+> is no separate stitch pass; each call sees all prior prose and is told to
+> continue seamlessly. The A/B specified below is still owed.
+
+
 The granularity hypothesis, tested rather than assumed: single-shot scenes
 read as superficially coherent, and generating each skeleton sub-block with
 its own focused call may produce richer, denser text than one prompt can.

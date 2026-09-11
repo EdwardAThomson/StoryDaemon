@@ -58,11 +58,21 @@ class SceneWriter:
         word_target = writer_context.get("word_target") or word_target_for(None, self.config)
         max_tokens = token_budget_for(word_target, self.config)
 
-        # First segment: as today. A failure here raises, exactly as before.
-        text, finish_reason = self._generate_segment(prompt, max_tokens)
+        # Sectioned writing (DSL Slice 5, generation.subblock_generation):
+        # write the scene across several plan-addressed calls instead of one.
+        # A masters-length chapter is ~3,165 words and a single request does
+        # not reliably produce one. Falls back to single-shot on any failure,
+        # and needs a skeleton, since the plan is what addresses the sections.
+        sectioned = self._write_in_sections(writer_context)
+        if sectioned is not None:
+            text, meta = sectioned
+        else:
+            # First segment: as today. A failure here raises, exactly as before.
+            text, finish_reason = self._generate_segment(prompt, max_tokens)
 
-        # Continue until concluded (bounded), then trim-and-flag as a last resort.
-        text, meta = self._write_until_concluded(text, finish_reason, writer_context)
+            # Continue until concluded (bounded), then trim-and-flag as a last resort.
+            text, meta = self._write_until_concluded(
+                text, finish_reason, writer_context)
 
         # Parse and return scene data plus generation metadata
         scene_data = self._parse_scene_response(text, writer_context)
@@ -92,6 +102,73 @@ class SceneWriter:
             except Exception as e:
                 logger.warning(f"skeleton marker stripping failed: {e}")
         return scene_data
+
+    def _write_in_sections(self, writer_context: Dict[str, Any]):
+        """Write the scene as several plan-addressed calls. None = not used.
+
+        Gated by generation.subblock_generation (default False) and requires a
+        scene skeleton, which is what gives each section its [n] addresses.
+        generation.subblock_section_blocks sets the granularity; 1 is the
+        landing sketch's literal per-sub-block mode.
+
+        Graceful degradation is the whole safety story here: any failure
+        returns None and the caller writes the scene single-shot exactly as
+        before, so switching the flag on can cost quality but never a scene.
+        """
+        if not self.config.get('generation.subblock_generation', False):
+            return None
+        skeleton = writer_context.get("scene_skeleton")
+        if not skeleton:
+            return None
+        try:
+            from .prompts import format_scene_section_prompt
+            from .scene_skeleton import (mode_word_stats, plan_rules,
+                                         skeleton_lines)
+            from .segments import (DEFAULT_SECTION_BLOCKS, partition_skeleton,
+                                   section_word_target, token_budget_for)
+
+            bounds = partition_skeleton(
+                len(skeleton),
+                self.config.get('generation.subblock_section_blocks',
+                                DEFAULT_SECTION_BLOCKS))
+            if len(bounds) < 2:
+                return None          # one section is just single-shot writing
+
+            mode_words = mode_word_stats()
+            parts, text = [], ""
+            for i, (first, last) in enumerate(bounds):
+                words = section_word_target(skeleton, first, last, mode_words)
+                prompt = format_scene_section_prompt(
+                    writer_context,
+                    plan_lines=skeleton_lines(skeleton, first, last),
+                    plan_rules=plan_rules(last - first + 1, words,
+                                          sectioned=True),
+                    first=first, last=last,
+                    scene_so_far=text,
+                    is_first=(i == 0),
+                    is_last=(i == len(bounds) - 1),
+                )
+                part, _ = self._generate_segment(
+                    prompt, token_budget_for(words, self.config))
+                part = self._strip_llm_header((part or "").strip())
+                if not part:
+                    raise ValueError(
+                        f"empty response for plan blocks {first}-{last}")
+                parts.append(part)
+                text = self._join_segments(text, part) if text else part
+                print(f"        section {i + 1}/{len(bounds)}: plan blocks "
+                      f"{first}-{last}, {len(part.split())} words "
+                      f"(target {words})")
+            return text, {
+                "segments_used": len(bounds),
+                "sectioned": True,
+                "concluded_naturally": True,
+                "trimmed": False,
+            }
+        except Exception as e:
+            logger.warning(
+                f"Sectioned writing failed; falling back to single-shot: {e}")
+            return None
 
     def _generate_segment(self, prompt: str, max_tokens: int) -> Tuple[str, Optional[str]]:
         """One LLM request, with the finish_reason when the backend exposes it.
