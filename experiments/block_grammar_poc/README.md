@@ -47,6 +47,34 @@ boundaries; the kernel owns local texture. Design consequence for the DSL:
 block-level guidance should condition on the previous TWO blocks (or
 equivalently, track "what mode was interrupted"), not just the current one.
 
+### Gate A against the production sampler
+
+`gate_a.py` scores this directory's own `sampler.py`. `gate_a_production.py`
+runs the same statistics and the same tolerances against
+`novel_agent.agent.scene_skeleton.generate_skeleton`, the sampler that
+actually reaches a novel, so a change to the shipping path can be re-checked
+on the instrument that validated the design. Zero LLM calls, but it imports
+`novel_agent`, so run it from the repo venv.
+
+```
+venv/bin/python experiments/block_grammar_poc/gate_a_production.py --chapters 2000
+```
+
+Two scales are reported, because they are different questions:
+
+- **chapter scale** (word budget sized so a plan runs ~58 blocks, matching a
+  masters chapter): the like-for-like gate, since every corpus statistic is
+  measured per chapter. Status: **25/25 pass** (excursion-return 0.340 vs
+  masters 0.355, mean blocks 56.8 vs 58.4). Exit code follows this scale.
+- **scene scale** (1400 words, the production default, ~23 blocks): reported
+  for information. Status: **23/24**, the one miss being DIALOGUE share
+  0.512 vs 0.565. That is a length effect rather than a sampling bug: the
+  grammar's opener distribution is a *chapter* opener (position 0 is mostly
+  SETTING/ACTION/LORE, dialogue rare) and the sampler applies it to every
+  scene, so orienting material a masters chapter pays for once across ~58
+  blocks is paid every ~23 here. Dialogue share ramps with plan length
+  (0.36 at 400 words, 0.46 at 800, 0.51 at 1400, 0.54 at 3500 and above).
+
 ## Gate B (this directory, DONE): does prose round-trip through the skeleton?
 
 `gate_b.py` renders Gate-A skeletons to prose in ONE single-shot writer call
@@ -222,7 +250,11 @@ Real runs are interruptible at two levels, tested without network by
 - `grammar_reference.json`: measured grammar (regenerable, see above)
 - `sampler.py`: L1/L2/L3 skeleton generator (`Grammar`, `Params`, `Sampler`)
 - `gate_a.py`: statistical scorecard, exit 0 = pass
+- `gate_a_production.py`: the same scorecard against
+  `novel_agent`'s shipping sampler, at chapter and scene scale (needs the venv)
 - `gate_b.py`: skeleton -> prose -> judge round-trip, exit 0 = pass
 - `gate_c.py`: skeleton-vs-baseline A/B on the failure metrics
   (exit 0 pass / 1 fail / 2 inconclusive)
+- `judge_scenes.py`: corpus-protocol judge for production scenes
+  (the Slice 4 production A/B above)
 - `runs/`: per-run artifacts; `cache/`: LLM response cache (gitignored)
