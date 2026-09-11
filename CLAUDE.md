@@ -149,7 +149,7 @@ Defaults live in `novel_agent/configs/config.py:DEFAULT_CONFIG`. `Config.get('ll
 
 Knob groups worth knowing before touching config, all in `DEFAULT_CONFIG`:
 
-- **Scene sizing / skeletons**: `generation.scene_word_targets` (`brief|short|long|extended`), `default_scene_length`, `tokens_per_word`, `scene_budget_multiplier`, `scene_max_segments`, `enable_scene_skeleton`.
+- **Scene sizing / skeletons**: `generation.scene_length_preset` (`house`, the byte-identical default, or `masters`, calibrated to the corpus per-chapter distribution; an explicit `scene_word_targets` dict that differs from the shipped defaults wins over it, same precedence rule as `coherence.curve_preset`), `scene_word_targets` (`brief|short|long|extended`), `default_scene_length`, `tokens_per_word`, `scene_budget_multiplier`, `scene_max_segments`, `enable_scene_skeleton`.
 - **Beat authoring**: `generation.beat_max_tokens`, `beat_dedup`, `beat_dedup_threshold`, `use_contracts`, `rolling_horizon`, `allow_beat_skip`, `fallback_to_reactive`.
 - **Arc pressure**: `coherence.target_story_length`, `target_tension_curve`, `curve_preset` (`house` is byte-identical to the shipped curve; the other presets trace to the masters decile tables, and every curve reader including the finale goes through one resolver), `arc_phase_mandate`, `tension_rewrite`, `tension_rewrite_threshold`, `tension_step_for_transition`.
 - **Finale**: `coherence.sacred_finale`, `finale_retries`, `ending_hook`.

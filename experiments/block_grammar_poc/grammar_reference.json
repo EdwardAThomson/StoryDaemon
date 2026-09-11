@@ -1571,6 +1571,142 @@
    }
   }
  },
+ "chapter_words": {
+  "source": "nd1 sidecar segmentation headers (total_words / n_units)",
+  "n_books": 21,
+  "mean": 4058.606274632523,
+  "median": 3641.6774193548385,
+  "min": 1989.4857142857143,
+  "max": 12634.666666666666,
+  "by_book": [
+   {
+    "book": "dunsany-elfland",
+    "units": 35,
+    "words": 69632,
+    "words_per_chapter": 1989.4857142857143
+   },
+   {
+    "book": "wells-timemachine",
+    "units": 16,
+    "words": 32361,
+    "words_per_chapter": 2022.5625
+   },
+   {
+    "book": "austen-pride",
+    "units": 62,
+    "words": 126462,
+    "words_per_chapter": 2039.7096774193549
+   },
+   {
+    "book": "wells-warofworlds",
+    "units": 27,
+    "words": 59841,
+    "words_per_chapter": 2216.3333333333335
+   },
+   {
+    "book": "conrad-lordjim",
+    "units": 46,
+    "words": 129920,
+    "words_per_chapter": 2824.3478260869565
+   },
+   {
+    "book": "austen-emma",
+    "units": 55,
+    "words": 157321,
+    "words_per_chapter": 2860.3818181818183
+   },
+   {
+    "book": "dickens-taleoftwocities",
+    "units": 45,
+    "words": 135539,
+    "words_per_chapter": 3011.9777777777776
+   },
+   {
+    "book": "collins-moonstone",
+    "units": 60,
+    "words": 194601,
+    "words_per_chapter": 3243.35
+   },
+   {
+    "book": "sabatini-scaramouche",
+    "units": 36,
+    "words": 124291,
+    "words_per_chapter": 3452.527777777778
+   },
+   {
+    "book": "austen-persuasion",
+    "units": 24,
+    "words": 83233,
+    "words_per_chapter": 3468.0416666666665
+   },
+   {
+    "book": "sabatini-captainblood",
+    "units": 31,
+    "words": 112892,
+    "words_per_chapter": 3641.6774193548385
+   },
+   {
+    "book": "haggard-ksm",
+    "units": 22,
+    "words": 82157,
+    "words_per_chapter": 3734.409090909091
+   },
+   {
+    "book": "childers-riddlesands",
+    "units": 29,
+    "words": 108415,
+    "words_per_chapter": 3738.448275862069
+   },
+   {
+    "book": "haggard-she",
+    "units": 29,
+    "words": 112073,
+    "words_per_chapter": 3864.5862068965516
+   },
+   {
+    "book": "buchan-thirtyninesteps",
+    "units": 10,
+    "words": 40760,
+    "words_per_chapter": 4076.0
+   },
+   {
+    "book": "buchan-greenmantle",
+    "units": 23,
+    "words": 98664,
+    "words_per_chapter": 4289.739130434783
+   },
+   {
+    "book": "bronte-janeeyre",
+    "units": 40,
+    "words": 185262,
+    "words_per_chapter": 4631.55
+   },
+   {
+    "book": "eddison-ouroboros",
+    "units": 34,
+    "words": 169991,
+    "words_per_chapter": 4999.735294117647
+   },
+   {
+    "book": "stoker-dracula",
+    "units": 29,
+    "words": 161025,
+    "words_per_chapter": 5552.586206896552
+   },
+   {
+    "book": "conrad-secretagent",
+    "units": 13,
+    "words": 90202,
+    "words_per_chapter": 6938.615384615385
+   },
+   {
+    "book": "conrad-heartofdarkness",
+    "units": 3,
+    "words": 37904,
+    "words_per_chapter": 12634.666666666666
+   }
+  ]
+ },
  "shading": {
   "rate": 0.20386383111318843,
   "top_pairs": [

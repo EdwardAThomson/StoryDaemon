@@ -5,6 +5,7 @@ token-budget sizing, the completion heuristic's truth table, and the
 trim-to-last-sentence fallback.
 """
 
+from novel_agent.agent import segments as sg
 from novel_agent.agent.segments import (
     CONTINUATION_WORD_TARGET,
     DEFAULT_WORD_TARGETS,
@@ -257,3 +258,68 @@ def test_length_guidance_tolerates_bad_metadata():
     guidance, target = _builder()._get_length_guidance({"metadata": {"scene_length": 7}})
     assert target == 1400
     assert "roughly 1400 words" in guidance
+
+
+# ---- scene length presets ----------------------------------------------------
+
+class _Cfg:
+    """Minimal config stand-in: only the keys under test are set."""
+
+    def __init__(self, **kw):
+        self.kw = kw
+
+    def get(self, key, default=None):
+        return self.kw.get(key, default)
+
+
+def test_house_preset_is_the_shipped_default():
+    assert sg.resolve_word_targets(_Cfg()) == sg.DEFAULT_WORD_TARGETS
+    assert (sg.resolve_word_targets(_Cfg(**{
+        "generation.scene_length_preset": "house"})) == sg.DEFAULT_WORD_TARGETS)
+
+
+def test_masters_preset_is_calibrated_to_the_corpus():
+    got = sg.resolve_word_targets(
+        _Cfg(**{"generation.scene_length_preset": "masters"}))
+    assert got == sg.MASTERS_WORD_TARGETS
+    # Every masters target clears the house one: the house set sits below the
+    # per-chapter average of every book in the corpus.
+    for label, value in got.items():
+        assert value > sg.DEFAULT_WORD_TARGETS[label]
+
+
+def test_preset_wins_when_the_targets_dict_is_untouched():
+    # Every generated project writes the shipped defaults into its config.yaml
+    # (cli/project.py), so "present" cannot mean "customized". A dict equal to
+    # the defaults carries no author intent and the preset applies.
+    got = sg.resolve_word_targets(_Cfg(**{
+        "generation.scene_length_preset": "masters",
+        "generation.scene_word_targets": dict(sg.DEFAULT_WORD_TARGETS),
+    }))
+    assert got == sg.MASTERS_WORD_TARGETS
+
+
+def test_an_explicit_target_beats_the_preset():
+    got = sg.resolve_word_targets(_Cfg(**{
+        "generation.scene_length_preset": "masters",
+        "generation.scene_word_targets": {"long": 999},
+    }))
+    assert got["long"] == 999
+    assert got["brief"] == sg.DEFAULT_WORD_TARGETS["brief"]
+
+
+def test_unknown_preset_degrades_to_house():
+    assert (sg.resolve_word_targets(_Cfg(**{
+        "generation.scene_length_preset": "nonsense"}))
+        == sg.DEFAULT_WORD_TARGETS)
+    for bad in (None, "", "   ", 7):
+        assert (sg.resolve_word_targets(_Cfg(**{
+            "generation.scene_length_preset": bad}))
+            == sg.DEFAULT_WORD_TARGETS)
+
+
+def test_word_target_for_reads_the_preset():
+    cfg = _Cfg(**{"generation.scene_length_preset": "masters"})
+    assert sg.word_target_for("long", cfg) == sg.MASTERS_WORD_TARGETS["long"]
+    # Unknown label still falls back through default_scene_length.
+    assert sg.word_target_for("nope", cfg) == sg.MASTERS_WORD_TARGETS["long"]

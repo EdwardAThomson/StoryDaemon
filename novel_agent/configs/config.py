@@ -77,6 +77,10 @@ DEFAULT_CONFIG = {
         # segments (each seeing the full scene so far, each told to CONCLUDE) run up to
         # scene_max_segments total; a scene still incomplete after the cap is trimmed to
         # the last complete sentence and flagged (scene_truncated in metrics).
+        # 'house' (shipped defaults) or 'masters' (calibrated to the
+        # 21-masterwork per-chapter distribution; roughly doubles prose per
+        # tick). An explicit scene_word_targets entry overrides either.
+        'scene_length_preset': 'house',
         'scene_word_targets': {'brief': 400, 'short': 800, 'long': 1400, 'extended': 2200},
         'default_scene_length': 'long',   # target label when the plan gives no scene_length
         'tokens_per_word': 1.4,           # words-to-tokens sizing factor for prose

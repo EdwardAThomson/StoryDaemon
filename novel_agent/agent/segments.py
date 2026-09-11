@@ -18,8 +18,11 @@ to the last complete sentence and flagged).
 Everything here is pure logic: no LLM calls, no I/O, no state.
 """
 
+import logging
 import re
 from typing import Optional, Tuple
+
+logger = logging.getLogger(__name__)
 
 
 # Word targets per planner scene_length label (PLANNER_PROMPT_TEMPLATE metadata:
@@ -29,6 +32,36 @@ DEFAULT_WORD_TARGETS = {
     "short": 800,
     "long": 1400,
     "extended": 2200,
+}
+
+# Masters-calibrated targets, from the per-chapter word distribution of the 21
+# masterworks (659 chapters: p10 1,595, p25 2,144, median 3,165, p75 4,459;
+# docs/MASTERS_BLOCK_GRAMMAR_STUDY.md section 13). StoryDaemon maps scene to
+# chapter 1:1 (novel_agent/export/chapters.py), so a chapter is the
+# like-for-like unit.
+#
+# Why this exists: the house targets above are far shorter than any book in the
+# corpus, and the shortfall is structural, not cosmetic. Gate A run against the
+# production sampler passes 25/25 at masters chapter length but fails DIALOGUE
+# share at the house default (0.510 against 0.565), because a short chapter
+# spends a larger fraction of itself on the opening orientation the grammar
+# prescribes. Dialogue share climbs 0.365 at 400 words, 0.509 at 1,400, 0.542
+# at 3,500.
+#
+# Not the default: these roughly double the prose written per tick, which is a
+# real cost and pacing decision rather than a purely technical one.
+MASTERS_WORD_TARGETS = {
+    "brief": 1600,
+    "short": 2150,
+    "long": 3150,
+    "extended": 4450,
+}
+
+# Named target sets, mirroring coherence.curve_preset. "house" resolves to the
+# shipped defaults exactly, so default behavior is byte-identical.
+SCENE_LENGTH_PRESETS = {
+    "house": DEFAULT_WORD_TARGETS,
+    "masters": MASTERS_WORD_TARGETS,
 }
 
 # The label used when the plan carries no scene_length. "long" is the choice:
@@ -60,22 +93,58 @@ _SENTENCE_END_RE = re.compile(r"[.!?…][\"'”’)\]}*_`]*")
 # Word targets and token budgets
 # ---------------------------------------------------------------------------
 
-def word_target_for(scene_length: Optional[str], config=None) -> int:
-    """Map a planner scene_length label (brief|short|long|extended) to a word target.
-
-    Unknown, empty, or missing labels fall back to generation.default_scene_length
-    (default "long", see DEFAULT_SCENE_LENGTH for the rationale). Targets are
-    overridable per label via the generation.scene_word_targets config dict.
-    """
+def _label_targets(overrides) -> dict:
+    """House defaults with any valid per-label override applied."""
     targets = dict(DEFAULT_WORD_TARGETS)
-    overrides = config.get('generation.scene_word_targets', None) if config else None
     if isinstance(overrides, dict):
         for label, value in overrides.items():
             try:
                 targets[str(label).strip().lower()] = int(value)
             except (TypeError, ValueError):
                 continue
+    return targets
 
+
+def resolve_word_targets(config=None) -> dict:
+    """The effective label-to-word-target map.
+
+    Precedence mirrors ``coherence.curve_preset`` (see
+    ``agent/arc_pressure.py:resolve_curve``), because the conflict is the same:
+    the shipped defaults are written into every project's config.yaml, so an
+    untouched project cannot be told from a customized one by presence alone.
+
+    - ``generation.scene_word_targets`` that differs from the shipped defaults
+      is an explicit author choice and wins over any preset.
+    - Otherwise ``generation.scene_length_preset`` picks the set. ``"house"``
+      (the default) resolves to exactly the shipped defaults, so default
+      behavior is byte-identical; ``"masters"`` is calibrated to the corpus.
+    - An unknown preset warns and falls back to house.
+    """
+    overrides = config.get('generation.scene_word_targets', None) if config else None
+    targets = _label_targets(overrides)
+    if targets != DEFAULT_WORD_TARGETS:
+        return targets
+    preset = (config.get('generation.scene_length_preset', 'house')
+              if config else 'house')
+    if not isinstance(preset, str) or not preset.strip():
+        return targets
+    chosen = SCENE_LENGTH_PRESETS.get(preset.strip().casefold())
+    if chosen is None:
+        logger.warning(
+            f"Unknown scene length preset {preset!r}; using house targets "
+            f"(known: {', '.join(sorted(SCENE_LENGTH_PRESETS))})")
+        return targets
+    return dict(chosen)
+
+
+def word_target_for(scene_length: Optional[str], config=None) -> int:
+    """Map a planner scene_length label (brief|short|long|extended) to a word target.
+
+    Unknown, empty, or missing labels fall back to generation.default_scene_length
+    (default "long", see DEFAULT_SCENE_LENGTH for the rationale). The target set
+    itself comes from resolve_word_targets (preset plus explicit overrides).
+    """
+    targets = resolve_word_targets(config)
     label = scene_length.strip().lower() if isinstance(scene_length, str) else ""
     if label not in targets:
         fallback = config.get('generation.default_scene_length', DEFAULT_SCENE_LENGTH) \

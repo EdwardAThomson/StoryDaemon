@@ -278,6 +278,25 @@ def print_tables(books, agg):
         print(f"| {a} -> {b} -> back | {cnt:,} | {o:.3f} | {e:.3f} | {dlt:+.3f} |")
 
     _print_paragraph_words(agg)
+    _print_chapter_words(books)
+
+
+def _print_chapter_words(books):
+    rows = _chapter_words(books)
+    print("\n## Chapter length (words)\n")
+    if not rows:
+        print("_No segmentation headers found._\n")
+        return
+    wc = [r["words_per_chapter"] for r in rows]
+    print(f"Scene maps to chapter 1:1 in StoryDaemon, so this is the "
+          f"like-for-like target for `generation.scene_word_targets`. "
+          f"Mean {statistics.mean(wc):,.0f}, median {statistics.median(wc):,.0f}, "
+          f"range {min(wc):,.0f} to {max(wc):,.0f}.\n")
+    print("| book | units | words | words/chapter |")
+    print("|---|---:|---:|---:|")
+    for r in rows:
+        print(f"| {r['book']} | {r['units']} | {r['words']:,} | "
+              f"{r['words_per_chapter']:,.0f} |")
 
 
 def _print_paragraph_words(agg):
@@ -326,6 +345,38 @@ def _second_order(agg, min_n):
                      for c in MODES if agg["trans2"][(a, b, c)]},
         }
     return out
+
+
+def _chapter_words(books):
+    """Words per chapter (unit) per book, straight from the segmentation header.
+
+    StoryDaemon maps scene to chapter 1:1 (novel_agent/export/chapters.py), so
+    this is the like-for-like target for generation.scene_word_targets.
+    """
+    rows = []
+    for name, d in books.items():
+        seg = d.get("segmentation") or {}
+        n, w = seg.get("n_units"), seg.get("total_words")
+        if n and w:
+            rows.append({"book": name, "units": n, "words": w,
+                         "words_per_chapter": w / n})
+    return sorted(rows, key=lambda r: r["words_per_chapter"])
+
+
+def _chapter_words_json(books):
+    rows = _chapter_words(books)
+    if not rows:
+        return None
+    wc = [r["words_per_chapter"] for r in rows]
+    return {
+        "source": "nd1 sidecar segmentation headers (total_words / n_units)",
+        "n_books": len(rows),
+        "mean": statistics.mean(wc),
+        "median": statistics.median(wc),
+        "min": min(wc),
+        "max": max(wc),
+        "by_book": rows,
+    }
 
 
 def _paragraph_words_json(agg):
@@ -403,6 +454,7 @@ def dump_json(books, agg, path):
             for band, c in agg["tension_band"].items()
         },
         "paragraph_words": _paragraph_words_json(agg),
+        "chapter_words": _chapter_words_json(books),
         "shading": {
             "rate": agg["sec_total"] / agg["prim_total"],
             "top_pairs": [

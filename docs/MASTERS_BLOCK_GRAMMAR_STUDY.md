@@ -611,3 +611,83 @@ annotation pass over the corpus.
    commitment measure at matched sequence lengths (see above): the statistics
    Gate A checks today would not notice a sampler that stopped sustaining
    set-pieces.
+
+## 13. Chapter length: the house scene targets sit below the whole corpus
+
+Added 2026-09-11, from running Gate A against the production sampler for the
+first time (`experiments/block_grammar_poc/gate_a_production.py`;
+`gate_a.py` only ever scored the PoC's own sampler).
+
+At chapter scale the production sampler passes **25/25**. At the production
+default of 1,400 words it passes 23/24, and the single failure is DIALOGUE
+share: 0.510 against the masters' 0.565, outside the 0.045 tolerance.
+
+It is a length effect, not a sampling bug. Share climbs with plan size:
+
+| plan size | blocks | DIALOGUE share |
+|---|---:|---:|
+| 400 words | 6.3 | 0.365 |
+| 800 | 13.0 | 0.463 |
+| 1,400 (house default) | 23.3 | 0.509 |
+| 2,200 (house maximum) | 36.9 | 0.531 |
+| 3,150 (masters preset) | 52.1 | 0.540 |
+| 3,500 | 57.3 | 0.542 |
+| *masters* | *58.4* | *0.565* |
+
+The cause is the chapter opener. Position 0 of a plan is SETTING 0.26 /
+ACTION 0.23 / LORE 0.19 with dialogue rare, and dialogue only reaches its base
+rate several blocks in (0.33 at position 1, 0.50 by position 4). That opening
+orientation is measured per chapter (Section 4), and StoryDaemon maps scene to
+chapter 1:1 (`novel_agent/export/chapters.py`), so applying it to every scene
+is correct. What is wrong is the chapter length it is being applied to.
+
+### The measurement
+
+Per-chapter word counts over the same 659 aligned chapters:
+
+| | words per chapter |
+|---|---:|
+| mean | 3,493 |
+| median | 3,165 |
+| p10 | 1,595 |
+| p25 | 2,144 |
+| p75 | 4,459 |
+| p90 | 5,798 |
+
+Per book, the shortest average in the entire corpus is Dunsany's *Elfland* at
+1,989 words per chapter; the longest is *Heart of Darkness* at 12,635 across
+its three parts. Both are in `chapter_words` in the grammar file, regenerated
+by `scripts/block_grammar_tables.py`.
+
+Against that, the shipped targets are `brief` 400, `short` 800, `long` 1,400,
+`extended` 2,200. **The house default is below the corpus p10, and the house
+*maximum* is below the per-chapter average of every book in the corpus.** Our
+chapters are roughly a third of a typical masters chapter, and the DIALOGUE
+deficit is the measurable consequence.
+
+### What shipped
+
+`generation.scene_length_preset`, mirroring `coherence.curve_preset`:
+`"house"` (default, byte-identical to the shipped targets) or `"masters"`
+(`brief` 1,600, `short` 2,150, `long` 3,150, `extended` 4,450, taken from the
+p10/p25/median/p75 above). Precedence copies the curve preset's rule, because
+the conflict is identical: every generated project writes the shipped targets
+into its own `config.yaml`, so presence cannot mean customization. A
+`scene_word_targets` dict that differs from the defaults is an author choice
+and wins; one equal to them carries no intent and the preset applies.
+
+At the masters preset the production sampler scores **24/24** at scene scale,
+DIALOGUE share included (0.540 against 0.565, inside tolerance).
+
+**The default is unchanged and this is deliberate.** Moving it roughly doubles
+the prose written per tick, which is a cost and pacing decision rather than a
+technical one. The measurement says what masters-like would cost; it does not
+say every novel should want it.
+
+### What this does not establish
+
+All of the above measures the *plan*. Whether the prose written from a
+masters-length plan matches the corpus is untested: the only judged evidence
+is Slice 4's four scenes per arm at the house default. Two of the known misses
+there (paragraph length overshooting by 70%, return rate 0.154 against 0.355)
+have had fixes land since without re-validation.
