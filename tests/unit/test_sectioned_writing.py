@@ -209,3 +209,36 @@ def test_markers_are_stripped_from_the_stitched_scene():
     scene = SceneWriter(llm, Cfg(**ON)).write_scene(_ctx(sk))
     assert "[1]" not in scene["text"] and "[11]" not in scene["text"]
     assert scene["skeleton_compliance"]["markers_found"] == 2
+
+
+# ---- the structural record ---------------------------------------------------
+
+def test_writer_carries_the_plan_into_scene_data():
+    sk = ["DIALOGUE"] * 25
+    llm = FakeLLM(["[1] First.", "[11] Second."])
+    scene = SceneWriter(llm, Cfg(**ON)).write_scene(_ctx(sk))
+    assert scene["scene_skeleton"] == sk
+    assert scene["section_bounds"] == [[1, 10], [11, 25]]
+
+
+def test_commit_metadata_records_how_the_scene_was_written():
+    from novel_agent.agent.scene_committer import _scene_metadata
+    meta = _scene_metadata(
+        {"rationale": "because"},
+        {"scene_skeleton": ["DIALOGUE", "ACTION"],
+         "skeleton_compliance": {"compliant": True},
+         "sectioned": True, "section_bounds": [[1, 1], [2, 2]],
+         "segments_used": 2, "trimmed": False,
+         "word_count": 400},
+    )
+    assert meta["plan_rationale"] == "because"
+    assert meta["scene_skeleton"] == ["DIALOGUE", "ACTION"]
+    assert meta["section_bounds"] == [[1, 1], [2, 2]]
+    assert meta["trimmed"] is False
+    assert "word_count" not in meta          # only the structural record
+
+
+def test_commit_metadata_omits_absent_keys():
+    from novel_agent.agent.scene_committer import _scene_metadata
+    meta = _scene_metadata({"rationale": "r"}, {"word_count": 10})
+    assert meta == {"plan_rationale": "r"}

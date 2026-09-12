@@ -6,6 +6,23 @@ from typing import Dict, Any, List
 from novel_agent.memory.entities import Scene
 
 
+def _scene_metadata(plan, scene_data):
+    """Scene metadata, including the structural record of how it was written.
+
+    The paragraph plan, its marker compliance and the section seams are kept
+    so a finished scene can be audited block by block after the fact. Without
+    them a judged run can only produce aggregate statistics, and a structural
+    miss cannot be traced back to the plan item that caused it.
+    """
+    meta = {"plan_rationale": plan.get("rationale", "")}
+    for key in ("scene_skeleton", "skeleton_compliance", "sectioned",
+                "section_bounds", "segments_used", "concluded_naturally",
+                "trimmed"):
+        if key in scene_data and scene_data[key] is not None:
+            meta[key] = scene_data[key]
+    return meta
+
+
 class SceneCommitter:
     """Commits scenes to disk and memory systems."""
     
@@ -72,7 +89,7 @@ class SceneCommitter:
             summary=summary,
             characters_present=characters_present,
             key_events=[],  # Could extract from summary in future
-            metadata={"plan_rationale": plan.get("rationale", "")}
+            metadata=_scene_metadata(plan, scene_data)
         )
         
         # 6. Save scene metadata

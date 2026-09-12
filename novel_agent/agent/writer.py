@@ -88,6 +88,7 @@ class SceneWriter:
                 clean, stats = strip_skeleton_markers(scene_data["text"])
                 scene_data["text"] = clean
                 scene_data["word_count"] = len(clean.split())
+                scene_data["scene_skeleton"] = list(skeleton)
                 scene_data["skeleton_compliance"] = {
                     "plan_blocks": len(skeleton),
                     "markers_found": stats["markers_found"],
@@ -162,6 +163,7 @@ class SceneWriter:
             return text, {
                 "segments_used": len(bounds),
                 "sectioned": True,
+                "section_bounds": [list(b) for b in bounds],
                 "concluded_naturally": True,
                 "trimmed": False,
             }
