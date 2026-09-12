@@ -374,7 +374,7 @@ class MultiStagePlanner:
             tick = state.get('current_tick', 0)
             response_file = self.prompts_dir / f"tick_{tick:03d}_stage3_response.txt"
             with open(response_file, 'w') as f:
-                f.write(response)
+                f.write(response or "")
         
         self.stage_stats['stage3_time'] = time.time() - start_time
         
@@ -682,6 +682,15 @@ Generate your plan now:"""
         Returns:
             Plan dictionary
         """
+        # A backend can return None or an empty string (a refused, empty or
+        # dropped completion). Treat that as "no plan" like any other
+        # unparseable response instead of raising an AttributeError from the
+        # middle of the parser: a live run lost a tick to exactly this, and
+        # the multi-tick loop then burned its retries on the same failure.
+        if not response or not isinstance(response, str):
+            logger.error(f"Empty plan response from the backend "
+                         f"({type(response).__name__}); using an empty plan")
+            return self._empty_plan()
         try:
             # Try to find JSON in response
             json_start = response.find('{')

@@ -357,3 +357,28 @@ def test_construct_client_drops_kwarg_for_closed_constructors():
     # the retry cap is a nicety, never a break.
     built = multi_provider_llm._construct_client(FakeOpenAI, api_key="k")
     assert isinstance(built, FakeOpenAI)
+
+
+# ---- planner robustness to an empty backend response -------------------------
+
+def test_planner_survives_a_none_response():
+    """A live run lost a tick to this: the tactical stage got None from the
+    backend and raised AttributeError from inside the JSON parser, then the
+    run loop spent its retries reproducing it."""
+    from novel_agent.agent.multi_stage_planner import MultiStagePlanner
+
+    class _Mem:
+        def get_active_character(self):
+            return "C000"
+
+    p = MultiStagePlanner.__new__(MultiStagePlanner)
+    p.memory = _Mem()
+    for bad in (None, "", 42, b"bytes"):
+        plan = MultiStagePlanner._parse_plan_response(p, bad)
+        assert isinstance(plan, dict), bad
+        assert plan["scene_intention"] == "Continue the story"
+        assert plan["actions"] == []
+    # A real response still parses.
+    ok = MultiStagePlanner._parse_plan_response(
+        p, 'noise {"scene_intention": "Elena opens the notebook"} trailing')
+    assert ok["scene_intention"] == "Elena opens the notebook"
