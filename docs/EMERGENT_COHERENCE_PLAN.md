@@ -185,9 +185,19 @@ instrumentation so every pressure below is measurable (see §5).
   `novel_agent/data/block_grammar_v1.json`) rides the writer prompt with the `[n]`
   marker protocol, markers are stripped and compliance recorded; the production A/B
   moved every solidly measured block statistic toward the masters with no surface
-  regression (`docs/SLICE4_SCENE_SKELETON_RESULTS.md`). Remaining: Slice 2
-  (precondition pressure), Slice 3 (bounded repair + an `event_occurs` LLM-judge
-  checker), Slice 5 (per-sub-block generation, a measured A/B).
+  regression (`docs/SLICE4_SCENE_SKELETON_RESULTS.md`). **Slice 5 (sectioned
+  writing) shipped** 2026-09 at *section* granularity, default off
+  (`generation.subblock_generation`, `subblock_section_blocks`): the scene is
+  written across several plan-addressed calls, each owning a contiguous range of
+  the skeleton's `[n]` blocks, seeing all prose so far and sized from its own mode
+  mix (`agent/segments.py:partition_skeleton`/`section_word_target`,
+  `SceneWriter._write_in_sections`). It requires `enable_scene_skeleton` and
+  returns to single-shot on any failure. The motivation changed from the original
+  richness hypothesis (which Slice 4's production runs answered "not needed for
+  gpt-5.5") to *length*: one request does not reliably produce a masters-length
+  chapter. Seam quality, voice continuity and cost per scene are **unvalidated**;
+  the landing sketch's A/B is still owed. Remaining: Slice 2 (precondition
+  pressure), Slice 3 (bounded repair + an `event_occurs` LLM-judge checker).
 - **Honest loop accounting** (interleaving Slice 0) — *shipped.* Loop closure is now
   judged rather than claimed: a beat's `resolves_loops` claims each get one focused
   LLM check against the scene and close only on a confirmed yes with an auditable
@@ -209,7 +219,11 @@ instrumentation so every pressure below is measurable (see §5).
   sizes each request from `generation.scene_word_targets` x `tokens_per_word` x
   `scene_budget_multiplier` and runs bounded continuation segments
   (`agent/segments.py`) until the scene concludes, trimming and flagging only after
-  `scene_max_segments`.
+  `scene_max_segments`. Chapter-length calibration rides the same module:
+  `generation.scene_length_preset` picks the target set (`house`, the shipped
+  default, or `masters` at 1,600/2,150/3,150/4,450 from the corpus per-chapter
+  distribution), with an explicit `scene_word_targets` dict winning over either,
+  exactly as `coherence.curve_preset` resolves.
 - **Thread interleaving groundwork** — *Slices T1 / T1.5 / T4a shipped.* A thread
   registry (`agent/thread_registry.py`, `memory/threads.json`, viewable via
   `novel threads`) mints thread identity in Python; the beat prompt carries a roster of
@@ -294,10 +308,12 @@ contradiction enforcement, the LLM tension scorer, arc-pressure, the arc-phase
 planner mandate (validated on the descent re-run), the arc-into-beats bridge,
 contracts Slice 1 (default off) and Slice 4 (scene skeletons, default off), the
 throughline gate and its LLM goal-relevance judge, honest loop accounting, the
-sacred finale, the write-until-concluded scene loop, and the thread-interleaving
-groundwork (registry, thread identity by selection, construction-pressure
-detector) are all in; loop-aging, thread construction/selection itself, and
-contract Slices 2, 3 and 5 are not yet started.
+sacred finale, the write-until-concluded scene loop (with chapter-length
+calibration behind `generation.scene_length_preset`), contracts Slice 5
+(sectioned writing, default off and its A/B still owed), and the
+thread-interleaving groundwork (registry, thread identity by selection,
+construction-pressure detector) are all in; loop-aging, thread
+construction/selection itself, and contract Slices 2 and 3 are not yet started.
 
 Next, in rough priority:
 1. ~~**Arc-_phase_ planner mandate** — *validated 2026-06* (`progress_report_20260602.md`):
@@ -317,8 +333,10 @@ Next, in rough priority:
    re-run's resolution ticks opened 8 loops and closed 0, and contracts can check
    `loop_resolved` but nothing pressures the planner to close loops.
 3. **Remaining contract slices** (Slice 2: precondition pressure; Slice 3: bounded
-   repair + `event_occurs` judge; Slice 5: per-sub-block A/B), per the landing sketch.
-   Slice 4 (scene skeletons) is done.
+   repair + `event_occurs` judge), per the landing sketch. Slice 4 (scene skeletons)
+   is done, and Slice 5 is built as sectioned writing (default off); what is left of
+   Slice 5 is its measured A/B: prose richness, voice continuity across section
+   seams, and cost per scene against skeleton-guided single-shot.
 4. **Validate the throughline gate** — re-run the on/off A/B now that the gauge is
    an LLM judge. *First pass (2026-05) was inconclusive*: a goal-aligned foundation keeps
    `goal_relevance` high (~7-10) with the pressure on *or* off — a ceiling effect, not a

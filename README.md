@@ -414,10 +414,23 @@ generation:
   recent_scenes_count: 3           # Context for planner
   include_overall_summary: true    # Include story-wide summary
   # Scene length is flexible - planner can optionally suggest "brief", "short", "long", or "extended"
-  
+  scene_length_preset: house       # "house" (the shipped 400/800/1400/2200 targets) or
+                                   # "masters" (1600/2150/3150/4450, calibrated to the
+                                   # 21-masterwork per-chapter distribution; roughly
+                                   # doubles prose per tick). An explicit
+                                   # scene_word_targets dict that differs from the
+                                   # defaults wins over the preset.
+
   # Scene skeletons (experimental, disabled by default): typed paragraph
   # plans sampled from the masters block grammar guide prose structure
   enable_scene_skeleton: false
+
+  # Sectioned scene writing (experimental, disabled by default): write one scene
+  # across several plan-addressed calls instead of one request, so a
+  # masters-length chapter is reachable. Requires enable_scene_skeleton and
+  # falls back to single-shot on any failure.
+  subblock_generation: false
+  subblock_section_blocks: 10      # skeleton blocks per call (1 = per-sub-block)
 
   # Plot-first mode (optional, disabled by default)
   use_plot_first: false            # Enable emergent plot-first architecture
@@ -452,7 +465,7 @@ The active roadmap is [docs/EMERGENT_COHERENCE_PLAN.md](docs/EMERGENT_COHERENCE_
 
 - **Phase 1 — Grounded identity** (the LLM *selects* names/IDs, never authors them) — **shipped.** Python-grounded `name.generate`, resolved entity references, similarity-pre-filtered + LLM-judged contradiction detection.
 - **Phase 2 — Rolling horizon** (lookahead emerges *from* the prose; beats are revisable) — **shipped.** Plus the `novel plot revise` trigger.
-- **Phase 3 — Constraint-as-pressure** — **in progress.** Shipped: the per-tick coherence rubric (`novel metrics`), contradiction enforcement (disputed-lore quarantine), an **LLM tension scorer** + **arc-pressure** (a target tension curve injected into planner and writer, with named `coherence.curve_preset` control-point sets), the **arc-phase planner mandate**, a **throughline gate** with an **LLM goal-relevance judge**, **honest loop accounting** (judged loop closure, creation dedup and cap), the **sacred finale** (`coherence.sacred_finale`: on plot-first runs Python owns the last scene), the **write-until-concluded scene loop** (scenes are sized from `generation.scene_word_targets` and continued rather than truncated), the **story-thread registry** with thread identity by selection and a construction-pressure detector (`novel threads`), and the first slice of the **block/sub-block DSL**: scene skeletons (`generation.enable_scene_skeleton`), typed paragraph plans sampled from a block grammar measured on the masters corpus, validated by a production A/B (see [the grammar study](docs/MASTERS_BLOCK_GRAMMAR_STUDY.md) and [the Slice 4 results](docs/SLICE4_SCENE_SKELETON_RESULTS.md)). Still to come: loop-aging, thread construction itself, and the deeper DSL slices.
+- **Phase 3 — Constraint-as-pressure** — **in progress.** Shipped: the per-tick coherence rubric (`novel metrics`), contradiction enforcement (disputed-lore quarantine), an **LLM tension scorer** + **arc-pressure** (a target tension curve injected into planner and writer, with named `coherence.curve_preset` control-point sets), the **arc-phase planner mandate**, a **throughline gate** with an **LLM goal-relevance judge**, **honest loop accounting** (judged loop closure, creation dedup and cap), the **sacred finale** (`coherence.sacred_finale`: on plot-first runs Python owns the last scene), the **write-until-concluded scene loop** (scenes are sized from `generation.scene_word_targets` and continued rather than truncated), the **story-thread registry** with thread identity by selection and a construction-pressure detector (`novel threads`), and the first slice of the **block/sub-block DSL**: scene skeletons (`generation.enable_scene_skeleton`), typed paragraph plans sampled from a block grammar measured on the masters corpus, validated by a production A/B (see [the grammar study](docs/MASTERS_BLOCK_GRAMMAR_STUDY.md) and [the Slice 4 results](docs/SLICE4_SCENE_SKELETON_RESULTS.md)), plus **chapter-length calibration** (`generation.scene_length_preset`, opt-in `masters` targets drawn from the corpus per-chapter distribution) and **sectioned scene writing** (`generation.subblock_generation`, default off: one scene written across several plan-addressed calls, its quality A/B still owed). Still to come: loop-aging, thread construction itself, and the remaining contract slices.
 - **Phase 4 — Setup/payoff foresight** (planted-element ledger for clues/reveals) — deferred until 1–3 prove out.
 
 Plot-first mode (Phase 5 of the *legacy* roadmap) is complete and available — automatic beat generation, beat-constrained writing, and beat verification — see the guide below. Note the two phase-numbering schemes differ: the legacy roadmap lives in [docs/plan.md](docs/plan.md), the active one in [docs/EMERGENT_COHERENCE_PLAN.md](docs/EMERGENT_COHERENCE_PLAN.md).
