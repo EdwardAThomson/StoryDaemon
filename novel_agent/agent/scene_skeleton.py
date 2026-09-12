@@ -20,6 +20,7 @@ path is guarded by the caller (a skeleton failure must never cost a scene).
 Gated by generation.enable_scene_skeleton (default off).
 """
 
+import hashlib
 import json
 import os
 import random
@@ -94,8 +95,73 @@ def mode_word_stats() -> Dict[str, Dict[str, float]]:
     return stats.get("by_mode") or _FALLBACK_WORDS
 
 
+def _decile_ladder(mode: str) -> Optional[List[float]]:
+    entry = mode_word_stats().get(mode) or {}
+    ladder = entry.get("deciles")
+    return [float(x) for x in ladder] if ladder else None
+
+
+def _sample_length(mode: str, rng: random.Random) -> int:
+    """One paragraph's word target, drawn from the mode's measured spread.
+
+    Interpolates the decile ladder at a uniform quantile. Sampling per block
+    rather than advertising one range per mode is the point: these
+    distributions are strongly right-skewed (DIALOGUE median 22 against mean
+    41.5), so a single range either brackets the median and under-sizes every
+    scene, or brackets the mean and forbids the short turns that are half the
+    corpus. Drawing per block reproduces the skew and keeps the plan's total
+    unbiased, which a fixed range cannot do at once.
+    """
+    ladder = _decile_ladder(mode)
+    stats = mode_word_stats().get(mode) or _FALLBACK_WORDS.get(mode, {})
+    if not ladder:
+        return max(5, int(round(stats.get("mean", 60.0))))
+    u = rng.uniform(0.05, 0.95) * 10.0 - 1.0     # position on the ladder
+    lo = max(0, min(len(ladder) - 1, int(u)))
+    hi = min(len(ladder) - 1, lo + 1)
+    frac = u - lo
+    return max(5, int(round(ladder[lo] + (ladder[hi] - ladder[lo]) * frac)))
+
+
+def block_word_targets(skeleton: List[str],
+                       seed: Optional[int] = None) -> List[int]:
+    """A word target per plan item, deterministic for a given plan.
+
+    Seeded from the plan's own content when no seed is given, so the same
+    skeleton always renders the same prompt.
+    """
+    if seed is None:
+        digest = hashlib.sha256("|".join(skeleton).encode()).digest()
+        seed = int.from_bytes(digest[:8], "big")
+    rng = random.Random(seed)
+    drawn = [_sample_length(m, rng) for m in skeleton]
+    # Interpolating a decile ladder samples the SHAPE well but loses mass in
+    # the upper tail, which on a right-skewed distribution is where the mean
+    # lives: raw draws come in about 10% under. Rescale to the mean-based
+    # total so the plan's sizing stays unbiased while keeping the variation.
+    want = mean_expected_words(skeleton)
+    total = float(sum(drawn))
+    if total <= 0 or want <= 0:
+        return drawn
+    scale = want / total
+    return [max(5, int(round(d * scale))) for d in drawn]
+
+
 def expected_words(skeleton: List[str]) -> float:
-    """The prose length a plan should produce, at measured paragraph lengths."""
+    """The prose length a plan asks for: the sum of its per-item targets.
+
+    Deliberately the same numbers the writer is shown. The previous version
+    summed per-mode *means* while the prompt advertised the p25-p75 range,
+    whose midpoint sits 20-30% below the mean on these skewed distributions,
+    so a writer that obeyed the prompt undershot the scene target by
+    construction. A live calibration scene came in at 2,121 words against a
+    3,150 target, and dialogue accounted for about 90% of the gap.
+    """
+    return float(sum(block_word_targets(skeleton)))
+
+
+def mean_expected_words(skeleton: List[str]) -> float:
+    """Expected length over all samplings; what generate_skeleton sizes with."""
     w = mode_word_stats()
     return sum(w.get(m, {}).get("mean", 0.0) for m in skeleton)
 
@@ -251,11 +317,11 @@ def skeleton_lines(skeleton: List[str], first: int = 1,
     its own keeps the same [n] addresses the full plan would have given it.
     """
     last = len(skeleton) if last is None else last
+    targets = block_word_targets(skeleton)
     out = []
     for i in range(first, last + 1):
         mode = skeleton[i - 1]
-        lo, hi = _word_range(mode)
-        out.append(f"{i}. {mode}, {lo}-{hi} words: {MODE_GUIDE[mode]}")
+        out.append(f"{i}. {mode}, ~{targets[i - 1]} words: {MODE_GUIDE[mode]}")
     return chr(10).join(out)
 
 
@@ -282,9 +348,11 @@ def plan_rules(count: int, target_words: int, sectioned: bool = False) -> str:
   character speaking, with its dialogue tag and any accompanying beat of
   business. When the speaker changes, the item changes. Never pack several
   exchanges into a single paragraph.{whole}
-- Write each paragraph to its own stated range; those ranges add up to this
-  {scope}'s target of roughly {target_words} words. Reach the target through the
-  plan, never by adding, dropping or merging paragraphs.
+- Write each paragraph to its own stated length. Those lengths vary on
+  purpose, from a few words to a long one, and they add up to this
+  {scope}'s target of roughly {target_words} words. Treat each as a target to
+  hit, not a ceiling to stay under, and reach the total through the plan,
+  never by adding, dropping or merging paragraphs.
 - A paragraph's dominant mode must match its plan item."""
 
 
@@ -316,14 +384,25 @@ that paragraph must have, and the length that paragraph should run.
 _MARKER = re.compile(r"^[ \t]*\[(\d+)\][ \t]*", re.M)
 
 
+_PARA_SPLIT = re.compile(r"\n\s*\n")
+
+
 def strip_skeleton_markers(text: str) -> Tuple[str, Dict[str, int]]:
     """Remove [n] paragraph markers; report what was found.
 
-    Returns (clean_text, stats) where stats carries markers_found (total)
-    and markers_distinct (unique plan numbers seen), for compliance
-    recording. Text without markers passes through unchanged.
+    Returns (clean_text, stats) with markers_found (total), markers_distinct
+    (unique plan numbers) and paragraphs (blank-line separated blocks of
+    prose). Text without markers passes through unchanged.
+
+    ``paragraphs`` exists because the marker counts alone cannot see an item
+    that was split: a live scene carried all 60 markers for a 60-block plan
+    and still ran to 65 paragraphs, and was recorded as fully compliant. The
+    counts answer "did every plan item get written"; only the paragraph count
+    answers "and nothing else was".
     """
     nums = [int(m.group(1)) for m in _MARKER.finditer(text)]
     clean = _MARKER.sub("", text)
+    paragraphs = len([p for p in _PARA_SPLIT.split(clean) if p.strip()])
     return clean, {"markers_found": len(nums),
-                   "markers_distinct": len(set(nums))}
+                   "markers_distinct": len(set(nums)),
+                   "paragraphs": paragraphs}

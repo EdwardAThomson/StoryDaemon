@@ -131,7 +131,14 @@ def _word_stats(values):
         return s[min(len(s) - 1, int(len(s) * f))]
 
     return {"mean": statistics.mean(s), "median": statistics.median(s),
-            "p25": q(0.25), "p75": q(0.75), "p90": q(0.90), "n": len(s)}
+            "p25": q(0.25), "p75": q(0.75), "p90": q(0.90), "n": len(s),
+            # The decile ladder is what the skeleton samples per-paragraph word
+            # targets from. A single range per mode cannot work: these
+            # distributions are strongly right-skewed (DIALOGUE median 22,
+            # mean 41.5), so one range either brackets the median and
+            # under-sizes the scene, or brackets the mean and forbids the
+            # short turns that make up half the corpus.
+            "deciles": [q(i / 10.0) for i in range(1, 10)]}
 
 
 def compute(books):

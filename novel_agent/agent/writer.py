@@ -89,17 +89,28 @@ class SceneWriter:
                 scene_data["text"] = clean
                 scene_data["word_count"] = len(clean.split())
                 scene_data["scene_skeleton"] = list(skeleton)
+                split = stats["paragraphs"] - len(skeleton)
                 scene_data["skeleton_compliance"] = {
                     "plan_blocks": len(skeleton),
                     "markers_found": stats["markers_found"],
                     "markers_distinct": stats["markers_distinct"],
-                    "compliant": stats["markers_distinct"] == len(skeleton),
+                    "paragraphs": stats["paragraphs"],
+                    "extra_paragraphs": max(0, split),
+                    # Both halves matter: every plan item written, and nothing
+                    # written that was not a plan item.
+                    "compliant": (stats["markers_distinct"] == len(skeleton)
+                                  and stats["paragraphs"] == len(skeleton)),
                 }
+                note = ""
+                if stats["markers_distinct"] != len(skeleton):
+                    note = " (markers missing)"
+                elif split > 0:
+                    note = f" ({split} item(s) split across paragraphs)"
+                elif split < 0:
+                    note = f" ({-split} item(s) merged)"
                 print(f"        scene skeleton: "
                       f"{stats['markers_distinct']}/{len(skeleton)} plan "
-                      f"markers present"
-                      + ("" if stats["markers_distinct"] == len(skeleton)
-                         else " (non-compliant)"))
+                      f"markers, {stats['paragraphs']} paragraphs{note}")
             except Exception as e:
                 logger.warning(f"skeleton marker stripping failed: {e}")
         return scene_data

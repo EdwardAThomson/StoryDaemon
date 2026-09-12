@@ -80,15 +80,40 @@ def test_prompt_section_carries_plan_and_gate_b_rules():
     assert "One plan item = one paragraph" in s
 
 
-def test_prompt_gives_each_item_its_own_measured_word_range():
-    s = sk.skeleton_prompt_section(["LORE", "DIALOGUE"])
-    lo_lore, hi_lore = sk._word_range("LORE")
-    lo_dlg, hi_dlg = sk._word_range("DIALOGUE")
-    assert f"1. LORE, {lo_lore}-{hi_lore} words" in s
-    assert f"2. DIALOGUE, {lo_dlg}-{hi_dlg} words" in s
-    # A dialogue turn is short; the old flat rule demanded 60-130 of every mode.
-    assert hi_dlg < lo_lore + hi_lore
-    assert "60-130 words" not in s
+def test_prompt_gives_each_item_its_own_sampled_word_target():
+    plan = ["LORE", "DIALOGUE"]
+    s = sk.skeleton_prompt_section(plan)
+    targets = sk.block_word_targets(plan)
+    assert f"1. LORE, ~{targets[0]} words" in s
+    assert f"2. DIALOGUE, ~{targets[1]} words" in s
+    assert "60-130 words" not in s          # the old flat rule is gone
+
+
+def test_targets_are_deterministic_for_a_given_plan():
+    plan = ["DIALOGUE", "ACTION", "LORE", "DIALOGUE"]
+    assert sk.block_word_targets(plan) == sk.block_word_targets(plan)
+    assert sk.skeleton_prompt_section(plan) == sk.skeleton_prompt_section(plan)
+
+
+def test_targets_reproduce_the_measured_skew():
+    # A single range per mode cannot do this: the masters' dialogue paragraphs
+    # run from a few words to very long, and half sit under the mean. Drawing
+    # per block keeps that spread, which is what makes the prose read varied
+    # rather than metronomic.
+    plan = ["DIALOGUE"] * 200
+    t = sk.block_word_targets(plan)
+    assert min(t) < 15 and max(t) > 80
+    assert len(set(t)) > 30
+
+
+def test_plan_asks_for_what_the_sizing_model_expects():
+    # The bug this replaced: expected_words summed per-mode MEANS while the
+    # prompt advertised the p25-p75 range, whose midpoint sits 20-30% below
+    # the mean on these skewed distributions. A live scene came in 33% short.
+    for seed in range(20):
+        plan = sk.generate_skeleton(3150, seed=seed)
+        ratio = sk.expected_words(plan) / sk.mean_expected_words(plan)
+        assert 0.97 < ratio < 1.03, (seed, ratio)
 
 
 def test_prompt_declares_one_speech_turn_per_dialogue_item():
@@ -113,7 +138,8 @@ def test_strip_markers():
     clean, stats = sk.strip_skeleton_markers(text)
     assert "[1]" not in clean and "[2]" not in clean
     assert clean.startswith("The bay lay grey.")
-    assert stats == {"markers_found": 2, "markers_distinct": 2}
+    assert stats == {"markers_found": 2, "markers_distinct": 2,
+                     "paragraphs": 2}
 
 
 def test_strip_markers_passthrough_without_markers():
@@ -124,7 +150,8 @@ def test_strip_markers_passthrough_without_markers():
 
 def test_strip_markers_counts_duplicates_distinctly():
     clean, stats = sk.strip_skeleton_markers("[1] A.\n\n[1] B.\n\n[3] C.")
-    assert stats == {"markers_found": 3, "markers_distinct": 2}
+    assert stats == {"markers_found": 3, "markers_distinct": 2,
+                     "paragraphs": 3}
 
 
 # ---- plan schema -------------------------------------------------------------
@@ -203,9 +230,23 @@ def test_writer_strips_markers_and_records_compliance():
     scene = SceneWriter(llm, Config()).write_scene(ctx)
     assert "[1]" not in scene["text"] and "[2]" not in scene["text"]
     assert scene["skeleton_compliance"] == {
-        "plan_blocks": 2, "markers_found": 2,
-        "markers_distinct": 2, "compliant": True,
+        "plan_blocks": 2, "markers_found": 2, "markers_distinct": 2,
+        "paragraphs": 2, "extra_paragraphs": 0, "compliant": True,
     }
+
+
+def test_compliance_catches_a_split_plan_item():
+    # The failure a live scene hid: all markers present, so the old metric
+    # called it compliant, while the writer had split items into 65
+    # paragraphs for a 60-block plan.
+    llm = FakeMetaLLM([('[1] First half.\n\nSecond half, unmarked.\n\n'
+                        '[2] The next item.', "stop")])
+    scene = SceneWriter(llm, Config()).write_scene(
+        _ctx(scene_skeleton=["DIALOGUE", "ACTION"]))
+    c = scene["skeleton_compliance"]
+    assert c["markers_distinct"] == 2 and c["paragraphs"] == 3
+    assert c["extra_paragraphs"] == 1
+    assert c["compliant"] is False
     assert scene["word_count"] == len(scene["text"].split())
 
 
