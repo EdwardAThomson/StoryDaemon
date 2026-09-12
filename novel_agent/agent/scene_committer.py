@@ -1,4 +1,5 @@
 """Scene committer for saving scenes to disk and memory."""
+import re
 
 from pathlib import Path
 from typing import Dict, Any, List
@@ -15,6 +16,22 @@ def _scene_metadata(plan, scene_data):
     miss cannot be traced back to the plan item that caused it.
     """
     meta = {"plan_rationale": plan.get("rationale", "")}
+    # Compliance must describe the text actually committed. It is computed in
+    # the writer, but later steps (the tension rewrite) can replace the prose
+    # between there and here, which silently turned the recorded figure into a
+    # description of a discarded draft. Recount against what is being saved.
+    skeleton = scene_data.get("scene_skeleton")
+    compliance = scene_data.get("skeleton_compliance")
+    if skeleton and compliance:
+        text = scene_data.get("text") or ""
+        paragraphs = len([p for p in re.split(r"\n\s*\n", text) if p.strip()])
+        if paragraphs != compliance.get("paragraphs"):
+            compliance = dict(compliance)
+            compliance["paragraphs"] = paragraphs
+            compliance["extra_paragraphs"] = max(0, paragraphs - len(skeleton))
+            compliance["rewritten_after_planning"] = True
+            compliance["compliant"] = False
+            scene_data["skeleton_compliance"] = compliance
     for key in ("scene_skeleton", "skeleton_compliance", "sectioned",
                 "section_bounds", "segments_used", "concluded_naturally",
                 "trimmed"):

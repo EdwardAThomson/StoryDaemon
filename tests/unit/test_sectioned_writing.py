@@ -242,3 +242,59 @@ def test_commit_metadata_omits_absent_keys():
     from novel_agent.agent.scene_committer import _scene_metadata
     meta = _scene_metadata({"rationale": "r"}, {"word_count": 10})
     assert meta == {"plan_rationale": "r"}
+
+
+# ---- the tension rewrite must not silently undo the plan ---------------------
+
+def test_compliance_is_recounted_against_the_committed_text():
+    """Observed live: the tension rewrite replaced the prose after the writer
+    had stripped markers and recorded compliance, so the saved figure
+    described a discarded draft (57 paragraphs recorded, 28 on disk)."""
+    from novel_agent.agent.scene_committer import _scene_metadata
+    scene_data = {
+        "scene_skeleton": ["DIALOGUE"] * 4,
+        "skeleton_compliance": {"plan_blocks": 4, "markers_found": 4,
+                                "markers_distinct": 4, "paragraphs": 4,
+                                "extra_paragraphs": 0, "compliant": True},
+        # what a rewrite left behind: the same scene, half the paragraphs
+        "text": "One para.\n\nTwo para.",
+    }
+    meta = _scene_metadata({"rationale": "r"}, scene_data)
+    c = meta["skeleton_compliance"]
+    assert c["paragraphs"] == 2
+    assert c["compliant"] is False
+    assert c["rewritten_after_planning"] is True
+
+
+def test_compliance_untouched_when_the_text_still_matches():
+    from novel_agent.agent.scene_committer import _scene_metadata
+    scene_data = {
+        "scene_skeleton": ["DIALOGUE", "ACTION"],
+        "skeleton_compliance": {"plan_blocks": 2, "paragraphs": 2,
+                                "compliant": True},
+        "text": "One para.\n\nTwo para.",
+    }
+    c = _scene_metadata({"rationale": "r"}, scene_data)["skeleton_compliance"]
+    assert c["compliant"] is True
+    assert "rewritten_after_planning" not in c
+
+
+def test_tension_rewrite_is_skipped_for_a_planned_scene():
+    """The revision prompt knows nothing about the paragraph plan, so it
+    rewrites the prose whole and collapses the structure. The plan wins."""
+    from novel_agent.agent.agent import StoryAgent
+
+    class Cfg2:
+        def get(self, key, default=None):
+            return {"coherence.tension_rewrite": True,
+                    "coherence.tension_rewrite_threshold": 2,
+                    "coherence.target_story_length": 40,
+                    "coherence.arc_phase_mandate": True}.get(key, default)
+
+    agent = StoryAgent.__new__(StoryAgent)
+    agent.config = Cfg2()
+    planned = {"text": "prose", "scene_skeleton": ["DIALOGUE", "ACTION"]}
+    tension = {"enabled": True, "tension_level": 9}
+    out, t = StoryAgent._maybe_rewrite_for_tension(
+        agent, planned, tension, 1, {})
+    assert out is planned and t is tension      # untouched, no rewrite attempted

@@ -1068,6 +1068,23 @@ class StoryAgent:
             if not needs_tension_rewrite(current, target, threshold):
                 return scene_data, tension_result
 
+            # A scene written to a paragraph plan is not available for a free
+            # prose rewrite: the revision prompt knows nothing about the plan
+            # and rewrites the prose whole, which collapses the structure the
+            # skeleton just imposed. Observed live on 2026-09-12: two of four
+            # scenes were rewritten and their paragraph counts fell 64 -> 36
+            # and 57 -> 28, undoing Slice 4 entirely and leaving the recorded
+            # skeleton_compliance describing text that had been thrown away.
+            # The skeleton is the stronger structural claim and arc-pressure's
+            # own finding is that EVENTS, not prose, set the tension floor
+            # (rewrite_futile, above), so the plan wins. Making the revision
+            # plan-aware is the better fix and is not this change.
+            if scene_data.get("scene_skeleton"):
+                print(f"   7.6. Tension {current}/10 vs target {target:g}: scene follows a "
+                      f"paragraph plan; skipping the prose rewrite (it would "
+                      f"collapse the plan's structure)")
+                return scene_data, tension_result
+
             # Phase 3 arc-phase mandate: a drop of a full transition step or more cannot
             # be rewritten away (the EVENTS set the floor, and only the planner changes
             # those), so skip the revision pass instead of wasting two LLM calls.
