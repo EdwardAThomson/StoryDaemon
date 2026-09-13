@@ -156,6 +156,130 @@ Then emit the JSON object below:
 Generate your plan now:"""
 
 
+# ---------------------------------------------------------------------------
+# The prompt contract
+# ---------------------------------------------------------------------------
+# Fields whose ABSENCE disables a feature, as opposed to merely thinning the
+# prompt. Every prompt that reaches a writing model must carry all of them,
+# and tests/unit/test_prompt_contract.py fails when one goes missing.
+#
+# This exists because sectioned writing and selective revision were built on
+# top of this context assembly and each hand-picked a subset, dropping four
+# contracts between them without anything noticing. The first live sectioned
+# scene invented three characters instead of using the foundation's
+# protagonist, and it was filed at the time as first-tick noise.
+CONTRACT_FIELDS = {
+    "scene_intention": "what this scene exists to accomplish",
+    "pov_character_name": "whose head the prose is in",
+    "pov_character_details": "how that character reads on the page",
+    "location_details": "where the scene happens",
+    "existing_characters": "the cast, so the writer refers to them correctly",
+    "approved_new_names": "Phase 1 grounded identity: names are minted in "
+                          "Python and selected, never invented",
+    "recent_context": "continuity with the scenes before this one",
+    "plot_beat_section": "the beat this scene must execute in plot-first mode",
+    "arc_pressure_section": "the tension target the arc system exists to set",
+}
+
+# A field a task may omit, with the reason. Anything not listed here is
+# required: an omission has to be argued for, not assumed.
+CONTRACT_EXEMPTIONS = {
+    ("revise", "approved_new_names"):
+        "a revision must introduce no new named entities at all, so the pool "
+        "of approved-but-unused names is withheld rather than offered; the "
+        "cast is fixed and comes from existing_characters",
+}
+
+
+def contract_fields_for(task: str) -> dict:
+    """The contract fields a given task must carry, with why each matters."""
+    return {f: why for f, why in CONTRACT_FIELDS.items()
+            if (task, f) not in CONTRACT_EXEMPTIONS}
+
+
+STORY_CONTEXT_TEMPLATE = """## Story Context
+
+**Novel:** {novel_name}
+**Tick:** {current_tick}
+
+## Recent Story
+
+{recent_context}
+
+## This Scene
+
+**Intention:** {scene_intention}
+**Key change this scene must accomplish:** {key_change}
+{plot_beat_section}{arc_pressure_section}
+
+## POV Character
+
+{pov_character_name}
+
+{pov_character_details}
+
+Write in deep third-person limited on this character: only what they can
+perceive, know or infer, in their register.
+
+## Location
+
+{location_details}
+
+## Cast & Naming
+
+{existing_characters}
+{naming_rule}"""
+
+
+WRITE_NAMING_RULE = """
+Names are minted in Python and SELECTED, never invented. If this scene needs a
+character, place or faction that does not exist yet, use one of these approved
+names exactly as written:
+
+{approved_new_names}
+
+Never invent a name that is not listed above, and never write a raw entity ID
+(C000, L000) into the prose."""
+
+
+REVISE_NAMING_RULE = """
+The cast above is fixed. Introduce NO new named entities: no new characters,
+places or factions, not even in passing. A revision that adds a name is a
+continuity break rather than a creative choice. Never write a raw entity ID
+(C000, L000) into the prose."""
+
+
+def story_context_section(context: dict, task: str = "write") -> str:
+    """The invariant context every writing call needs, rendered once.
+
+    Shared deliberately. Three prompts each hand-picked their own subset of
+    this and between them dropped four contracts (see CONTRACT_FIELDS), which
+    is what a single renderer prevents.
+
+    ``task`` selects the naming directive, and only that. Writing offers the
+    approved-name pool; revision withholds it and forbids new names outright,
+    because the same data needs the opposite instruction in the two cases.
+    """
+    ctx = dict(context or {})
+    ctx.setdefault("novel_name", "(untitled)")
+    ctx.setdefault("current_tick", "?")
+    for field in ("recent_context", "scene_intention", "key_change",
+                  "pov_character_name", "pov_character_details",
+                  "location_details", "existing_characters"):
+        ctx.setdefault(field, "")
+        if not str(ctx[field]).strip():
+            ctx[field] = "(none)"
+    for field in ("plot_beat_section", "arc_pressure_section"):
+        ctx.setdefault(field, "")
+    if task == "revise":
+        ctx["naming_rule"] = REVISE_NAMING_RULE
+    else:
+        pool = str(ctx.get("approved_new_names") or "").strip()
+        ctx["naming_rule"] = WRITE_NAMING_RULE.format(
+            approved_new_names=pool or "(none available this tick)")
+    return STORY_CONTEXT_TEMPLATE.format(**ctx)
+
+
 WRITER_PROMPT_TEMPLATE = """You are a creative fiction writer specializing in deep POV narrative.
 
 ## Story Context
@@ -335,30 +459,14 @@ def format_scene_continuation_prompt(scene_so_far: str, writer_context: dict = N
 
 SCENE_SECTION_PROMPT_TEMPLATE = """You are a creative fiction writer writing ONE SECTION of a scene, against a paragraph plan.
 
-## Scene Intention
-
-{scene_intention}
-
-## POV Character
-
-{pov_character_name}
-
-{pov_character_details}
-
-## Setting
-
-{location_details}
-
-## Cast
-
-{existing_characters}
-{scene_so_far_section}
-## Your Section: paragraphs {first} to {last}
-
-{plan_lines}
+{story_context}
 
 {plan_rules}
 
+## Your Section: paragraphs {first} to {last}
+
+{plan_lines}
+{scene_so_far_section}
 ## Your Task
 
 {position_instruction}
@@ -424,11 +532,7 @@ def format_scene_section_prompt(writer_context: dict, plan_lines: str,
                   scene_so_far=scene_so_far, prior_last=first - 1))
 
     return SCENE_SECTION_PROMPT_TEMPLATE.format(
-        scene_intention=ctx.get("scene_intention") or "(as established by the scene)",
-        pov_character_name=ctx.get("pov_character_name") or "the established POV character",
-        pov_character_details=ctx.get("pov_character_details") or "",
-        location_details=ctx.get("location_details") or "",
-        existing_characters=ctx.get("existing_characters") or "",
+        story_context=story_context_section(ctx, task="write"),
         scene_so_far_section=so_far,
         first=first,
         last=last,
@@ -441,9 +545,9 @@ def format_scene_section_prompt(writer_context: dict, plan_lines: str,
 
 PARTIAL_REVISION_PROMPT_TEMPLATE = """You are a creative fiction writer adjusting the tension of ONE SCENE by revising a few of its paragraphs.
 
-## The Scene (every paragraph numbered)
+{story_context}
 
-{numbered_scene}
+{plan_rules}
 
 ## Tension
 
@@ -452,34 +556,44 @@ PARTIAL_REVISION_PROMPT_TEMPLATE = """You are a creative fiction writer adjustin
 This scene currently reads {current_level}/10 ({current_band}). The target is {target_level}/10 ({target_band}): {target_definition}
 {continuity_line}{direction_line}
 
+## The Scene (every paragraph numbered)
+
+{numbered_scene}
+
 ## Your Task
 
 Rewrite ONLY these paragraphs:
 
 {target_lines}
 
+What must NOT change:
+1. The events. Who does what, and what the scene establishes, stay exactly as
+   they are. Only the pressure changes.
+2. The cast. Introduce no new named entities.
+3. The paragraph count. Each rewritten paragraph stays ONE paragraph at
+   roughly its current length; never split one or merge two.
+
 Firm rules:
 1. Output ONLY the rewritten paragraphs, each opening with its number in
    square brackets, e.g. "[7] ", then the prose. Do not output any other
    paragraph.
-2. Keep each rewritten paragraph a SINGLE paragraph at roughly its stated
-   length. Never split one into several, never merge two.
-3. The events of the scene do not change. Who does what, and what the scene
-   establishes, stay exactly as they are; only the pressure changes.
-4. Each rewrite must read continuously with the untouched paragraphs on
+2. Each rewrite must read continuously with the untouched paragraphs on
    either side of it: same voice, tense, POV and narrative distance.
 
 Rewrite those paragraphs now:"""
 
 
-def format_partial_revision_prompt(context: dict) -> str:
+def format_partial_revision_prompt(context: dict, writer_context: dict = None) -> str:
     """Format a selective paragraph revision (see agent/partial_revision.py).
 
     Revising the whole scene destroys the paragraph plan that produced it, so
     the revision is addressed to specific paragraphs and everything else is
     left byte-identical.
     """
-    return PARTIAL_REVISION_PROMPT_TEMPLATE.format(**context)
+    payload = dict(context)
+    payload["story_context"] = story_context_section(writer_context or {},
+                                                     task="revise")
+    return PARTIAL_REVISION_PROMPT_TEMPLATE.format(**payload)
 
 
 def number_scene(paragraphs) -> str:

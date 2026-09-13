@@ -121,7 +121,12 @@ def test_revision_prompt_addresses_only_the_selected_paragraphs():
     assert "[1] First para." in p and "[4] Fourth para." in p   # full context
     assert "Rewrite ONLY these paragraphs" in p
     assert "\n[2] ACTION" in p                                  # the target line
-    assert "events of the scene do not change" in p
+    flat = " ".join(p.split())
+    # The three invariants a revision must hold, stated explicitly.
+    assert "What must NOT change" in p
+    assert "The events." in p and "Only the pressure changes." in flat
+    assert "Introduce no new named entities." in flat
+    assert "The paragraph count." in p
 
 
 def test_unaddressed_response_changes_nothing():

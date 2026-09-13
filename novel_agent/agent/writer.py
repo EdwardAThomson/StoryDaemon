@@ -349,7 +349,7 @@ class SceneWriter:
         from .partial_revision import (check_lengths, parse_revised_blocks,
                                        splice)
         from .prompts import format_partial_revision_prompt, number_scene
-        from .scene_skeleton import block_word_targets, MODE_GUIDE
+        from .scene_skeleton import block_word_targets, MODE_GUIDE, plan_rules
         from .tension_scale import band_for, scale_overview
 
         writer_context = writer_context or {}
@@ -360,6 +360,9 @@ class SceneWriter:
             return "", {"applied": 0, "reason": "no revisable paragraphs"}
 
         targets = block_word_targets(list(skeleton))
+        want_words_hint = sum(
+            targets[i - 1] if i - 1 < len(targets)
+            else len(paragraphs[i - 1].split()) for i in indices)
         target_band, current_band = band_for(target_level), band_for(current_level)
         lines = []
         for i in indices:
@@ -382,6 +385,8 @@ class SceneWriter:
                      f"RAISE the tension toward the target: {target_band.directive}")
 
         prompt = format_partial_revision_prompt({
+            "plan_rules": plan_rules(len(indices), want_words_hint,
+                                     sectioned=True),
             "numbered_scene": number_scene(paragraphs),
             "scale_overview": scale_overview(),
             "current_level": f"{current_level:g}", "current_band": current_band.name,
@@ -390,7 +395,7 @@ class SceneWriter:
             "continuity_line": continuity_line,
             "direction_line": direction,
             "target_lines": chr(10).join(lines),
-        })
+        }, writer_context=writer_context)
         # Only the selected paragraphs come back, so the budget is sized from
         # them rather than from the whole scene.
         want_words = sum(targets[i - 1] if i - 1 < len(targets)
