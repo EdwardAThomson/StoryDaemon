@@ -279,9 +279,10 @@ def test_compliance_untouched_when_the_text_still_matches():
     assert "rewritten_after_planning" not in c
 
 
-def test_tension_rewrite_is_skipped_for_a_planned_scene():
-    """The revision prompt knows nothing about the paragraph plan, so it
-    rewrites the prose whole and collapses the structure. The plan wins."""
+def test_a_planned_scene_takes_the_selective_revision_path():
+    """A planned scene must not be handed to the whole-scene rewrite: that is
+    what collapsed 64 paragraphs to 36 live. It gets selective revision of the
+    tension-carrying paragraphs instead."""
     from novel_agent.agent.agent import StoryAgent
 
     class Cfg2:
@@ -289,12 +290,32 @@ def test_tension_rewrite_is_skipped_for_a_planned_scene():
             return {"coherence.tension_rewrite": True,
                     "coherence.tension_rewrite_threshold": 2,
                     "coherence.target_story_length": 40,
+                    "coherence.curve_preset": "house",
+                    "coherence.target_tension_curve":
+                        Config().get("coherence.target_tension_curve"),
                     "coherence.arc_phase_mandate": True}.get(key, default)
 
+    calls = {}
+
+    class W:
+        def revise_blocks_for_tension(self, text, skeleton, indices, *a, **k):
+            calls["indices"] = list(indices)
+            calls["skeleton"] = list(skeleton)
+            return "", {"reason": "test stub"}
+
+        def revise_for_tension_with_meta(self, *a, **k):   # must NOT be called
+            calls["whole_scene"] = True
+            return "rewritten whole", {}
+
+    class Mem:
+        def list_scenes(self):
+            return []
+
     agent = StoryAgent.__new__(StoryAgent)
-    agent.config = Cfg2()
-    planned = {"text": "prose", "scene_skeleton": ["DIALOGUE", "ACTION"]}
-    tension = {"enabled": True, "tension_level": 9}
-    out, t = StoryAgent._maybe_rewrite_for_tension(
-        agent, planned, tension, 1, {})
-    assert out is planned and t is tension      # untouched, no rewrite attempted
+    agent.config, agent.writer, agent.memory = Cfg2(), W(), Mem()
+    planned = {"text": "a\n\nb\n\nc", "scene_skeleton": ["ACTION"] * 3}
+    tension = {"enabled": True, "tension_level": 5.5}
+    out, t = StoryAgent._maybe_rewrite_for_tension(agent, planned, tension, 1, {})
+    assert "whole_scene" not in calls          # the destructive path never ran
+    assert calls["indices"]                    # selective revision was asked for
+    assert out is planned and t is tension     # stub returned nothing, so unchanged

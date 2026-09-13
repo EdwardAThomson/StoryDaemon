@@ -180,6 +180,10 @@ DEFAULT_CONFIG = {
         # toward the target (kept only if it lands closer). Adds ~2 LLM calls per
         # off-target scene; set False to disable (back to open-loop nudging only).
         'tension_rewrite': True,
+        # Selective revision: when a scene follows a paragraph plan, only the
+        # tension-carrying paragraphs are rewritten (the rest stay
+        # byte-identical), so the plan survives the pass. Cap on how many.
+        'partial_rewrite_max_blocks': 8,
         'tension_rewrite_threshold': 2,
         # A target that is this far below the previous scene's tension is treated as a
         # deliberate drop that needs a transition (new location / aftermath / time skip)

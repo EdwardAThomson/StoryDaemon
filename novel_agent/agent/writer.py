@@ -1,6 +1,7 @@
 """Scene writer for generating prose."""
 
 import logging
+import re
 from typing import Dict, Any, List, Optional, Tuple
 
 from .segments import (
@@ -332,6 +333,76 @@ class SceneWriter:
             meta["trimmed"] = True
             print("        revision trimmed to last complete sentence, flagged")
         return text, meta
+
+    def revise_blocks_for_tension(
+        self, scene_text: str, skeleton, indices, target_level: float,
+        current_level: float, writer_context: Dict[str, Any] = None,
+        prev_tension: float = None
+    ) -> Tuple[str, Dict[str, Any]]:
+        """Revise selected paragraphs toward a tension target; splice them back.
+
+        Everything not selected is returned byte-identical, so the paragraph
+        plan, the scene's length and its marker compliance all survive the
+        pass by construction. Returns ("", meta) when nothing could be applied,
+        which the caller treats as "no revision" and keeps the original scene.
+        """
+        from .partial_revision import parse_revised_blocks, splice
+        from .prompts import format_partial_revision_prompt, number_scene
+        from .scene_skeleton import block_word_targets, MODE_GUIDE
+        from .tension_scale import band_for, scale_overview
+
+        writer_context = writer_context or {}
+        paragraphs = [p.strip() for p in re.split(r"\n\s*\n", scene_text)
+                      if p.strip()]
+        indices = [i for i in indices if 1 <= i <= len(paragraphs)]
+        if not indices:
+            return "", {"applied": 0, "reason": "no revisable paragraphs"}
+
+        targets = block_word_targets(list(skeleton))
+        target_band, current_band = band_for(target_level), band_for(current_level)
+        lines = []
+        for i in indices:
+            mode = skeleton[i - 1] if i - 1 < len(skeleton) else ""
+            want = targets[i - 1] if i - 1 < len(targets) else len(paragraphs[i - 1].split())
+            gloss = MODE_GUIDE.get(mode, "")
+            lines.append(f"[{i}] {mode}, ~{want} words: {gloss}")
+
+        continuity_line = ""
+        if prev_tension is not None:
+            step = self.config.get('coherence.tension_step_for_transition', 3)
+            if prev_tension - target_level >= step:
+                continuity_line = (
+                    f"The previous scene was {prev_tension:g}/10; this is a deliberate "
+                    f"transition to a calmer beat.\n")
+            else:
+                continuity_line = f"The previous scene was {prev_tension:g}/10.\n"
+        direction = (f"LOWER the tension toward the target: {target_band.directive}"
+                     if target_level < current_level else
+                     f"RAISE the tension toward the target: {target_band.directive}")
+
+        prompt = format_partial_revision_prompt({
+            "numbered_scene": number_scene(paragraphs),
+            "scale_overview": scale_overview(),
+            "current_level": f"{current_level:g}", "current_band": current_band.name,
+            "target_level": f"{target_level:g}", "target_band": target_band.name,
+            "target_definition": target_band.definition,
+            "continuity_line": continuity_line,
+            "direction_line": direction,
+            "target_lines": chr(10).join(lines),
+        })
+        # Only the selected paragraphs come back, so the budget is sized from
+        # them rather than from the whole scene.
+        want_words = sum(targets[i - 1] if i - 1 < len(targets)
+                         else len(paragraphs[i - 1].split()) for i in indices)
+        response, _ = self._generate_segment(
+            prompt, token_budget_for(max(want_words, 120), self.config))
+        revised = parse_revised_blocks(self._strip_llm_header((response or "").strip()))
+        revised = {i: t for i, t in revised.items() if i in set(indices)}
+        merged, applied = splice(paragraphs, revised)
+        if not applied:
+            return "", {"applied": 0, "reason": "no addressed paragraphs returned"}
+        return "\n\n".join(merged), {"applied": applied,
+                                      "requested": len(indices)}
 
     def _format_writer_prompt(self, context: Dict[str, Any]) -> str:
         """Format writer prompt with context.

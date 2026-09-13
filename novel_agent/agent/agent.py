@@ -1068,23 +1068,6 @@ class StoryAgent:
             if not needs_tension_rewrite(current, target, threshold):
                 return scene_data, tension_result
 
-            # A scene written to a paragraph plan is not available for a free
-            # prose rewrite: the revision prompt knows nothing about the plan
-            # and rewrites the prose whole, which collapses the structure the
-            # skeleton just imposed. Observed live on 2026-09-12: two of four
-            # scenes were rewritten and their paragraph counts fell 64 -> 36
-            # and 57 -> 28, undoing Slice 4 entirely and leaving the recorded
-            # skeleton_compliance describing text that had been thrown away.
-            # The skeleton is the stronger structural claim and arc-pressure's
-            # own finding is that EVENTS, not prose, set the tension floor
-            # (rewrite_futile, above), so the plan wins. Making the revision
-            # plan-aware is the better fix and is not this change.
-            if scene_data.get("scene_skeleton"):
-                print(f"   7.6. Tension {current}/10 vs target {target:g}: scene follows a "
-                      f"paragraph plan; skipping the prose rewrite (it would "
-                      f"collapse the plan's structure)")
-                return scene_data, tension_result
-
             # Phase 3 arc-phase mandate: a drop of a full transition step or more cannot
             # be rewritten away (the EVENTS set the floor, and only the planner changes
             # those), so skip the revision pass instead of wasting two LLM calls.
@@ -1097,6 +1080,27 @@ class StoryAgent:
 
             print(f"   7.6. Tension {current}/10 off target {target:g} — revising once...")
             prev_tension = last_scene_tension(self.memory)
+
+            # A scene written to a paragraph plan gets a SELECTIVE revision:
+            # only the paragraphs that carry the tension are rewritten and the
+            # rest are returned byte-identical, so the plan, the scene's length
+            # and its marker compliance survive by construction. Rewriting the
+            # whole scene destroyed all three (2026-09-12: paragraph counts
+            # fell 64 -> 36 and 57 -> 28, and a fifth of the prose went with
+            # them), because the revision prompt saw only prose and
+            # compression is a natural way to take heat out of a scene.
+            skeleton = scene_data.get("scene_skeleton")
+            if skeleton:
+                revised_text, part_meta = self._revise_planned_blocks(
+                    scene_data, skeleton, target, current, writer_context,
+                    prev_tension)
+                if not revised_text:
+                    print(f"        selective revision made no change "
+                          f"({part_meta.get('reason', 'no blocks applied')})")
+                    return scene_data, tension_result
+                return self._keep_revision_if_closer(
+                    scene_data, tension_result, revised_text, {}, target,
+                    current, writer_context)
             # Phase 3 segment plumbing: prefer the meta variant (carries the
             # completion guarantee's trimmed flag); plain revise_for_tension is
             # the fallback so hand-rolled writers keep working.
@@ -1113,6 +1117,39 @@ class StoryAgent:
             if not revised_text:
                 return scene_data, tension_result
 
+            return self._keep_revision_if_closer(
+                scene_data, tension_result, revised_text, revise_meta, target,
+                current, writer_context)
+        except Exception as e:
+            logging.getLogger(__name__).warning(f"Tension rewrite failed: {e}")
+            return scene_data, tension_result
+
+    def _revise_planned_blocks(self, scene_data, skeleton, target, current,
+                               writer_context, prev_tension):
+        """Selective revision of the tension-carrying paragraphs. Never raises."""
+        try:
+            from .partial_revision import select_blocks
+            reviser = getattr(self.writer, "revise_blocks_for_tension", None)
+            if reviser is None:
+                return "", {"reason": "writer has no selective revision"}
+            indices = select_blocks(
+                skeleton,
+                self.config.get('coherence.partial_rewrite_max_blocks', 8))
+            if not indices:
+                return "", {"reason": "no tension-carrying paragraphs in the plan"}
+            print(f"        revising {len(indices)} of {len(skeleton)} paragraphs "
+                  f"({', '.join(str(i) for i in indices)})")
+            return reviser(scene_data["text"], skeleton, indices, target,
+                           current, writer_context, prev_tension)
+        except Exception as e:
+            logging.getLogger(__name__).warning(f"Selective revision failed: {e}")
+            return "", {"reason": str(e)}
+
+    def _keep_revision_if_closer(self, scene_data, tension_result, revised_text,
+                                 revise_meta, target, current, writer_context):
+        """Adopt a revision only when it scores closer to the target."""
+        try:
+            from .arc_pressure import rewrite_improved
             new_result = self.tension_evaluator.evaluate_tension(revised_text, writer_context)
             new_level = new_result.get('tension_level') if new_result.get('enabled') else None
             if rewrite_improved(new_level, current, target):
@@ -1121,7 +1158,7 @@ class StoryAgent:
                 new_result['tension_pre_rewrite'] = current
                 scene_data = {**scene_data, "text": revised_text,
                               "word_count": len(revised_text.split())}
-                if revise_meta.get("trimmed"):
+                if (revise_meta or {}).get("trimmed"):
                     # The adopted revision was trim-flagged; the committed scene
                     # must carry that truth (scene_truncated in metrics).
                     scene_data["trimmed"] = True
@@ -1131,7 +1168,8 @@ class StoryAgent:
             tension_result['rewritten'] = False
             return scene_data, tension_result
         except Exception as e:
-            logging.getLogger(__name__).warning(f"Tension rewrite failed (tick {tick}): {e}")
+            logging.getLogger(__name__).warning(
+                f"Scoring the revision failed; keeping the original scene: {e}")
             return scene_data, tension_result
 
     def _sacred_finale_applies(self, tick) -> bool:

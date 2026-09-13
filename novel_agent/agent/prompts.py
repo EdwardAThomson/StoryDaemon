@@ -439,6 +439,54 @@ def format_scene_section_prompt(writer_context: dict, plan_lines: str,
     )
 
 
+PARTIAL_REVISION_PROMPT_TEMPLATE = """You are a creative fiction writer adjusting the tension of ONE SCENE by revising a few of its paragraphs.
+
+## The Scene (every paragraph numbered)
+
+{numbered_scene}
+
+## Tension
+
+{scale_overview}
+
+This scene currently reads {current_level}/10 ({current_band}). The target is {target_level}/10 ({target_band}): {target_definition}
+{continuity_line}{direction_line}
+
+## Your Task
+
+Rewrite ONLY these paragraphs:
+
+{target_lines}
+
+Firm rules:
+1. Output ONLY the rewritten paragraphs, each opening with its number in
+   square brackets, e.g. "[7] ", then the prose. Do not output any other
+   paragraph.
+2. Keep each rewritten paragraph a SINGLE paragraph at roughly its stated
+   length. Never split one into several, never merge two.
+3. The events of the scene do not change. Who does what, and what the scene
+   establishes, stay exactly as they are; only the pressure changes.
+4. Each rewrite must read continuously with the untouched paragraphs on
+   either side of it: same voice, tense, POV and narrative distance.
+
+Rewrite those paragraphs now:"""
+
+
+def format_partial_revision_prompt(context: dict) -> str:
+    """Format a selective paragraph revision (see agent/partial_revision.py).
+
+    Revising the whole scene destroys the paragraph plan that produced it, so
+    the revision is addressed to specific paragraphs and everything else is
+    left byte-identical.
+    """
+    return PARTIAL_REVISION_PROMPT_TEMPLATE.format(**context)
+
+
+def number_scene(paragraphs) -> str:
+    """The scene with every paragraph marked, so a revision can address them."""
+    return chr(10).join(f"[{i + 1}] {p}" for i, p in enumerate(paragraphs))
+
+
 def format_planner_prompt(context: dict) -> str:
     """Format the planner prompt with context variables.
 
