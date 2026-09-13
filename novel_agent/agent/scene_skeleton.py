@@ -325,18 +325,23 @@ def skeleton_lines(skeleton: List[str], first: int = 1,
     return chr(10).join(out)
 
 
-def plan_rules(count: int, target_words: int, sectioned: bool = False) -> str:
+def plan_rules(sectioned: bool = False) -> str:
     """The plan rules block, shared by the whole-scene and per-section prompts.
 
     Single source of truth deliberately: these rules encode the Gate B lessons
     (per-item markers, one item one paragraph, no compression) and the
     one-speech-turn-per-item dialogue rule, and a copy that drifted out of sync
     would silently undo either.
+
+    Deliberately free of per-call numbers. Item counts and word totals live
+    beside the plan they describe, which reads better and, more to the point,
+    keeps this block byte-identical across every call of a scene so it can sit
+    in the cacheable prefix (PROMPT_ARCHITECTURE_PLAN.md section 3).
     """
     scope = "section" if sectioned else "scene"
     whole = ("" if sectioned else
-             f"\n- Do not compress, summarize, or wrap the scene up early: all\n"
-             f"  {count} items, one paragraph each.")
+             "\n- Do not compress, summarize, or wrap the scene up early: write\n"
+             "  every item in the plan, one paragraph each.")
     return f"""Plan rules:
 - Begin every paragraph with its plan number in square brackets and a
   space, e.g. "[7] ", then the prose. Every item appears exactly once, in
@@ -349,10 +354,9 @@ def plan_rules(count: int, target_words: int, sectioned: bool = False) -> str:
   business. When the speaker changes, the item changes. Never pack several
   exchanges into a single paragraph.{whole}
 - Write each paragraph to its own stated length. Those lengths vary on
-  purpose, from a few words to a long one, and they add up to this
-  {scope}'s target of roughly {target_words} words. Treat each as a target to
-  hit, not a ceiling to stay under, and reach the total through the plan,
-  never by adding, dropping or merging paragraphs.
+  purpose, from a few words to a long one. Treat each as a target to hit,
+  not a ceiling to stay under, and reach this {scope}'s total through the
+  plan, never by adding, dropping or merging paragraphs.
 - A paragraph's dominant mode must match its plan item."""
 
 
@@ -372,13 +376,14 @@ def skeleton_prompt_section(skeleton: List[str]) -> str:
     """
     return f"""
 
+{plan_rules()}
+
 **Paragraph Plan (structural guidance):** follow this {len(skeleton)}-item
-paragraph plan EXACTLY; each numbered item names the single dominant mode
-that paragraph must have, and the length that paragraph should run.
+paragraph plan EXACTLY, about {round(expected_words(skeleton))} words in total.
+Each numbered item names the single dominant mode that paragraph must have,
+and the length that paragraph should run.
 
-{skeleton_lines(skeleton)}
-
-{plan_rules(len(skeleton), round(expected_words(skeleton)))}"""
+{skeleton_lines(skeleton)}"""
 
 
 _MARKER = re.compile(r"^[ \t]*\[(\d+)\][ \t]*", re.M)

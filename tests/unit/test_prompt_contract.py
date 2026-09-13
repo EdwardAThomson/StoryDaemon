@@ -137,6 +137,51 @@ def test_sections_do_not_get_whole_scene_shape_requirements():
         assert "EXECUTE THE CHANGE" not in prompt
 
 
+# ---- ordering: static before volatile ----------------------------------------
+
+def _common_prefix(a, b):
+    n = 0
+    for x, y in zip(a, b):
+        if x != y:
+            break
+        n += 1
+    return n
+
+
+def test_section_calls_share_a_long_identical_prefix():
+    """Everything invariant across a scene's sections must come first.
+
+    This is what makes the prefix cacheable (PROMPT_ARCHITECTURE_PLAN.md
+    section 3). It was not true before: the growing scene-so-far sat ahead of
+    the static plan rules, so the prose poisoned the prefix from the second
+    call onward.
+    """
+    llm = CapturingLLM()
+    cfg = Cfg(**{"generation.subblock_generation": True,
+                 "generation.subblock_section_blocks": 10})
+    SceneWriter(llm, cfg).write_scene(_ctx(scene_skeleton=["DIALOGUE"] * 40))
+    assert len(llm.prompts) >= 3, "need several sections to compare"
+    shared = min(_common_prefix(llm.prompts[0], p) for p in llm.prompts[1:])
+    # The spine, craft rules and plan rules all sit inside the shared prefix.
+    assert shared > 1500, f"only {shared} chars shared across section calls"
+    prefix = llm.prompts[0][:shared]
+    assert "## POV Character" in prefix
+    assert "Deep POV only" in prefix
+    assert "Plan rules:" in prefix
+    # and the volatile parts are outside it: the per-section numbers, the
+    # plan lines and the prose so far must all fall after the shared prefix.
+    assert "The Scene So Far" not in prefix
+    tails = [p[shared:] for p in llm.prompts]
+    assert all("items, about" in t for t in tails)     # per-section counts
+    assert all("DIALOGUE, ~" in t for t in tails)      # this section's plan
+
+
+def test_plan_rules_are_identical_across_sections():
+    from novel_agent.agent.scene_skeleton import plan_rules
+    assert plan_rules(sectioned=True) == plan_rules(sectioned=True)
+    assert "{" not in plan_rules(sectioned=True)     # no per-call numbers left
+
+
 # ---- the contract itself -----------------------------------------------------
 
 def test_every_exemption_names_a_real_field_and_gives_a_reason():

@@ -154,8 +154,9 @@ class SceneWriter:
                 prompt = format_scene_section_prompt(
                     writer_context,
                     plan_lines=skeleton_lines(skeleton, first, last),
-                    plan_rules=plan_rules(last - first + 1, words,
-                                          sectioned=True),
+                    plan_rules=plan_rules(sectioned=True),
+                    item_count=last - first + 1,
+                    section_words=words,
                     first=first, last=last,
                     scene_so_far=text,
                     is_first=(i == 0),
@@ -385,8 +386,7 @@ class SceneWriter:
                      f"RAISE the tension toward the target: {target_band.directive}")
 
         prompt = format_partial_revision_prompt({
-            "plan_rules": plan_rules(len(indices), want_words_hint,
-                                     sectioned=True),
+            "plan_rules": plan_rules(sectioned=True),
             "numbered_scene": number_scene(paragraphs),
             "scale_overview": scale_overview(),
             "current_level": f"{current_level:g}", "current_band": current_band.name,

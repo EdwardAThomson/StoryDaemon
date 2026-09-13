@@ -57,7 +57,7 @@ def _prompt(first, last, **kw):
         {"scene_intention": "Mira confronts the archivist",
          "pov_character_name": "Mira"},
         plan_lines=skeleton_lines(sk, first, last),
-        plan_rules=plan_rules(last - first + 1, 500, sectioned=True),
+        plan_rules=plan_rules(sectioned=True),
         first=first, last=last, **kw)
 
 

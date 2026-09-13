@@ -128,7 +128,7 @@ def test_prompt_declares_one_speech_turn_per_dialogue_item():
 def test_prompt_states_the_plans_own_word_target():
     plan = ["DIALOGUE"] * 8
     s = sk.skeleton_prompt_section(plan)
-    assert f"roughly {round(sk.expected_words(plan))} words" in s
+    assert f"about {round(sk.expected_words(plan))} words in total" in s
 
 
 # ---- marker stripping --------------------------------------------------------

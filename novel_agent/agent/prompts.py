@@ -488,6 +488,8 @@ SCENE_SECTION_PROMPT_TEMPLATE = """You are a creative fiction writer writing ONE
 
 ## Your Section: paragraphs {first} to {last}
 
+{item_count} items, about {section_words} words in total.
+
 {plan_lines}
 {scene_so_far_section}
 ## Your Task
@@ -510,6 +512,7 @@ SCENE_SO_FAR_SECTION_TEMPLATE = """
 
 def format_scene_section_prompt(writer_context: dict, plan_lines: str,
                                 plan_rules: str, first: int, last: int,
+                                item_count: int = 0, section_words: int = 0,
                                 scene_so_far: str = "",
                                 is_first: bool = False,
                                 is_last: bool = False) -> str:
@@ -562,6 +565,8 @@ def format_scene_section_prompt(writer_context: dict, plan_lines: str,
         last=last,
         plan_lines=plan_lines,
         plan_rules=plan_rules,
+        item_count=item_count or (last - first + 1),
+        section_words=section_words,
         position_instruction=position,
         continuity_rules=chr(10).join(continuity),
     )
