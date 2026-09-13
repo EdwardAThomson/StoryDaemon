@@ -90,6 +90,53 @@ def test_revision_carries_every_contract_field():
     assert _missing(llm.prompts[0], "revise") == []
 
 
+# ---- craft discipline reaches every call too ---------------------------------
+
+CRAFT_MARKERS = ["Third-person POV", "Deep POV only", "Show don't tell",
+                 "NEVER invent a NEW character's name", "head-hopping"]
+
+
+def _craft_missing(prompt):
+    return [m for m in CRAFT_MARKERS if m not in prompt]
+
+
+def test_single_shot_write_carries_the_craft_rules():
+    llm = CapturingLLM()
+    SceneWriter(llm, Config()).write_scene(_ctx())
+    assert _craft_missing(llm.prompts[0]) == []
+
+
+def test_every_section_call_carries_the_craft_rules():
+    # Sections had NO craft guidance at all: no POV discipline, no naming
+    # rule, no show-don't-tell. Only the whole-scene prompt ever had them.
+    llm = CapturingLLM()
+    cfg = Cfg(**{"generation.subblock_generation": True,
+                 "generation.subblock_section_blocks": 10})
+    SceneWriter(llm, cfg).write_scene(_ctx(scene_skeleton=["DIALOGUE"] * 25))
+    for i, prompt in enumerate(llm.prompts):
+        assert _craft_missing(prompt) == [], f"section call {i + 1}"
+
+
+def test_revision_carries_the_craft_rules():
+    llm = CapturingLLM(response="[2] Revised.")
+    SceneWriter(llm, Config()).revise_blocks_for_tension(
+        "One.\n\nTwo.\n\nThree.", ["ACTION"] * 3, [2],
+        target_level=3, current_level=8, writer_context=_ctx())
+    assert _craft_missing(llm.prompts[0]) == []
+
+
+def test_sections_do_not_get_whole_scene_shape_requirements():
+    """A middle section must not be told to open, turn and resolve on its own:
+    those describe the arc of a whole scene."""
+    llm = CapturingLLM()
+    cfg = Cfg(**{"generation.subblock_generation": True,
+                 "generation.subblock_section_blocks": 10})
+    SceneWriter(llm, cfg).write_scene(_ctx(scene_skeleton=["DIALOGUE"] * 25))
+    for prompt in llm.prompts:
+        assert "BUILD TO A TURNING POINT" not in prompt
+        assert "EXECUTE THE CHANGE" not in prompt
+
+
 # ---- the contract itself -----------------------------------------------------
 
 def test_every_exemption_names_a_real_field_and_gives_a_reason():

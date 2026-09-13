@@ -197,6 +197,42 @@ def contract_fields_for(task: str) -> dict:
             if (task, f) not in CONTRACT_EXEMPTIONS}
 
 
+CRAFT_RULES_TEMPLATE = """**WRITING RULES:**
+
+1. **Use character name naturally** - The POV character is "{pov_character_name}" - use this name in prose
+   - NEVER use placeholder formats like "char_name" or "character_name"
+   - Use "{pov_character_name}" when introducing the character or for clarity
+   - After introduction, you can vary between the name and pronouns naturally
+   - NEVER invent nicknames or alternate names not provided
+   - NEVER invent a NEW character's name: use the cast or an approved name from "Cast & Naming" above (unnamed walk-ons may stay unnamed)
+2. **Third-person POV** - Write in third person using "{pov_character_name}" or pronouns (he/she/they)
+   - NEVER use first person ("I", "my", "me") unless in dialogue
+   - Example: "{pov_character_name} pressed a palm against..." NOT "I pressed my palm against..."
+3. **Deep POV only** - Everything filtered through {pov_character_name}'s perception
+4. **No omniscient narration** - Don't reveal what the character can't know
+5. **Show don't tell** - Use actions, dialogue, and sensory details
+6. **Sensory details** - Engage sight, sound, smell, touch, taste
+7. **Internal thoughts and reactions** - Show character's mental state
+8. **Ground factions** - When an organization appears for the first time, include a brief identity line (who they are) or use a generated faction representative in dialogue
+
+**AVOID:** first-person POV outside dialogue, placeholder names, head-hopping, telling emotions instead of showing, and repeating actions or emotional beats from the recent scenes above."""
+
+
+def craft_rules(context: dict) -> str:
+    """Per-call craft discipline: POV, naming, showing, sensory grounding.
+
+    Shared by every writing call. Deliberately excludes the SCENE-shape
+    requirements (execute the key change, build to a turning point, use the
+    planned transition, honour dialogue targets): those describe the arc of a
+    whole scene, and handing them to a call that is writing paragraphs 21 to
+    30 would ask a middle section to open, turn and resolve on its own. The
+    scene's objective reaches a section as context, and its structural role
+    comes from the position instruction instead.
+    """
+    name = (context or {}).get("pov_character_name") or "the POV character"
+    return CRAFT_RULES_TEMPLATE.format(pov_character_name=name)
+
+
 STORY_CONTEXT_TEMPLATE = """## Story Context
 
 **Novel:** {novel_name}
@@ -363,24 +399,9 @@ Write a scene passage from {pov_character_name}'s deep POV that ACCOMPLISHES THE
    - Do NOT repeat similar emotional beats
    - Find fresh ways to show character state and conflict
 
-**WRITING RULES:**
+{craft_rules}
 
-1. **Use character name naturally** - The POV character is "{pov_character_name}" - use this name in prose
-   - NEVER use placeholder formats like "char_name" or "character_name"
-   - Use "{pov_character_name}" when introducing the character or for clarity
-   - After introduction, you can vary between the name and pronouns naturally
-   - NEVER invent nicknames or alternate names not provided
-   - NEVER invent a NEW character's name — use the cast or an approved name from "Cast & Naming" above (unnamed walk-ons may stay unnamed)
-2. **Third-person POV** - Write in third person using "{pov_character_name}" or pronouns (he/she)
-   - NEVER use first person ("I", "my", "me") unless in dialogue
-   - Example: "{pov_character_name} pressed a palm against..." NOT "I pressed my palm against..."
-3. **Deep POV only** - Everything filtered through {pov_character_name}'s perception
-4. **No omniscient narration** - Don't reveal what the character can't know
-5. **Show don't tell** - Use actions, dialogue, and sensory details
-6. **Sensory details** - Engage sight, sound, smell, touch, taste
-7. **Internal thoughts and reactions** - Show character's mental state
-8. **Length:** Aim for the word target in the Length Guidance above (a guide, not a hard cap) and ALWAYS bring the scene to a complete, deliberate ending - never stop mid-sentence
-9. **Ground factions** - When an organization appears for the first time, include a brief identity line (who they are) or use a generated faction representative in dialogue
+9. **Length and ending:** Aim for the word target in the Length Guidance above (a guide, not a hard cap) and ALWAYS bring the scene to a complete, deliberate ending, never stopping mid-sentence.
 
 **OUTPUT FORMAT:** 
 Begin directly with the scene prose (optionally a markdown scene title).
@@ -461,6 +482,8 @@ SCENE_SECTION_PROMPT_TEMPLATE = """You are a creative fiction writer writing ONE
 
 {story_context}
 
+{craft_rules}
+
 {plan_rules}
 
 ## Your Section: paragraphs {first} to {last}
@@ -533,6 +556,7 @@ def format_scene_section_prompt(writer_context: dict, plan_lines: str,
 
     return SCENE_SECTION_PROMPT_TEMPLATE.format(
         story_context=story_context_section(ctx, task="write"),
+        craft_rules=craft_rules(ctx),
         scene_so_far_section=so_far,
         first=first,
         last=last,
@@ -546,6 +570,8 @@ def format_scene_section_prompt(writer_context: dict, plan_lines: str,
 PARTIAL_REVISION_PROMPT_TEMPLATE = """You are a creative fiction writer adjusting the tension of ONE SCENE by revising a few of its paragraphs.
 
 {story_context}
+
+{craft_rules}
 
 {plan_rules}
 
@@ -593,6 +619,7 @@ def format_partial_revision_prompt(context: dict, writer_context: dict = None) -
     payload = dict(context)
     payload["story_context"] = story_context_section(writer_context or {},
                                                      task="revise")
+    payload["craft_rules"] = craft_rules(writer_context or {})
     return PARTIAL_REVISION_PROMPT_TEMPLATE.format(**payload)
 
 
@@ -696,7 +723,9 @@ def format_writer_prompt(context: dict) -> str:
     Returns:
         Formatted prompt string
     """
-    return WRITER_PROMPT_TEMPLATE.format(**context)
+    payload = dict(context)
+    payload["craft_rules"] = craft_rules(context)
+    return WRITER_PROMPT_TEMPLATE.format(**payload)
 
 
 def format_fact_extraction_prompt(context: dict) -> str:

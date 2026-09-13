@@ -52,11 +52,24 @@ must say why in code.
 `scene_skeleton.plan_rules()`: markers, one item one paragraph, the
 one-speech-turn dialogue rule, per-item lengths.
 
-**A task block per call type.** Two, not three, because *single-shot writing
-and sectioned writing are the same task at different scope*. "Write plan items
-1 to n" and "write items 11 to 20" differ in range and in whether the call
-opens, continues or lands the scene. Those are parameters. Keeping them as
-separate templates is exactly how the section variant drifted.
+**A task block per call type.** Originally specified as two templates rather
+than three, on the argument that single-shot and sectioned writing are the same
+task at different scope.
+
+**Revised while building (2026-09-13).** The merge was the wrong move and the
+templates stay separate. The single-shot task block carries SCENE-shape
+requirements ("execute the key change", "build to a turning point: opening,
+rising action, turning point, resolution", "use the planned transition",
+"honour dialogue targets") that describe the arc of a whole scene. Handing
+those to a call writing paragraphs 21 to 30 would ask a middle section to open,
+turn and resolve on its own. What was actually shared and missing was the
+per-call *craft* discipline, now extracted as `craft_rules()`: POV, naming,
+show-don't-tell, sensory grounding, no head-hopping. Sections had none of it.
+
+The deeper correction: **the contract test is what prevents drift, not the
+template count.** Merging templates would have been a readability choice
+wearing a safety argument. Craft markers are now in the contract test too, so
+either template losing them fails.
 
 ```
 story_context_section(ctx)      shared by all calls
