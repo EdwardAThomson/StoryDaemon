@@ -59,9 +59,10 @@ def test_load_and_save_project_state():
         state = load_project_state(project_dir)
         assert state['novel_name'] == "test-novel"
         assert state['current_tick'] == 0
-        # A project is created with its protagonist already minted, so the active
-    # character is set from the start: a story must never begin castless.
-    assert state['active_character'] == 'C000' 
+        # A project is created with its protagonist already minted, so the
+        # active character is set from the start: a story must never begin
+        # castless.
+        assert state['active_character'] == 'C000'
         
         # Modify and save state
         state['current_tick'] = 5
