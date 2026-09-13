@@ -36,6 +36,14 @@ MIN_MODE_SHARE = 0.03
 DEFAULT_MAX_BLOCKS = 8       # cap on paragraphs revised in one pass
 MAX_SCENE_FRACTION = 0.34    # never rewrite most of a scene: that is the old bug
 
+# A revised paragraph beyond this multiple of its planned length is not a
+# revision of that paragraph, it is the model writing something else in its
+# place. Paragraph length is part of the plan (study section 5b), so letting
+# one block come back at five times its target would break the very
+# distribution the plan exists to hold, quietly and one paragraph at a time.
+MAX_LENGTH_MULTIPLE = 3.0
+MIN_LENGTH_FRACTION = 0.25
+
 
 def heat_ratios() -> Dict[str, float]:
     """Per-mode high-band share divided by calm-band share, from the grammar."""
@@ -102,21 +110,64 @@ _MARKED = re.compile(r"^[ \t]*\[(\d+)\][ \t]*", re.M)
 def parse_revised_blocks(response: str) -> Dict[int, str]:
     """Marker-addressed paragraphs from a revision response.
 
-    Returns {plan index: prose}. A response without markers yields {}, which
-    the caller treats as a failed revision rather than splicing blind.
+    Returns {plan index: prose}. A response with no markers at all yields {},
+    which the caller treats as a failed revision rather than splicing blind.
+
+    Structure is repaired here rather than requested. A marker addresses one
+    plan item and a plan item is one paragraph by definition, so a revision
+    the model split across blank lines is re-joined into its marked owner, and
+    line breaks inside a block are collapsed. The previous version kept only
+    the parts that began with a marker, which silently deleted the rest of a
+    split paragraph: strictly worse than the split it was trying to avoid.
+    Text before the first marker is preamble and is dropped.
     """
     if not response or not isinstance(response, str):
         return {}
-    out: Dict[int, str] = {}
-    parts = [p.strip() for p in re.split(r"\n\s*\n", response) if p.strip()]
-    for part in parts:
-        m = _MARKED.match(part)
-        if not m:
+    out: Dict[int, List[str]] = {}
+    current: Optional[int] = None
+    for part in re.split(r"\n\s*\n", response):
+        if not part.strip():
             continue
-        body = _MARKED.sub("", part, count=1).strip()
-        if body:
-            out[int(m.group(1))] = body
-    return out
+        m = _MARKED.match(part)
+        if m:
+            current = int(m.group(1))
+            body = _MARKED.sub("", part, count=1).strip()
+            out.setdefault(current, [])
+            if body:
+                out[current].append(body)
+        elif current is not None:
+            out[current].append(part.strip())
+    # One block = one paragraph: collapse any internal line breaks.
+    return {k: " ".join(" ".join(v).split()) for k, v in out.items()
+            if " ".join(v).strip()}
+
+
+def check_lengths(revised: Dict[int, str], targets: Sequence[int],
+                  originals: Sequence[str]) -> Tuple[Dict[int, str], List[int]]:
+    """Drop revisions whose length says they are not revisions.
+
+    Bounded against the paragraph being REPLACED, with the plan's target as a
+    fallback. That way round deliberately: a revision should be about the size
+    of what it replaces, and the writer already lands somewhat under the plan,
+    so bounding against the plan would reject revisions that faithfully match
+    the prose actually on the page. Returns the kept revisions and the indices
+    rejected, so the caller can record how often the guard fires rather than
+    hiding it.
+    """
+    kept, rejected = {}, []
+    for idx, prose in revised.items():
+        want = None
+        if 1 <= idx <= len(originals):
+            want = len(originals[idx - 1].split())
+        if not want and 1 <= idx <= len(targets):
+            want = targets[idx - 1]
+        got = len(prose.split())
+        if want and (got > want * MAX_LENGTH_MULTIPLE
+                     or got < want * MIN_LENGTH_FRACTION):
+            rejected.append(idx)
+            continue
+        kept[idx] = prose
+    return kept, sorted(rejected)
 
 
 def splice(paragraphs: Sequence[str], revised: Dict[int, str]

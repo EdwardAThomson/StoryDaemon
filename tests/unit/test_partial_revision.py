@@ -108,7 +108,9 @@ def test_revision_preserves_structure_and_length():
         SCENE, SK, [2, 4], target_level=3, current_level=8)
     assert text.split("\n\n") == ["First para.", "Second, calmer.",
                                   "Third para.", "Fourth, calmer."]
-    assert meta == {"applied": 2, "requested": 2}
+    assert meta["applied"] == 2 and meta["requested"] == 2
+    assert meta["rejected_length"] == []
+    assert meta["scene_paragraphs"] == 4       # unchanged, by construction
 
 
 def test_revision_prompt_addresses_only_the_selected_paragraphs():
@@ -143,3 +145,77 @@ def test_indices_outside_the_scene_are_dropped():
     text, _ = SceneWriter(llm, Config()).revise_blocks_for_tension(
         SCENE, SK, [2, 99], target_level=3, current_level=8)
     assert "Revised." in text and len(text.split("\n\n")) == 4
+
+
+# ---- structure is enforced in code, not requested in the prompt --------------
+
+def test_a_split_revision_is_rejoined_not_truncated():
+    """The bug this replaced: the parser kept only parts beginning with a
+    marker, so a paragraph the model split across blank lines lost everything
+    after the first chunk. Silently deleting prose is worse than the split."""
+    got = pr.parse_revised_blocks("[2] First half.\n\nSecond half continues.")
+    assert got == {2: "First half. Second half continues."}
+
+
+def test_line_breaks_inside_a_block_are_collapsed():
+    # A marker addresses one plan item and a plan item is one paragraph.
+    assert pr.parse_revised_blocks("[3] One line\nand another.") == {
+        3: "One line and another."}
+
+
+def test_preamble_before_the_first_marker_is_dropped():
+    assert pr.parse_revised_blocks("Here you go:\n\n[5] The prose.") == {
+        5: "The prose."}
+
+
+def test_marker_alone_on_its_line():
+    assert pr.parse_revised_blocks("[7]\nThe prose after.") == {
+        7: "The prose after."}
+
+
+def test_runaway_length_is_rejected():
+    # Not a revision of that paragraph: the model wrote something else in its
+    # place, and paragraph length is part of the plan.
+    original = " ".join(["word"] * 40)
+    runaway = " ".join(["word"] * 200)
+    kept, rejected = pr.check_lengths({1: runaway}, [40], [original])
+    assert kept == {} and rejected == [1]
+
+
+def test_collapsed_length_is_rejected():
+    original = " ".join(["word"] * 80)
+    kept, rejected = pr.check_lengths({1: "tiny"}, [80], [original])
+    assert kept == {} and rejected == [1]
+
+
+def test_a_reasonable_length_change_is_kept():
+    original = " ".join(["word"] * 40)
+    prose = " ".join(["word"] * 50)
+    kept, rejected = pr.check_lengths({1: prose}, [40], [original])
+    assert kept == {1: prose} and rejected == []
+
+
+def test_length_is_bounded_against_the_paragraph_being_replaced():
+    # Not against the plan target: the writer lands somewhat under the plan,
+    # so bounding against the plan would reject revisions that faithfully
+    # match the prose actually on the page.
+    original = " ".join(["word"] * 20)        # plan asked 80, page has 20
+    prose = " ".join(["word"] * 22)
+    kept, _ = pr.check_lengths({1: prose}, [80], [original])
+    assert kept == {1: prose}
+
+
+def test_length_guard_falls_back_to_the_plan_when_there_is_no_original():
+    kept, rejected = pr.check_lengths({3: "two words"}, [0, 0, 80], [])
+    assert kept == {} and rejected == [3]
+
+
+def test_writer_reports_the_structural_outcome():
+    scene = "a a a a\n\nb b b b\n\nc c c c"
+    sk = ["ACTION", "ACTION", "ACTION"]
+    llm = FakeLLM("[2] " + " ".join(["word"] * 4))
+    text, meta = SceneWriter(llm, Config()).revise_blocks_for_tension(
+        scene, sk, [2], target_level=3, current_level=8)
+    assert meta["applied"] == 1 and meta["rejected_length"] == []
+    assert meta["scene_paragraphs"] == 3          # unchanged, by construction
+    assert meta["words_before"] == 4 and meta["words_after"] == 4

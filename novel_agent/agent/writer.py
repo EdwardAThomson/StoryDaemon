@@ -346,7 +346,8 @@ class SceneWriter:
         pass by construction. Returns ("", meta) when nothing could be applied,
         which the caller treats as "no revision" and keeps the original scene.
         """
-        from .partial_revision import parse_revised_blocks, splice
+        from .partial_revision import (check_lengths, parse_revised_blocks,
+                                       splice)
         from .prompts import format_partial_revision_prompt, number_scene
         from .scene_skeleton import block_word_targets, MODE_GUIDE
         from .tension_scale import band_for, scale_overview
@@ -397,12 +398,24 @@ class SceneWriter:
         response, _ = self._generate_segment(
             prompt, token_budget_for(max(want_words, 120), self.config))
         revised = parse_revised_blocks(self._strip_llm_header((response or "").strip()))
+        # Only what was asked for: a revision addressed elsewhere is not ours.
         revised = {i: t for i, t in revised.items() if i in set(indices)}
+        revised, over_length = check_lengths(revised, targets, paragraphs)
         merged, applied = splice(paragraphs, revised)
         if not applied:
-            return "", {"applied": 0, "reason": "no addressed paragraphs returned"}
-        return "\n\n".join(merged), {"applied": applied,
-                                      "requested": len(indices)}
+            return "", {"applied": 0, "requested": len(indices),
+                        "rejected_length": over_length,
+                        "reason": "no usable paragraphs returned"}
+        before = sum(len(paragraphs[i - 1].split()) for i in revised)
+        after = sum(len(t.split()) for t in revised.values())
+        meta = {"applied": applied, "requested": len(indices),
+                "rejected_length": over_length,
+                "words_before": before, "words_after": after,
+                "scene_paragraphs": len(merged)}
+        if over_length:
+            print(f"        {len(over_length)} revision(s) rejected on length "
+                  f"({', '.join(str(i) for i in over_length)})")
+        return "\n\n".join(merged), meta
 
     def _format_writer_prompt(self, context: Dict[str, Any]) -> str:
         """Format writer prompt with context.
