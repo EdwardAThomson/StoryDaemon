@@ -139,7 +139,10 @@ instrumentation so every pressure below is measurable (see §5).
   resolution) off the target curve's shape, `ARC_PHASE_MANDATES` puts a firm per-phase
   event mandate (escalate / confront / resolve) into the planner's arc-pressure
   guidance, `rewrite_futile` skips the prose rewrite when the gap is too big for prose
-  to close, and `arc_phase` is recorded per tick. Gated by `coherence.arc_phase_mandate`
+  to close, and `arc_phase` is recorded per tick. (The rewrite is skipped on the same
+  reasoning for a scene written to a paragraph plan: the revision prompt cannot see
+  the plan, so it rewrote the prose whole and halved the paragraph counts of the
+  scenes it touched.) Gated by `coherence.arc_phase_mandate`
   (default True). Descent re-run vs the June control (`progress_report_20260709.md`):
   the planner now chooses aftermath events in the resolution phase; final scene 8 to 6
   against target 4, resolution drift 2.35 to 1.65. Residuals: the ending is subdued,
@@ -185,7 +188,17 @@ instrumentation so every pressure below is measurable (see §5).
   `novel_agent/data/block_grammar_v1.json`) rides the writer prompt with the `[n]`
   marker protocol, markers are stripped and compliance recorded; the production A/B
   moved every solidly measured block statistic toward the masters with no surface
-  regression (`docs/SLICE4_SCENE_SKELETON_RESULTS.md`). **Slice 5 (sectioned
+  regression (`docs/SLICE4_SCENE_SKELETON_RESULTS.md`). Each plan item carries its
+  own word target drawn from that mode's measured decile ladder
+  (`block_word_targets`, deterministic per plan and rescaled so the plan's total
+  stays unbiased) rather than one advertised range per mode, whose midpoint sat
+  20-30% below the mean on these skewed distributions and under-sized every scene
+  by construction. Compliance requires both halves — every plan item written, and
+  nothing written that was not one — and is recounted at commit time against the
+  text being saved (`rewritten_after_planning` on a mismatch), since a metric
+  describing a discarded draft is worse than none. The plan, its compliance, the
+  section seams and the segment accounting are persisted on the scene's
+  `metadata` so a finished scene is auditable block by block. **Slice 5 (sectioned
   writing) shipped** 2026-09 at *section* granularity, default off
   (`generation.subblock_generation`, `subblock_section_blocks`): the scene is
   written across several plan-addressed calls, each owning a contiguous range of
