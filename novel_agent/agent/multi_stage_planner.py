@@ -20,6 +20,10 @@ from .throughline import primary_goal, throughline_guidance
 
 logger = logging.getLogger(__name__)
 
+# Marks the empty fallback plan, so callers can tell a degraded tick
+# from a real one instead of it passing as success.
+_EMPTY_PLAN_RATIONALE = "Planning failed, continuing with minimal plan"
+
 
 class MultiStagePlanner:
     """Multi-stage planner with semantic context selection."""
@@ -378,10 +382,27 @@ class MultiStagePlanner:
         
         self.stage_stats['stage3_time'] = time.time() - start_time
         
-        # Parse response
+        # Parse response. An empty or unparseable response gets ONE retry
+        # before degrading, which is this codebase's convention for every other
+        # LLM-dependent step (retry once, log, degrade on the second failure).
+        # It matters here more than most: the backend returns None whenever the
+        # provider sends null content, and the degraded plan has no POV
+        # character, no intention and no tool actions, so the whole tick runs
+        # on a stub while still reporting success.
         plan = self._parse_plan_response(response)
-        
+        if self._is_degraded(plan):
+            logger.warning("Tactical planning produced no usable plan; retrying once")
+            response = self.llm.generate(prompt, max_tokens=2000)
+            plan = self._parse_plan_response(response)
+            if self._is_degraded(plan):
+                logger.error("Tactical planning failed twice; the tick will run "
+                             "on a minimal plan with no POV character or actions")
         return plan
+
+    @staticmethod
+    def _is_degraded(plan) -> bool:
+        """True when this is the empty fallback rather than a real plan."""
+        return bool(plan) and plan.get("rationale") == _EMPTY_PLAN_RATIONALE
     
     def _build_strategic_prompt(self, state: dict) -> str:
         """Build Stage 1 strategic planning prompt.
@@ -725,7 +746,7 @@ Generate your plan now:"""
             Minimal valid plan
         """
         return {
-            'rationale': 'Planning failed, continuing with minimal plan',
+            'rationale': _EMPTY_PLAN_RATIONALE,
             'scene_intention': 'Continue the story',
             'pov_character': self.memory.get_active_character(),
             'target_location': None,

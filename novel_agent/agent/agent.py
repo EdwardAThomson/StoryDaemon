@@ -232,6 +232,12 @@ class StoryAgent:
             print("   2. Generating plan with LLM...")
             plan = self._generate_plan(context)
             
+            # A degraded plan has no POV character, no intention and no tool
+            # actions, so the tick writes a stub scene and still reports
+            # success. Four consecutive runs went unnoticed that way. Say so
+            # where the operator is actually looking.
+            self._warn_if_plan_degraded(plan, tick)
+
             # Step 3: Validate plan
             print("   3. Validating plan...")
             validate_plan(plan)
@@ -863,6 +869,20 @@ class StoryAgent:
             "success": entity_results.get("success", True) and remaining_results.get("success", True)
         }
     
+    def _warn_if_plan_degraded(self, plan, tick) -> None:
+        """Surface a fallback plan in the tick output, not only in the log."""
+        try:
+            from .multi_stage_planner import MultiStagePlanner
+            if not MultiStagePlanner._is_degraded(plan):
+                return
+            self._plan_degraded = True
+            print(f"   ⚠️  PLANNING FAILED for tick {tick}: running on a minimal "
+                  f"plan (no POV character, no intention, no tool actions). "
+                  f"The scene will be written, but entity generation and beat "
+                  f"execution are skipped.")
+        except Exception:
+            pass
+
     def _gate_on_evaluation(self, eval_result: Dict[str, Any]) -> None:
         """Raise only when the evaluation carries concrete critical issues.
 

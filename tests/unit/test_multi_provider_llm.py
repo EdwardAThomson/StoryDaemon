@@ -382,3 +382,67 @@ def test_planner_survives_a_none_response():
     ok = MultiStagePlanner._parse_plan_response(
         p, 'noise {"scene_intention": "Elena opens the notebook"} trailing')
     assert ok["scene_intention"] == "Elena opens the notebook"
+
+
+def test_tactical_planning_retries_before_degrading():
+    """The backend returns None whenever the provider sends null content, and
+    the degraded plan has no POV character, no intention and no tool actions.
+    Four consecutive live runs produced 4/4 degraded plans while reporting
+    success, so this path gets the same retry-once treatment as every other
+    LLM-dependent step."""
+    from novel_agent.agent.multi_stage_planner import MultiStagePlanner
+
+    class Mem:
+        def get_active_character(self):
+            return "C000"
+
+    class LLM:
+        def __init__(self, responses):
+            self.responses = list(responses)
+            self.calls = 0
+
+        def generate(self, prompt, max_tokens=2000):
+            self.calls += 1
+            return self.responses.pop(0)
+
+    p = MultiStagePlanner.__new__(MultiStagePlanner)
+    p.memory, p.save_prompts, p.prompts_dir = Mem(), False, None
+    p.stage_stats, p.tool_registry = {}, None
+    p._build_tactical_prompt = lambda *a, **k: "PROMPT"
+
+    # first call empty, retry succeeds
+    p.llm = LLM([None, '{"scene_intention": "Elena opens the notebook"}'])
+    plan = MultiStagePlanner._tactical_planning(p, "an intention", {}, {"active_character": "C000"})
+    assert p.llm.calls == 2
+    assert plan["scene_intention"] == "Elena opens the notebook"
+    assert not MultiStagePlanner._is_degraded(plan)
+
+    # both empty: degrade, but only after trying twice
+    p.llm = LLM([None, None])
+    plan = MultiStagePlanner._tactical_planning(p, "an intention", {}, {"active_character": "C000"})
+    assert p.llm.calls == 2
+    assert MultiStagePlanner._is_degraded(plan)
+
+
+def test_a_good_plan_is_not_retried():
+    from novel_agent.agent.multi_stage_planner import MultiStagePlanner
+
+    class LLM:
+        def __init__(self):
+            self.calls = 0
+
+        def generate(self, prompt, max_tokens=2000):
+            self.calls += 1
+            return '{"scene_intention": "fine"}'
+
+    class Mem2:
+        def get_active_character(self):
+            return "C000"
+
+    p = MultiStagePlanner.__new__(MultiStagePlanner)
+    p.save_prompts, p.prompts_dir, p.stage_stats = False, None, {}
+    p.memory, p.tool_registry = Mem2(), None
+    p._build_tactical_prompt = lambda *a, **k: "PROMPT"
+    p.llm = LLM()
+    MultiStagePlanner._tactical_planning(p, "an intention", {}, {"active_character": "C000"})
+    assert p.llm.calls == 1

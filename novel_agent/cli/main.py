@@ -682,6 +682,8 @@ def run(
                     tool_registry.register(RelationshipQueryTool(memory_manager))
                     # Faction tools
                     tool_registry.register(FactionGenerateTool(memory_manager, vector_store, name_gen_tool.generator))
+                    tool_registry.register(FactionUpdateTool(memory_manager, vector_store))
+                    tool_registry.register(FactionQueryTool(memory_manager, vector_store))
 
                     # Create agent
                     agent = StoryAgent(project_dir, llm, tool_registry, config)
