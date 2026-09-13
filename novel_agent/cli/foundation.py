@@ -17,7 +17,8 @@ class StoryFoundation:
         setting: str,
         tone: str,
         themes: Optional[List[str]] = None,
-        primary_goal: Optional[str] = None
+        primary_goal: Optional[str] = None,
+        protagonist_name: Optional[str] = None
     ):
         self.genre = genre
         self.premise = premise
@@ -26,6 +27,13 @@ class StoryFoundation:
         self.tone = tone
         self.themes = themes or []
         self.primary_goal = primary_goal  # Optional user-specified story goal
+        # The protagonist's NAME, separate from the archetype describing their
+        # role. They were one field, and a name written into the archetype was
+        # recovered later by splitting on a comma and checking capitalisation,
+        # which turned "Doctor Miriam Vale, a field surgeon" into a character
+        # whose first name was "Doctor". Structure belongs in fields, not in
+        # prose a regex has to mine.
+        self.protagonist_name = (protagonist_name or "").strip() or None
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for state.json."""
@@ -36,7 +44,8 @@ class StoryFoundation:
             "setting": self.setting,
             "tone": self.tone,
             "themes": self.themes,
-            "primary_goal": self.primary_goal
+            "primary_goal": self.primary_goal,
+            "protagonist_name": self.protagonist_name
         }
     
     @classmethod
@@ -49,7 +58,9 @@ class StoryFoundation:
             setting=data["setting"],
             tone=data["tone"],
             themes=data.get("themes", []),
-            primary_goal=data.get("primary_goal")
+            primary_goal=data.get("primary_goal"),
+            # Absent on foundations created before the field existed.
+            protagonist_name=data.get("protagonist_name")
         )
 
 
@@ -73,9 +84,14 @@ def prompt_for_foundation() -> tuple[StoryFoundation, Dict[str, Any]]:
     typer.echo("\nPremise (1-2 sentences describing the story's core question):")
     premise = typer.prompt("", type=str).strip()
     
-    # Protagonist archetype
+    # Protagonist: name and archetype are asked separately and on purpose.
+    typer.echo("\nProtagonist")
+    protagonist_name = typer.prompt(
+        "  Name (leave blank to have one generated)",
+        type=str, default="", show_default=False
+    ).strip()
     protagonist_archetype = typer.prompt(
-        "\nProtagonist archetype (personality/role)",
+        "  Archetype (personality/role, NOT the name)",
         type=str
     ).strip()
     
@@ -195,7 +211,8 @@ def prompt_for_foundation() -> tuple[StoryFoundation, Dict[str, Any]]:
     typer.echo("📋 Foundation Summary:")
     typer.echo(f"  Genre: {genre}")
     typer.echo(f"  Premise: {premise}")
-    typer.echo(f"  Protagonist: {protagonist_archetype}")
+    typer.echo(f"  Protagonist: {protagonist_name or '(name to be generated)'}"
+               f" - {protagonist_archetype}")
     typer.echo(f"  Setting: {setting}")
     typer.echo(f"  Tone: {tone}")
     if themes:
@@ -224,6 +241,7 @@ def prompt_for_foundation() -> tuple[StoryFoundation, Dict[str, Any]]:
         genre=genre,
         premise=premise,
         protagonist_archetype=protagonist_archetype,
+        protagonist_name=protagonist_name,
         setting=setting,
         tone=tone,
         themes=themes,

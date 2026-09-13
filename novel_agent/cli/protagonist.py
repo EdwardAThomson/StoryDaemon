@@ -4,72 +4,76 @@ A project used to start with zero characters and no active_character, so the
 entire cast of a novel depended on the planner choosing, unprompted, to call
 character.generate. When planning degraded, nothing was created and nothing
 said so: eight scenes were written about a protagonist who existed only as a
-string parsed out of the foundation's free text by a fallback in
-writer_context. She had no id, no memory record, no relationships, nothing the
-fact extractor could update and nothing the vector store could retrieve.
+string a regex had mined out of the foundation's prose. She had no id, no
+memory record, nothing the fact extractor could update or the vector store
+retrieve.
 
-This is the same principle Phase 1 already applies to every other entity: names
-are minted in Python and the LLM only selects. The protagonist was the one
-place that never got it. A story now cannot begin without a real protagonist
-entity, so the writer is never handed a name with nothing behind it.
+The name now comes from an explicit field or from the generator. Nothing here
+parses prose. The parser this replaced split the archetype on its first comma
+and accepted one to three capitalised words, which produced:
 
-The author's own name wins when the foundation gives one; NameGenerator mints
-one otherwise. No LLM call either way.
+    "Captain Ahab"                        -> first name "Captain"
+    "Doctor Miriam Vale, a field surgeon" -> first name "Doctor", Miriam lost
+    "The Nameless One, a wanderer"        -> first name "The"
+    "Detective Sergeant Ruth Kade"        -> rejected, real name discarded
+
+and it was the compensation that hid a deeper mistake: the wizard asks for an
+archetype ("personality/role") and our projects had a name written into it, so
+the field was being filled wrongly and the code quietly covered for it.
 """
 
 import logging
-import re
-from pathlib import Path
 from typing import Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
-# "Elena Marsh, a naturalist carrying her brother's notebook" -> "Elena Marsh".
-# One to three capitalised words before the first comma reads as a name; the
-# check is deliberately strict, because guessing wrong here is what produced a
-# phantom protagonist in the first place.
-_NAME_WORD = re.compile(r"^[A-Z][\w'\-]*$")
 
+def split_name(full_name: str) -> Tuple[str, str]:
+    """Split an explicitly given name into (first, family).
 
-def name_from_archetype(archetype: str) -> Optional[Tuple[str, str]]:
-    """(first_name, family_name) if the archetype opens with a proper name."""
-    head = (archetype or "").split(",")[0].strip()
-    words = head.split()
-    if not 1 <= len(words) <= 3:
-        return None
-    if not all(_NAME_WORD.match(w) for w in words):
-        return None
+    Splitting a name the author typed into a name field is not guessing: every
+    word is part of the name. A single word is a mononym and keeps an empty
+    family name.
+    """
+    words = (full_name or "").split()
+    if not words:
+        return "", ""
     if len(words) == 1:
         return words[0], ""
-    return words[0], words[-1]
+    return words[0], " ".join(words[1:])
 
 
 def create_protagonist(memory, foundation, name_generator=None):
     """Create and persist the protagonist. Returns the new character id.
 
-    Raises ValueError when no name can be established, which is deliberate: a
-    story with no protagonist is not a story that should quietly start.
+    The name is taken from foundation.protagonist_name when the author gave
+    one, and minted otherwise. Raises ValueError when neither is possible,
+    which is deliberate: a story with no protagonist should not quietly start.
     """
     archetype = ""
     genre = ""
+    given = ""
     if foundation is not None:
         archetype = (getattr(foundation, "protagonist_archetype", "") or "").strip()
         genre = (getattr(foundation, "genre", "") or "").strip()
+        given = (getattr(foundation, "protagonist_name", "") or "").strip()
 
-    named = name_from_archetype(archetype)
-    if named:
-        first, family = named
+    if given:
+        first, family = split_name(given)
+        source = "foundation"
     elif name_generator is not None:
         minted = name_generator.generate_name(genre=genre or "scifi")
         first = minted.get("first_name", "")
         family = minted.get("last_name", "") or minted.get("family_name", "")
+        source = "generated"
+        _warn_if_archetype_looks_like_a_name(archetype, f"{first} {family}".strip())
     else:
         raise ValueError(
-            "Cannot create a protagonist: the story foundation does not name "
-            "one and no name generator was supplied.")
+            "Cannot create a protagonist: the story foundation has no "
+            "protagonist_name and no name generator was supplied.")
 
     if not first:
-        raise ValueError("Cannot create a protagonist: minted an empty name.")
+        raise ValueError("Cannot create a protagonist: the name is empty.")
 
     from novel_agent.memory.entities import Character
 
@@ -80,11 +84,28 @@ def create_protagonist(memory, foundation, name_generator=None):
         family_name=family,
         role="protagonist",
         description=archetype or f"{first} {family}".strip(),
-        metadata={"source": "project_creation",
-                  "minted": "foundation" if named else "generated"},
+        metadata={"source": "project_creation", "minted": source},
     )
     memory.save_character(character)
     if name_generator is not None:
         name_generator.register_used_name(f"{first} {family}".strip())
-    logger.info("Created protagonist %s (%s %s)", char_id, first, family)
+    logger.info("Created protagonist %s (%s %s, %s)", char_id, first, family, source)
     return char_id
+
+
+def _warn_if_archetype_looks_like_a_name(archetype: str, minted: str) -> None:
+    """Say so when a name was probably meant but not given.
+
+    Surfacing it beats silently mining it: a legacy foundation with a name
+    buried in its archetype now gets a generated protagonist AND a message
+    saying which field to fill, instead of a regex deciding on the author's
+    behalf.
+    """
+    head = (archetype or "").split(",")[0].strip()
+    words = head.split()
+    if 1 <= len(words) <= 4 and all(w[:1].isupper() for w in words if w):
+        logger.warning(
+            "The protagonist archetype starts with %r, which reads like a "
+            "name, but protagonist_name was empty so %r was generated instead. "
+            "Set protagonist_name in the story foundation if a specific name "
+            "was intended.", head, minted)
