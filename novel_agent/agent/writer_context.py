@@ -240,27 +240,31 @@ class WriterContextBuilder:
         approved_new_names = "\n".join(f"- {n}" for n in pool) if pool else "(use a role descriptor instead)"
         return existing_characters, approved_new_names
     
-    def _protagonist_fallback(self, project_state: Optional[Dict[str, Any]]) -> tuple[str, str]:
-        """POV stand-in when the plan's character id resolves to nothing.
+    def _protagonist_fallback(self, project_state):
+        """No longer a fallback: a missing POV character is now an error.
 
-        A raw id ("C0") in pov_character_name ends up as the character's literal
-        name in prose (the writer prompt says "use this name"), so the fallback
-        must always be a real name or a neutral descriptor, never the id. The
-        story foundation's protagonist_archetype often leads with a proper name
-        ("Elena Marsh, a naturalist ..."); use it only when it looks like one.
+        This used to parse a name out of the foundation's free text when the
+        plan's character id resolved to nothing. That silently substituted a
+        phantom: a name with no entity behind it, no id, no memory record, no
+        relationships, nothing the fact extractor could update or the vector
+        store retrieve. Eight scenes were written that way before anyone
+        noticed, and the naming contract pointed at an empty pool throughout.
+
+        The protagonist is now minted in Python at project creation
+        (cli/protagonist.py), so reaching here means a real fault: a project
+        created before that existed, or a character deleted from memory.
+        Failing loudly is the point.
         """
         foundation = (project_state or {}).get("story_foundation") or {}
         archetype = (foundation.get("protagonist_archetype") or "").strip()
-        if archetype:
-            candidate = archetype.split(",")[0].strip()
-            words = candidate.split()
-            if 1 <= len(words) <= 3 and all(w[:1].isupper() for w in words):
-                details = (f"**Name:** {candidate}\n\n"
-                           f"**Description:** {archetype}")
-                return candidate, details
-            return "the protagonist", f"**Description:** {archetype}"
-        return ("the protagonist",
-                "The story's protagonist (details not yet established).")
+        raise ValueError(
+            "No POV character could be resolved for this scene. The plan's "
+            "character id does not match any character in memory, and the "
+            "writer will not be handed a name with no entity behind it. "
+            f"Foundation protagonist: {archetype or '(none)'}. "
+            "For a project created before protagonists were minted at "
+            "creation, run a tick that generates a character first."
+        )
 
     def _get_character_details(
         self, character_id: str, project_state: Optional[Dict[str, Any]] = None

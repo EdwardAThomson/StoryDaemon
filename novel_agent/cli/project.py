@@ -97,6 +97,16 @@ def create_novel_project(
             'promotion_tick': 0 if primary_goal else None
         }
         
+        # Mint the protagonist now, in Python, before any tick runs. A project
+        # used to start castless and rely on the planner to call
+        # character.generate unprompted; when planning degraded, eight scenes
+        # were written about a protagonist who existed only as a string parsed
+        # out of the foundation. See cli/protagonist.py.
+        # Unconditional: a project without a protagonist cannot write a scene,
+        # and the writer now raises rather than substituting a phantom. With no
+        # foundation to read a name from, one is minted.
+        _create_protagonist(project_dir, foundation, initial_state)
+
         write_json(os.path.join(project_dir, 'state.json'), initial_state)
         
         # Create initial config. Snapshot the current LLM backend/model settings so
@@ -180,6 +190,25 @@ Created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
     
     except Exception as e:
         raise IOError(f"Error creating project structure: {e}")
+
+
+def _create_protagonist(project_dir, foundation, initial_state) -> None:
+    """Create the protagonist entity and make it the active character.
+
+    Never silently skipped: a project whose foundation names no protagonist and
+    whose genre yields no minted name is a project that cannot write a scene,
+    and it should say so at creation rather than eight scenes later.
+    """
+    from pathlib import Path
+    from ..memory.manager import MemoryManager
+    from ..tools.name_generator import NameGenerator
+    from .protagonist import create_protagonist
+
+    memory = MemoryManager(Path(project_dir))
+    data_dir = Path(__file__).resolve().parent.parent / "data" / "names"
+    generator = NameGenerator(data_dir) if data_dir.exists() else None
+    char_id = create_protagonist(memory, foundation, generator)
+    initial_state['active_character'] = char_id
 
 
 def find_project_dir(start_dir: Optional[str] = None) -> str:

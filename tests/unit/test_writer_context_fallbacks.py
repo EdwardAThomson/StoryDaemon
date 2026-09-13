@@ -37,33 +37,35 @@ def builder():
     shutil.rmtree(d, ignore_errors=True)
 
 
-def test_missing_character_falls_back_to_foundation_protagonist(builder):
+def test_missing_character_raises_instead_of_substituting(builder):
+    """The behaviour this replaced: the name was parsed out of the foundation's
+    free text, so the writer got "Elena Marsh" with no entity behind it. Eight
+    scenes were written that way. A protagonist is now minted in Python at
+    project creation, so reaching here is a real fault and must say so."""
     wcb, _ = builder
-    name, details = wcb._get_character_details("C0", FOUNDATION_STATE)
-    assert name == "Elena Marsh"
-    assert "C0" not in name and "C0" not in details
-    assert "naturalist" in details
+    with pytest.raises(ValueError) as e:
+        wcb._get_character_details("C0", FOUNDATION_STATE)
+    msg = str(e.value)
+    assert "No POV character" in msg
+    assert "Elena Marsh" in msg          # names the foundation's protagonist
+    assert "C0" not in msg.split("Foundation protagonist:")[0]
 
 
-def test_missing_character_without_foundation_is_neutral(builder):
+def test_missing_character_without_foundation_also_raises(builder):
     wcb, _ = builder
-    name, details = wcb._get_character_details("C0", {})
-    assert name == "the protagonist"
-    assert "C0" not in details
-
-    # No id at all takes the same fallback.
-    name, details = wcb._get_character_details("", None)
-    assert name == "the protagonist"
+    with pytest.raises(ValueError):
+        wcb._get_character_details("C0", {})
+    with pytest.raises(ValueError):
+        wcb._get_character_details("", None)
 
 
-def test_non_namelike_archetype_keeps_neutral_name(builder):
+def test_non_namelike_archetype_also_raises(builder):
+    # Previously this quietly became "the protagonist".
     wcb, _ = builder
     state = {"story_foundation": {
-        "protagonist_archetype": "a jaded detective haunted by an old case"
-    }}
-    name, details = wcb._get_character_details("C0", state)
-    assert name == "the protagonist"
-    assert "jaded detective" in details
+        "protagonist_archetype": "a jaded detective haunted by an old case"}}
+    with pytest.raises(ValueError):
+        wcb._get_character_details("C0", state)
 
 
 def test_existing_character_still_wins(builder):
@@ -82,11 +84,18 @@ def test_missing_location_never_surfaces_id(builder):
 
 
 def test_writer_prompt_carries_no_raw_ids(builder):
-    wcb, _ = builder
-    plan = {"pov_character": "C0", "target_location": "L0",
+    """The original point of this file: a raw id reaching the prompt becomes
+    the character's literal name in prose. With a real character present the
+    prompt carries the name; the missing-character case now raises instead."""
+    wcb, mm = builder
+    mm.save_character(Character(id="C000", first_name="Joran", family_name="Vell",
+                                role="protagonist", description="lead"))
+    plan = {"pov_character": "C000", "target_location": "L0",
             "scene_intention": "x", "key_change": "y"}
     ctx = wcb.build_writer_context(plan, {"actions_executed": []}, FOUNDATION_STATE)
-    assert ctx["pov_character_name"] == "Elena Marsh"
+    assert ctx["pov_character_name"] == "Joran"
     text = format_writer_prompt(ctx)
-    assert "C0" not in text
+    # The id may appear as a labelled field ("**ID:** C000"); what must never
+    # happen is the id standing in for the character's NAME.
+    assert "C000" not in ctx["pov_character_name"]
     assert "L0" not in text
