@@ -5,74 +5,42 @@
   "return": 0.3550575543568926,
   "dlg_share": 0.5647746460579296,
   "dlg_run": 3.32,
-  "words_per_para": 90.0
+  "words_per_para": 59.78618002337966
  },
  "cells": {
-  "prod-on_9566053d": {
-   "n_paragraphs": 64,
+  "v1_30a06324": {
+   "n_paragraphs": 216,
    "mode_share": {
-    "INTERIORITY": 0.062,
-    "SETTING": 0.062,
-    "ACTION": 0.25,
-    "DIALOGUE": 0.5,
-    "CHARACTER_DESC": 0.031,
-    "LORE": 0.094
+    "ACTION": 0.199,
+    "TRANSITION": 0.005,
+    "SETTING": 0.093,
+    "INTERIORITY": 0.093,
+    "DIALOGUE": 0.565,
+    "CHARACTER_DESC": 0.023,
+    "LORE": 0.023
    },
-   "shading_rate": 0.266,
-   "int_self_transition": 0.0,
-   "int_transitions_n": 4,
-   "dialogue_run_mean": 2.91,
-   "return_rate": 0.154,
-   "words_per_para": 101.4
+   "shading_rate": 0.102,
+   "int_self_transition": 0.053,
+   "int_transitions_n": 19,
+   "dialogue_run_mean": 3.13,
+   "return_rate": 0.246,
+   "words_per_para": 46.6
   },
-  "prod-off_87078390": {
-   "n_paragraphs": 609,
+  "nosec_0af774c6": {
+   "n_paragraphs": 56,
    "mode_share": {
-    "SETTING": 0.1,
-    "ACTION": 0.319,
-    "LORE": 0.028,
-    "INTERIORITY": 0.186,
-    "DIALOGUE": 0.351,
-    "CHARACTER_DESC": 0.016
+    "LORE": 0.036,
+    "SETTING": 0.018,
+    "ACTION": 0.214,
+    "DIALOGUE": 0.607,
+    "INTERIORITY": 0.125
    },
-   "shading_rate": 0.099,
-   "int_self_transition": 0.261,
-   "int_transitions_n": 111,
-   "dialogue_run_mean": 1.98,
-   "return_rate": 0.247,
-   "words_per_para": 16.9
-  },
-  "skel-on_43ddd73a": {
-   "n_paragraphs": 48,
-   "mode_share": {
-    "SETTING": 0.146,
-    "INTERIORITY": 0.104,
-    "DIALOGUE": 0.438,
-    "ACTION": 0.271,
-    "LORE": 0.042
-   },
-   "shading_rate": 0.125,
-   "int_self_transition": 0.0,
-   "int_transitions_n": 4,
-   "dialogue_run_mean": 1.91,
+   "shading_rate": 0.107,
+   "int_self_transition": 0.143,
+   "int_transitions_n": 7,
+   "dialogue_run_mean": 2.83,
    "return_rate": 0.345,
-   "words_per_para": 33.2
-  },
-  "skel-off_464a7e73": {
-   "n_paragraphs": 70,
-   "mode_share": {
-    "SETTING": 0.071,
-    "ACTION": 0.271,
-    "INTERIORITY": 0.143,
-    "DIALOGUE": 0.429,
-    "LORE": 0.086
-   },
-   "shading_rate": 0.271,
-   "int_self_transition": 0.25,
-   "int_transitions_n": 8,
-   "dialogue_run_mean": 2.5,
-   "return_rate": 0.205,
-   "words_per_para": 26.4
+   "words_per_para": 35.0
   }
  }
 }
