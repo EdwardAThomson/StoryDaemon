@@ -139,10 +139,13 @@ instrumentation so every pressure below is measurable (see §5).
   resolution) off the target curve's shape, `ARC_PHASE_MANDATES` puts a firm per-phase
   event mandate (escalate / confront / resolve) into the planner's arc-pressure
   guidance, `rewrite_futile` skips the prose rewrite when the gap is too big for prose
-  to close, and `arc_phase` is recorded per tick. (The rewrite is skipped on the same
-  reasoning for a scene written to a paragraph plan: the revision prompt cannot see
-  the plan, so it rewrote the prose whole and halved the paragraph counts of the
-  scenes it touched.) Gated by `coherence.arc_phase_mandate`
+  to close, and `arc_phase` is recorded per tick. (A scene written to a paragraph plan
+  takes a different route through step 7.6: a *selective* revision of only the
+  tension-carrying paragraphs, `agent/partial_revision.py`, capped by
+  `coherence.partial_rewrite_max_blocks`. The whole-scene rewrite could not see the
+  plan and halved the paragraph counts of the scenes it touched; it was briefly
+  suppressed for planned scenes and is now replaced for them.)
+  Gated by `coherence.arc_phase_mandate`
   (default True). Descent re-run vs the June control (`progress_report_20260709.md`):
   the planner now chooses aftermath events in the resolution phase; final scene 8 to 6
   against target 4, resolution drift 2.35 to 1.65. Residuals: the ending is subdued,

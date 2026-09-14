@@ -86,8 +86,10 @@ novel new my-story --dir work/novels
 #  Creates: work/novels/my-story_a1b2c3d4/
 #  You will be prompted for genre, premise, protagonist, setting, tone, etc.,
 #  and to choose the LLM backend/model to store in this project's config.
+#  The protagonist's name and archetype are asked separately: the name is a
+#  field, not something parsed back out of the archetype text.
 
-# Advanced: create a bare project without interactive setup
+# Advanced: skip the interactive wizard (no story foundation)
 novel new my-story --dir work/novels --no-interactive
 
 # Or create from a YAML foundation file (non-interactive)
@@ -100,6 +102,10 @@ novel new my-story \
   --protagonist "Curious, isolated technical expert" \
   --setting "Near-future Mars colony" \
   --tone "Contemplative, mysterious"
+#  Note: --protagonist is the *archetype*, not the name. Every project gets a
+#  protagonist character (C000, set as the active character) minted in Python at
+#  creation time — from the name you gave, or generated when you gave none —
+#  rather than waiting for the planner to call character.generate on tick 0.
 
 # Generate your first scene
 cd work/novels/my-story_a1b2c3d4
@@ -239,6 +245,7 @@ StoryDaemon/
 │   │   ├── writer_context.py   # Writer context builder
 │   │   ├── writer.py           # Scene prose generator
 │   │   ├── scene_skeleton.py   # Masters-grammar paragraph plans (Slice 4)
+│   │   ├── partial_revision.py # Selective revision of tension-carrying paragraphs
 │   │   ├── evaluator.py        # Scene quality evaluator
 │   │   ├── scene_committer.py  # Scene persistence
 │   │   └── prompts.py          # LLM prompt templates
@@ -259,6 +266,7 @@ StoryDaemon/
 │   │   ├── main.py             # CLI entry point
 │   │   ├── project.py          # Project management
 │   │   ├── foundation.py       # Story foundation setup
+│   │   ├── protagonist.py      # Mints the protagonist at project creation
 │   │   ├── recent_projects.py  # Recent projects tracker
 │   │   └── commands/           # CLI commands
 │   │       ├── status.py       # Status command
@@ -309,7 +317,7 @@ StoryDaemon/
 novel new <name> [--dir <path>]
 # Example: novel new my-story  creates my-story_a1b2c3d4/ and runs the foundation wizard
 
-# Disable interactive wizard (bare project)
+# Disable interactive wizard (no story foundation; a protagonist is still minted)
 novel new <name> --no-interactive [--dir <path>]
 
 # Create with story foundation (non-interactive variants)
