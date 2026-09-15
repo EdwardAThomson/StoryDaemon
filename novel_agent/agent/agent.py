@@ -594,6 +594,13 @@ class StoryAgent:
             # Step 3: Validate plan
             print("   3. Validating plan...")
             validate_plan(plan)
+            # Tick 0 was the one tick that never said so. A degraded plan
+            # here is worse than on any later tick: the two-phase path
+            # exists purely so entity generation runs before the writer
+            # sees the world, and a fallback plan carries no actions at
+            # all, so the novel starts with whatever the project was
+            # created with and nothing else.
+            self._warn_if_plan_degraded(plan, tick)
             
             # Step 4: Execute ONLY entity generation tools
             print("   4. Pre-generating entities...")

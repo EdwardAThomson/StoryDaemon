@@ -199,3 +199,73 @@ def test_exemptions_are_narrow():
 def test_revision_is_exempt_from_offering_new_names():
     assert "approved_new_names" not in contract_fields_for("revise")
     assert "approved_new_names" in contract_fields_for("write")
+
+
+def test_an_empty_section_is_retried_before_the_whole_write_is_abandoned():
+    """A dropped completion on one section used to abandon the entire
+    sectioned write, discarding every section already paid for and re-writing
+    the scene single-shot. That is the most ordinary transient there is, so it
+    gets the same retry-once treatment as planning."""
+    from novel_agent.agent.writer import SceneWriter
+    from novel_agent.agent.scene_skeleton import generate_skeleton
+
+    skeleton = generate_skeleton(1400, seed=7)
+    assert len(skeleton) > 10, "need more than one section's worth of plan"
+
+    class Cfg:
+        def get(self, key, default=None):
+            return {
+                'generation.subblock_generation': True,
+                'generation.subblock_section_blocks': 10,
+            }.get(key, default)
+
+    class LLM:
+        """Drops the second call, then behaves."""
+
+        def __init__(self):
+            self.calls = 0
+
+        def generate(self, prompt, max_tokens=2000):
+            self.calls += 1
+            return "" if self.calls == 2 else "Some prose for this section."
+
+    w = SceneWriter(LLM(), Cfg())
+    result = w._write_in_sections({
+        "scene_skeleton": skeleton,
+        "scene_intention": "Elena reads the notebook",
+        "pov_character_name": "Elena Marsh",
+    })
+
+    assert result is not None, "one dropped section must not abandon the write"
+    text, meta = result
+    assert meta["sectioned"] is True
+    assert "Some prose for this section." in text
+    # the dropped call plus its retry, so one more call than there are sections
+    assert w.llm.calls == meta["segments_used"] + 1
+
+
+def test_two_empty_responses_for_one_section_still_fall_back():
+    """The retry is one retry. A section that will not produce prose must
+    still hand the scene back to the single-shot path rather than commit an
+    incomplete scene."""
+    from novel_agent.agent.writer import SceneWriter
+    from novel_agent.agent.scene_skeleton import generate_skeleton
+
+    skeleton = generate_skeleton(1400, seed=7)
+
+    class Cfg:
+        def get(self, key, default=None):
+            return {
+                'generation.subblock_generation': True,
+                'generation.subblock_section_blocks': 10,
+            }.get(key, default)
+
+    class LLM:
+        def generate(self, prompt, max_tokens=2000):
+            return ""
+
+    assert SceneWriter(LLM(), Cfg())._write_in_sections({
+        "scene_skeleton": skeleton,
+        "scene_intention": "Elena reads the notebook",
+        "pov_character_name": "Elena Marsh",
+    }) is None

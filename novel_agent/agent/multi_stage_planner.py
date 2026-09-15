@@ -370,34 +370,101 @@ class MultiStagePlanner:
                 f.write(f"Scene Intention: {scene_intention}\n")
                 f.write(f"\n{prompt}\n")
         
-        # Call LLM
-        response = self.llm.generate(prompt, max_tokens=2000)
-        
-        # Save response if requested
-        if self.save_prompts and self.prompts_dir:
-            tick = state.get('current_tick', 0)
-            response_file = self.prompts_dir / f"tick_{tick:03d}_stage3_response.txt"
-            with open(response_file, 'w') as f:
-                f.write(response or "")
-        
-        self.stage_stats['stage3_time'] = time.time() - start_time
-        
+        budget = self.config.get('llm.planner_max_tokens', 4000)
+
+        def call(max_tokens):
+            """One planning request, with the finish_reason where it exists.
+
+            The api backend's MultiProviderInterface implements
+            generate_with_meta and reports an authoritative "length" when the
+            token ceiling cut the response off; the CLI backends do not expose
+            response metadata and return None, leaving looks_truncated to
+            judge. Same opt-in the writer uses for the segment loop.
+            """
+            if hasattr(self.llm, "generate_with_meta"):
+                response, finish_reason = self.llm.generate_with_meta(
+                    prompt, max_tokens=max_tokens)
+            else:
+                response, finish_reason = self.llm.generate(
+                    prompt, max_tokens=max_tokens), None
+            if self.save_prompts and self.prompts_dir:
+                tick = state.get('current_tick', 0)
+                response_file = self.prompts_dir / f"tick_{tick:03d}_stage3_response.txt"
+                with open(response_file, 'w') as f:
+                    f.write(response or "")
+            return response, finish_reason
+
         # Parse response. An empty or unparseable response gets ONE retry
         # before degrading, which is this codebase's convention for every other
         # LLM-dependent step (retry once, log, degrade on the second failure).
-        # It matters here more than most: the backend returns None whenever the
-        # provider sends null content, and the degraded plan has no POV
+        # It matters here more than most: the degraded plan has no POV
         # character, no intention and no tool actions, so the whole tick runs
         # on a stub while still reporting success.
+        #
+        # The retry is not a repeat. A response cut off by the token budget
+        # will be cut off again at the same budget, which is exactly what a
+        # live tick did: truncated at 3,062 characters, retried, truncated at
+        # 2,695. Retrying a truncated plan means retrying it with room, so the
+        # second call doubles the budget. A response that was malformed rather
+        # than cut off is retried unchanged, since there the budget was not the
+        # problem.
+        response, finish_reason = call(budget)
         plan = self._parse_plan_response(response)
         if self._is_degraded(plan):
-            logger.warning("Tactical planning produced no usable plan; retrying once")
-            response = self.llm.generate(prompt, max_tokens=2000)
+            truncated = finish_reason == "length" or self.looks_truncated(response)
+            retry_budget = budget * 2 if truncated else budget
+            logger.warning(
+                "Tactical planning produced no usable plan (%s); retrying once at "
+                "max_tokens=%d",
+                "cut off by the token budget" if truncated else "unparseable",
+                retry_budget)
+            response, _ = call(retry_budget)
             plan = self._parse_plan_response(response)
             if self._is_degraded(plan):
                 logger.error("Tactical planning failed twice; the tick will run "
                              "on a minimal plan with no POV character or actions")
+        self.stage_stats['stage3_time'] = time.time() - start_time
         return plan
+
+    @staticmethod
+    def looks_truncated(text) -> bool:
+        """True when a response was cut off mid-JSON rather than malformed.
+
+        The distinction is the whole point: a malformed plan means the prompt
+        or the model is wrong, and a truncated one means the token budget is
+        too small. Reported as the same "Failed to parse plan JSON" they are
+        indistinguishable, and a live session spent its time looking for a
+        null completion that was never there while every tick ran on a stub.
+
+        Scanning from the first brace ignores any preamble or code fence, and
+        tracking string state stops a brace inside a description from
+        counting. An unterminated string or an unclosed object at the end of
+        the text is a response the model was still writing.
+        """
+        if not text or not isinstance(text, str):
+            return False
+        start = text.find('{')
+        if start == -1:
+            return False
+        depth = 0
+        in_string = False
+        escaped = False
+        for ch in text[start:]:
+            if in_string:
+                if escaped:
+                    escaped = False
+                elif ch == '\\':
+                    escaped = True
+                elif ch == '"':
+                    in_string = False
+                continue
+            if ch == '"':
+                in_string = True
+            elif ch == '{':
+                depth += 1
+            elif ch == '}':
+                depth -= 1
+        return in_string or depth > 0
 
     @staticmethod
     def _is_degraded(plan) -> bool:
@@ -735,7 +802,13 @@ Generate your plan now:"""
             return plan
             
         except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse plan JSON: {e}")
+            if self.looks_truncated(response):
+                logger.error(
+                    f"Plan response was cut off after {len(response)} characters "
+                    f"({e}). This is the token budget, not the prompt: raise "
+                    f"llm.planner_max_tokens.")
+            else:
+                logger.error(f"Failed to parse plan JSON: {e}")
             logger.debug(f"Response was: {response}")
             return self._empty_plan()
     

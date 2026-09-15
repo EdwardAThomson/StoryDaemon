@@ -384,6 +384,18 @@ def test_planner_survives_a_none_response():
     assert ok["scene_intention"] == "Elena opens the notebook"
 
 
+class _Cfg:
+    """Minimal config stand-in: the planner reads only its token budget."""
+
+    def __init__(self, planner_max_tokens=4000):
+        self._budget = planner_max_tokens
+
+    def get(self, key, default=None):
+        if key == 'llm.planner_max_tokens':
+            return self._budget
+        return default
+
+
 def test_tactical_planning_retries_before_degrading():
     """The backend returns None whenever the provider sends null content, and
     the degraded plan has no POV character, no intention and no tool actions.
@@ -408,6 +420,7 @@ def test_tactical_planning_retries_before_degrading():
     p = MultiStagePlanner.__new__(MultiStagePlanner)
     p.memory, p.save_prompts, p.prompts_dir = Mem(), False, None
     p.stage_stats, p.tool_registry = {}, None
+    p.config = _Cfg()
     p._build_tactical_prompt = lambda *a, **k: "PROMPT"
 
     # first call empty, retry succeeds
@@ -442,7 +455,144 @@ def test_a_good_plan_is_not_retried():
     p = MultiStagePlanner.__new__(MultiStagePlanner)
     p.save_prompts, p.prompts_dir, p.stage_stats = False, None, {}
     p.memory, p.tool_registry = Mem2(), None
+    p.config = _Cfg()
     p._build_tactical_prompt = lambda *a, **k: "PROMPT"
     p.llm = LLM()
     MultiStagePlanner._tactical_planning(p, "an intention", {}, {"active_character": "C000"})
     assert p.llm.calls == 1
+
+
+def test_looks_truncated_separates_a_cut_off_plan_from_a_malformed_one():
+    """A truncated plan and a malformed one need different fixes, and a live
+    session lost its time to them reading identically in the log. Truncation
+    means the token budget; malformed means the prompt or the model."""
+    from novel_agent.agent.multi_stage_planner import MultiStagePlanner as M
+
+    # cut off mid-string, which is what a live tick produced twice running
+    assert M.looks_truncated('{"tool": "location.generate", "description": "A small isl')
+    # cut off between members, braces still open
+    assert M.looks_truncated('{"actions": [{"tool": "x"}, {"tool": "y"}')
+    # complete, even wrapped in a fence and trailing prose
+    assert not M.looks_truncated('```json\n{"scene_intention": "fine"}\n```\nThat is the plan.')
+    # malformed but complete: a missing comma is not a budget problem
+    assert not M.looks_truncated('{"a": 1 "b": 2}')
+    # a brace inside a string must not count as structure
+    assert not M.looks_truncated('{"description": "a {brace} in prose"}')
+    assert M.looks_truncated('{"description": "a {brace} in prose"')
+    # nothing to judge
+    assert not M.looks_truncated("")
+    assert not M.looks_truncated(None)
+    assert not M.looks_truncated("no json here at all")
+
+
+def test_a_truncated_plan_is_retried_with_a_bigger_budget():
+    """Retrying a cut-off response at the same budget cuts it off again. A live
+    tick truncated at 3,062 characters, retried, and truncated at 2,695."""
+    from novel_agent.agent.multi_stage_planner import MultiStagePlanner
+
+    class Mem:
+        def get_active_character(self):
+            return "C000"
+
+    class LLM:
+        def __init__(self, responses):
+            self.responses = list(responses)
+            self.budgets = []
+
+        def generate(self, prompt, max_tokens=2000):
+            self.budgets.append(max_tokens)
+            return self.responses.pop(0)
+
+    def planner(llm):
+        p = MultiStagePlanner.__new__(MultiStagePlanner)
+        p.memory, p.save_prompts, p.prompts_dir = Mem(), False, None
+        p.stage_stats, p.tool_registry = {}, None
+        p.config = _Cfg(planner_max_tokens=4000)
+        p._build_tactical_prompt = lambda *a, **k: "PROMPT"
+        p.llm = llm
+        return p
+
+    truncated = '{"scene_intention": "Elena opens the notebook", "actions": [{"tool": "x'
+    good = '{"scene_intention": "Elena opens the notebook"}'
+
+    p = planner(LLM([truncated, good]))
+    plan = MultiStagePlanner._tactical_planning(p, "an intention", {}, {})
+    assert p.llm.budgets == [4000, 8000]
+    assert not MultiStagePlanner._is_degraded(plan)
+
+    # a malformed response is not a budget problem, so the retry does not grow
+    p = planner(LLM(['{"a": 1 "b": 2}', good]))
+    MultiStagePlanner._tactical_planning(p, "an intention", {}, {})
+    assert p.llm.budgets == [4000, 4000]
+
+    # and an empty one is not either
+    p = planner(LLM([None, good]))
+    MultiStagePlanner._tactical_planning(p, "an intention", {}, {})
+    assert p.llm.budgets == [4000, 4000]
+
+
+def test_a_backend_reported_length_cut_counts_as_truncation():
+    """The api backend says "length" outright when the ceiling cut a response
+    off. The planner never asked, so a budget problem was reported for a whole
+    session as a parse failure. Use the authoritative signal where it exists,
+    and keep the structural check for the CLI backends, which expose nothing."""
+    from novel_agent.agent.multi_stage_planner import MultiStagePlanner
+
+    class Mem:
+        def get_active_character(self):
+            return "C000"
+
+    good = '{"scene_intention": "Elena opens the notebook"}'
+
+    class MetaLLM:
+        """Returns valid-looking JSON that the backend still reports as cut."""
+
+        def __init__(self):
+            self.budgets = []
+
+        def generate_with_meta(self, prompt, max_tokens=2000):
+            self.budgets.append(max_tokens)
+            if len(self.budgets) == 1:
+                # complete braces, so only finish_reason reveals the cut
+                return '{"a": 1 "b": 2}', "length"
+            return good, "stop"
+
+    p = MultiStagePlanner.__new__(MultiStagePlanner)
+    p.memory, p.save_prompts, p.prompts_dir = Mem(), False, None
+    p.stage_stats, p.tool_registry = {}, None
+    p.config = _Cfg(planner_max_tokens=4000)
+    p._build_tactical_prompt = lambda *a, **k: "PROMPT"
+    p.llm = MetaLLM()
+
+    plan = MultiStagePlanner._tactical_planning(p, "an intention", {}, {})
+    assert p.llm.budgets == [4000, 8000]
+    assert not MultiStagePlanner._is_degraded(plan)
+
+
+def test_a_backend_without_meta_still_plans():
+    """The CLI backends have no generate_with_meta; the planner must not
+    require one."""
+    from novel_agent.agent.multi_stage_planner import MultiStagePlanner
+
+    class Mem:
+        def get_active_character(self):
+            return "C000"
+
+    class PlainLLM:
+        def __init__(self):
+            self.calls = 0
+
+        def generate(self, prompt, max_tokens=2000):
+            self.calls += 1
+            return '{"scene_intention": "fine"}'
+
+    p = MultiStagePlanner.__new__(MultiStagePlanner)
+    p.memory, p.save_prompts, p.prompts_dir = Mem(), False, None
+    p.stage_stats, p.tool_registry = {}, None
+    p.config = _Cfg()
+    p._build_tactical_prompt = lambda *a, **k: "PROMPT"
+    p.llm = PlainLLM()
+
+    plan = MultiStagePlanner._tactical_planning(p, "an intention", {}, {})
+    assert p.llm.calls == 1
+    assert plan["scene_intention"] == "fine"

@@ -11,7 +11,7 @@ def test_default_config():
     
     assert config.get('llm.codex_bin_path') == 'codex'
     assert config.get('llm.default_max_tokens') == 2000
-    assert config.get('llm.planner_max_tokens') == 1000
+    assert config.get('llm.planner_max_tokens') == 4000
     assert config.get('llm.writer_max_tokens') == 3000
 
 

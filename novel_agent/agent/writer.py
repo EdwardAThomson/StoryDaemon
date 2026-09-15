@@ -162,12 +162,25 @@ class SceneWriter:
                     is_first=(i == 0),
                     is_last=(i == len(bounds) - 1),
                 )
-                part, _ = self._generate_segment(
-                    prompt, token_budget_for(words, self.config))
+                budget = token_budget_for(words, self.config)
+                part, _ = self._generate_segment(prompt, budget)
                 part = self._strip_llm_header((part or "").strip())
                 if not part:
+                    # One empty section used to abandon the whole sectioned
+                    # write, throwing away every section already paid for and
+                    # re-writing the scene single-shot. A dropped completion is
+                    # the most ordinary transient there is, so it gets the same
+                    # retry-once treatment as planning and every other
+                    # LLM-dependent step here.
+                    logger.warning(
+                        "Empty response for plan blocks %d-%d; retrying once",
+                        first, last)
+                    part, _ = self._generate_segment(prompt, budget)
+                    part = self._strip_llm_header((part or "").strip())
+                if not part:
                     raise ValueError(
-                        f"empty response for plan blocks {first}-{last}")
+                        f"empty response for plan blocks {first}-{last} "
+                        f"(twice)")
                 parts.append(part)
                 text = self._join_segments(text, part) if text else part
                 print(f"        section {i + 1}/{len(bounds)}: plan blocks "
@@ -181,6 +194,13 @@ class SceneWriter:
                 "trimmed": False,
             }
         except Exception as e:
+            # Say so where the operator is looking, not only in the log. A
+            # silent fallback means the flag reads as on while the feature
+            # never runs, which is how four measured runs went by on stub
+            # plans without anyone noticing.
+            print(f"        ⚠️  Sectioned writing failed ({e}); writing the "
+                  f"scene single-shot instead. The paragraph plan will not be "
+                  f"section-addressed.")
             logger.warning(
                 f"Sectioned writing failed; falling back to single-shot: {e}")
             return None
