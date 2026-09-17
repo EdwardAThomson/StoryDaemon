@@ -409,7 +409,10 @@ llm:
   codex_bin_path: codex
   model: gpt-5.5             # Generic API model (gpt-5.5/5.4/5.4-mini/5.2, claude-fable-5, claude-opus-4-8, claude-sonnet-4-6, claude-sonnet-4-5, claude-haiku-4-5, gemini-3.1-pro-preview, gemini-3-pro-preview, gemini-3-flash-preview, gemini-2.5-pro)
   openai_model: gpt-5.5       # Legacy OpenAI-specific key (still honored)
-  planner_max_tokens: 1000
+  planner_max_tokens: 4000    # Tactical-planning budget, read by the multi-stage planner.
+                              # Load-bearing: over the ceiling the plan is cut off mid-JSON
+                              # and the tick completes on a stub plan with no POV character
+                              # and no tool actions. Raise it if you add fields to the plan.
   writer_max_tokens: 3000     # Legacy flat ceiling; superseded by generation.scene_word_targets
                               # (kept so old project configs load, nothing reads it)
   timeout: 300                # Per-call timeout (seconds), applied on CLI and api backends
