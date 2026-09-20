@@ -1,6 +1,7 @@
 # Name banks: one genre exists, every story gets it
 
-Status: open, unscheduled. Written 2026-09-15 after a live run.
+Status: **resolved 2026-09-20** (see "What shipped" at the end for the residue
+that is still open). Written 2026-09-15 after a live run.
 Code: `novel_agent/tools/name_generator.py`, data in `novel_agent/data/names/`.
 
 ## What happens
@@ -130,3 +131,40 @@ Two decisions to make first, neither of which the code can settle:
 Generate a cast against a historical foundation and read the names aloud. The
 2026-09-15 run is the baseline to beat, and it is recorded above in full so
 the comparison is against something specific rather than an impression.
+
+## What shipped (2026-09-20)
+
+Seven person-name banks, per-genre place banks, and per-genre rank rosters.
+The same 1871 foundation that produced the cast above now produces Lewis
+Stevens and Sybil Osborne at Cranwick.
+
+The decisions the code could not settle were settled this way:
+
+- **Coined or drawn?** Both. `scifi` stays syllable-coined and `fantasy` draws
+  given names while coining surnames; every other bank is a drawn list of whole
+  names. Coined-from-syllables English names do read as neither invented nor
+  real, which is what the drawn path exists for.
+- **Period.** Periodised where it matters rather than universally: `victorian`
+  is separate from `modern` and from `historical`, and a four-digit year in the
+  genre text between 1800 and 1901 sharpens a vague genre to `victorian`.
+
+And the gap's own framing (that this is data, not code) turned out to be half
+right. Reaching the data needed wiring too, and reading it in a live probe
+turned up something the original write-up missed: **the bank was being chosen by
+the LLM**, through the `genre` parameter `name.generate` advertised. That
+parameter is gone. Bank choice now lives in the `names:` config block, one slot
+per kind of name, each defaulting to `auto` (the genre routing described above).
+
+A place name may not say the same word twice; the guard is word-level and
+applies to every bank.
+
+## Still open
+
+- No title block for `victorian`; it borrows `historical`.
+- `_firsts()` ignores the `register` argument that `_lasts()` honours, so a
+  given name and a surname are drawn independently. Harmless for `victorian`,
+  visible in a `western` cast. Carried in the ROADMAP backlog with the
+  reasoning.
+- `scifi_name_mode` (a drawn science-fiction bank, and a mixed mode) was
+  removed rather than left inert: `scifi_names.json` was never authored, so two
+  of its three settings silently did nothing. Re-add the knob with the data.

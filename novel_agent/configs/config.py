@@ -50,7 +50,7 @@ DEFAULT_CONFIG = {
         'enable_entity_updates': True,
         'enable_tension_tracking': True,  # Phase 7A.3: Track scene tension levels
         'enable_lore_tracking': True,  # Phase 7A.4: Track world rules and lore
-        
+
         # Character detection (Phase 6)
         'auto_detect_characters': True,  # Detect new character names in scenes
         'auto_create_minor_characters': False,  # Auto-create stubs for detected characters
@@ -140,6 +140,25 @@ DEFAULT_CONFIG = {
         # method to "contract"; any failing keeps the beat pending (or triggers a
         # rolling-horizon revision when generation.rolling_horizon is on).
         'use_contracts': False,
+    },
+    'names': {
+        # Which name banks a novel draws from. Every slot defaults to 'auto',
+        # which routes from the story foundation's genre exactly as before, so
+        # these keys change nothing until an author sets one.
+        #
+        # The slots are independent on purpose: 'victorian names in a space opera'
+        # is person_bank: victorian with place_bank left on auto. Banks are named
+        # by NameGenerator.available_banks(); an unknown or unusable one raises
+        # at startup rather than quietly misnaming a whole novel.
+        #
+        # The LLM has no say in any of this. It selects from what Python mints,
+        # which is why name.generate no longer advertises a genre parameter.
+        'use_drawn_banks': True,   # False restores the old coined-scifi-everywhere behaviour
+        'person_bank': 'auto',     # character names
+        'place_bank': 'auto',      # location names
+        'title_bank': 'auto',      # the rank/honorific roster offered for selection
+        'register': 'auto',        # default surname register where a bank splits them
+                                   # (victorian: gentry|common)
     },
     'lore': {
         'contradiction_threshold': 0.5,  # Similarity threshold for the candidate pre-filter (0.0-2.0)

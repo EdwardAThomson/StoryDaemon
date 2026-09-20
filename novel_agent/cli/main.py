@@ -31,7 +31,7 @@ from ..tools.memory_tools import (
     FactionUpdateTool,
     FactionQueryTool
 )
-from ..tools.name_generator import NameGeneratorTool
+from ..tools.name_generator import NameGenerator, NameGeneratorTool
 from ..memory.manager import MemoryManager
 from ..memory.vector_store import VectorStore
 from ..agent.agent import StoryAgent
@@ -102,6 +102,32 @@ def _show_story_stats(project_dir: Path, state: dict):
     typer.echo(f"   Lore Items: {len(all_lore)}")
     if tensions:
         typer.echo(f"   Avg Tension: {avg_tension:.1f}/10")
+
+
+def _prompt_for_name_bank(genre: str) -> Optional[str]:
+    """Ask which name bank the cast is drawn from.
+
+    Defaults to the genre's own routing, and says which bank that is, so the
+    choice is visible at creation rather than discovered later in config.yaml.
+    """
+    data_dir = Path(__file__).parent.parent / "data" / "names"
+    banks = NameGenerator.available_banks()
+    try:
+        routed = NameGenerator(data_dir).resolve_person_bank(genre)
+    except Exception:
+        return None
+
+    typer.echo("\n📛 Character name bank")
+    typer.echo(f"   auto  - match the genre (this story: {routed})")
+    typer.echo(f"   or:     {', '.join(banks)}")
+    for _ in range(3):
+        choice = (typer.prompt("   Name bank", default="auto") or "").strip().lower()
+        if choice in ("", "auto"):
+            return None
+        if choice in banks:
+            return choice
+        typer.echo(f"   '{choice}' is not a name bank.")
+    return None
 
 
 def _prompt_for_llm_selection() -> tuple[str, str]:
@@ -239,6 +265,16 @@ def new(
         None,
         "--themes",
         help="Story themes (comma-separated)"
+    ),
+    name_bank: Optional[str] = typer.Option(
+        None,
+        "--name-bank",
+        help=(
+            "Name bank for characters, overriding the genre "
+            "(auto, " + ", ".join(NameGenerator.available_banks()) + "). "
+            "Places and titles stay on auto, so Victorian names can sit in a "
+            "science-fiction setting."
+        )
     )
 ):
     """Create a new novel project with optional story foundation.
@@ -278,10 +314,24 @@ def new(
         llm_backend_override: Optional[str] = None
         llm_model_override: Optional[str] = None
         plot_config: Optional[Dict[str, Any]] = None
+        name_banks: Optional[Dict[str, Any]] = None
+
+        if name_bank:
+            valid = NameGenerator.available_banks()
+            if name_bank.strip().lower() not in valid + ["auto"]:
+                typer.echo(
+                    f"❌ Unknown name bank '{name_bank}'. "
+                    f"Choose one of: auto, {', '.join(valid)}.", err=True)
+                raise typer.Exit(1)
+            name_banks = {"person_bank": name_bank.strip().lower()}
 
         if interactive_effective:
             # Interactive prompting (recommended default)
             foundation, plot_config = prompt_for_foundation()
+            if name_banks is None:
+                chosen = _prompt_for_name_bank(getattr(foundation, "genre", "") or "")
+                if chosen:
+                    name_banks = {"person_bank": chosen}
             llm_backend_override, llm_model_override = _prompt_for_llm_selection()
         elif foundation_file:
             # Load from file
@@ -306,9 +356,13 @@ def new(
             llm_backend=llm_backend_override,
             llm_model=llm_model_override,
             plot_config=plot_config,
+            name_banks=name_banks,
         )
         typer.echo(f"✅ Created novel project: {project_dir}")
         
+        if name_banks and name_banks.get("person_bank"):
+            typer.echo(f"   Character names: {name_banks['person_bank']} bank")
+
         if foundation:
             typer.echo(f"\n📚 Story foundation set:")
             typer.echo(f"   Genre: {foundation.genre}")
@@ -443,12 +497,13 @@ def tick(
         # Register all tools
         # Get data directory for name generator
         data_dir = Path(__file__).parent.parent / "data" / "names"
-        name_gen_tool = NameGeneratorTool(data_dir)
+        genre = (state.get('story_foundation') or {}).get('genre') or 'scifi'
+        # Name banks come from the names.* config block, falling back to genre
+        # routing. Settled here, once, so no tool asks the model for it.
+        name_gen_tool = NameGeneratorTool.from_config(data_dir, config, genre)
         
         # Get beat_mode for strict name generation enforcement
         beat_mode = config.get('plot.beat_mode', 'soft_hint')
-        # Genre drives grounded name generation (falls back to scifi banks)
-        genre = (state.get('story_foundation') or {}).get('genre') or 'scifi'
 
         tool_registry.register(name_gen_tool)
         tool_registry.register(MemorySearchTool(memory_manager, vector_store))
@@ -458,7 +513,7 @@ def tick(
         tool_registry.register(RelationshipUpdateTool(memory_manager))
         tool_registry.register(RelationshipQueryTool(memory_manager))
         # Faction tools
-        tool_registry.register(FactionGenerateTool(memory_manager, vector_store, name_gen_tool.generator))
+        tool_registry.register(FactionGenerateTool(memory_manager, vector_store, name_gen_tool.generator, genre=genre))
         tool_registry.register(FactionUpdateTool(memory_manager, vector_store))
         tool_registry.register(FactionQueryTool(memory_manager, vector_store))
         
@@ -666,12 +721,13 @@ def run(
 
                     # Get data directory for name generator
                     data_dir = Path(__file__).parent.parent / "data" / "names"
-                    name_gen_tool = NameGeneratorTool(data_dir)
+                    genre = (state.get('story_foundation') or {}).get('genre') or 'scifi'
+                    # Same resolution as tick(): config first, genre routing
+                    # second, the model nowhere.
+                    name_gen_tool = NameGeneratorTool.from_config(data_dir, config, genre)
 
                     # Get beat_mode for strict name generation enforcement
                     beat_mode = config.get('plot.beat_mode', 'soft_hint')
-                    # Genre drives grounded name generation (falls back to scifi banks)
-                    genre = (state.get('story_foundation') or {}).get('genre') or 'scifi'
 
                     tool_registry.register(name_gen_tool)
                     tool_registry.register(MemorySearchTool(memory_manager, vector_store))
@@ -681,7 +737,7 @@ def run(
                     tool_registry.register(RelationshipUpdateTool(memory_manager))
                     tool_registry.register(RelationshipQueryTool(memory_manager))
                     # Faction tools
-                    tool_registry.register(FactionGenerateTool(memory_manager, vector_store, name_gen_tool.generator))
+                    tool_registry.register(FactionGenerateTool(memory_manager, vector_store, name_gen_tool.generator, genre=genre))
                     tool_registry.register(FactionUpdateTool(memory_manager, vector_store))
                     tool_registry.register(FactionQueryTool(memory_manager, vector_store))
 

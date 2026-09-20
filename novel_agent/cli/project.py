@@ -21,6 +21,7 @@ def create_novel_project(
     llm_backend: Optional[str] = None,
     llm_model: Optional[str] = None,
     plot_config: Optional[Dict[str, Any]] = None,
+    name_banks: Optional[Dict[str, Any]] = None,
 ) -> str:
     """Create a new novel project directory structure.
     
@@ -31,6 +32,7 @@ def create_novel_project(
         llm_backend: Optional LLM backend override to store in project config
         llm_model: Optional LLM model override to store in project config
         plot_config: Optional plot-first mode configuration
+        name_banks: Optional names.* overrides (e.g. from --name-bank)
         
     Returns:
         Path to created project directory
@@ -97,6 +99,20 @@ def create_novel_project(
             'promotion_tick': 0 if primary_goal else None
         }
         
+        # Settle the name banks before anything is named. The protagonist is
+        # minted below and must come from the same bank the ticks will use,
+        # not from whatever the genre would have routed to.
+        names_config = {
+            'use_drawn_banks': config.get('names.use_drawn_banks', True),
+            'person_bank': config.get('names.person_bank', 'auto'),
+            'place_bank': config.get('names.place_bank', 'auto'),
+            'title_bank': config.get('names.title_bank', 'auto'),
+            'register': config.get('names.register', 'auto'),
+        }
+        for key, value in (name_banks or {}).items():
+            if value:
+                names_config[key] = value
+
         # Mint the protagonist now, in Python, before any tick runs. A project
         # used to start castless and rely on the planner to call
         # character.generate unprompted; when planning degraded, eight scenes
@@ -105,7 +121,7 @@ def create_novel_project(
         # Unconditional: a project without a protagonist cannot write a scene,
         # and the writer now raises rather than substituting a phantom. With no
         # foundation to read a name from, one is minted.
-        _create_protagonist(project_dir, foundation, initial_state)
+        _create_protagonist(project_dir, foundation, initial_state, names_config)
 
         write_json(os.path.join(project_dir, 'state.json'), initial_state)
         
@@ -128,7 +144,8 @@ def create_novel_project(
                 'scene_word_targets': config.get('generation.scene_word_targets'),
                 'default_scene_length': config.get('generation.default_scene_length'),
                 'scene_max_segments': config.get('generation.scene_max_segments'),
-            }
+            },
+            'names': names_config,
         }
         
         # Add plot-first configuration if provided
@@ -192,7 +209,8 @@ Created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
         raise IOError(f"Error creating project structure: {e}")
 
 
-def _create_protagonist(project_dir, foundation, initial_state) -> None:
+def _create_protagonist(project_dir, foundation, initial_state,
+                        names_config: Optional[Dict[str, Any]] = None) -> None:
     """Create the protagonist entity and make it the active character.
 
     Never silently skipped: a project whose foundation names no protagonist and
@@ -206,7 +224,15 @@ def _create_protagonist(project_dir, foundation, initial_state) -> None:
 
     memory = MemoryManager(Path(project_dir))
     data_dir = Path(__file__).resolve().parent.parent / "data" / "names"
-    generator = NameGenerator(data_dir) if data_dir.exists() else None
+    settings = dict(names_config or {})
+    generator = NameGenerator(
+        data_dir,
+        use_drawn_banks=settings.get("use_drawn_banks", True),
+        person_bank=settings.get("person_bank"),
+        place_bank=settings.get("place_bank"),
+        title_bank=settings.get("title_bank"),
+        register=settings.get("register"),
+    ) if data_dir.exists() else None
     char_id = create_protagonist(memory, foundation, generator)
     initial_state['active_character'] = char_id
 

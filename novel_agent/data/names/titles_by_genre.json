@@ -1,0 +1,1153 @@
+{
+  "historical": {
+    "tiers": {
+      "noble": {
+        "high": {
+          "male": [
+            "King",
+            "Emperor",
+            "Duke",
+            "Prince",
+            "Archduke",
+            "Grand Duke",
+            "Margrave"
+          ],
+          "female": [
+            "Queen",
+            "Empress",
+            "Duchess",
+            "Princess",
+            "Archduchess",
+            "Grand Duchess",
+            "Margravine"
+          ],
+          "neutral": [
+            "Sovereign",
+            "Ruler",
+            "Monarch",
+            "Regent",
+            "Chancellor"
+          ]
+        },
+        "mid": {
+          "male": [
+            "Count",
+            "Earl",
+            "Baron",
+            "Viscount",
+            "Lord",
+            "Knight",
+            "Baronet"
+          ],
+          "female": [
+            "Countess",
+            "Baroness",
+            "Viscountess",
+            "Lady",
+            "Dame"
+          ],
+          "neutral": [
+            "Noble",
+            "Highborn",
+            "Heir",
+            "Scion"
+          ]
+        },
+        "low": {
+          "male": [
+            "Squire",
+            "Page",
+            "Gentleman"
+          ],
+          "female": [
+            "Squire",
+            "Page",
+            "Gentlewoman"
+          ],
+          "neutral": [
+            "Noble Apprentice",
+            "Court Page",
+            "Noble Ward",
+            "Courtier"
+          ]
+        }
+      },
+      "military": {
+        "high": {
+          "male": [
+            "General",
+            "Marshal",
+            "Admiral",
+            "Commander",
+            "Colonel",
+            "Knight-Commander"
+          ],
+          "female": [
+            "General",
+            "Marshal",
+            "Admiral",
+            "Commander",
+            "Colonel",
+            "Dame Commander"
+          ],
+          "neutral": [
+            "High Commander",
+            "War Leader",
+            "Battle Master",
+            "Supreme Commander"
+          ]
+        },
+        "mid": {
+          "male": [
+            "Captain",
+            "Major",
+            "Lieutenant",
+            "Knight",
+            "Sergeant-Major"
+          ],
+          "female": [
+            "Captain",
+            "Major",
+            "Lieutenant",
+            "Dame",
+            "Sergeant-Major"
+          ],
+          "neutral": [
+            "Squad Leader",
+            "Battle Captain",
+            "War Captain",
+            "Officer"
+          ]
+        },
+        "low": {
+          "male": [
+            "Sergeant",
+            "Corporal",
+            "Soldier",
+            "Guard",
+            "Recruit"
+          ],
+          "female": [
+            "Sergeant",
+            "Corporal",
+            "Soldier",
+            "Guard",
+            "Recruit"
+          ],
+          "neutral": [
+            "Scout",
+            "Archer",
+            "Warrior",
+            "Fighter",
+            "Defender"
+          ]
+        }
+      },
+      "religious": {
+        "high": {
+          "male": [
+            "Archbishop",
+            "Cardinal",
+            "Bishop",
+            "Abbot",
+            "Prior",
+            "High Priest"
+          ],
+          "female": [
+            "Archbishop",
+            "Cardinal",
+            "Bishop",
+            "Abbess",
+            "Prioress",
+            "High Priestess"
+          ],
+          "neutral": [
+            "Elder",
+            "Divine Speaker",
+            "Sacred Guardian",
+            "Temple Master"
+          ]
+        },
+        "mid": {
+          "male": [
+            "Priest",
+            "Father",
+            "Brother",
+            "Chaplain",
+            "Deacon"
+          ],
+          "female": [
+            "Priestess",
+            "Mother",
+            "Sister",
+            "Chaplain",
+            "Deacon"
+          ],
+          "neutral": [
+            "Cleric",
+            "Divine Servant",
+            "Temple Guardian",
+            "Sacred Keeper"
+          ]
+        },
+        "low": {
+          "male": [
+            "Acolyte",
+            "Novice",
+            "Brother",
+            "Monk"
+          ],
+          "female": [
+            "Acolyte",
+            "Novice",
+            "Sister",
+            "Nun"
+          ],
+          "neutral": [
+            "Initiate",
+            "Temple Student",
+            "Sacred Apprentice",
+            "Devotee"
+          ]
+        }
+      },
+      "scholarly": {
+        "high": {
+          "male": [
+            "Master",
+            "Professor",
+            "Doctor",
+            "Scholar",
+            "Philosopher"
+          ],
+          "female": [
+            "Master",
+            "Professor",
+            "Doctor",
+            "Scholar",
+            "Philosopher"
+          ],
+          "neutral": [
+            "Grand Scholar",
+            "Master Teacher",
+            "Chief Researcher",
+            "Academic Leader"
+          ]
+        },
+        "mid": {
+          "male": [
+            "Teacher",
+            "Tutor",
+            "Lecturer",
+            "Researcher"
+          ],
+          "female": [
+            "Teacher",
+            "Tutor",
+            "Lecturer",
+            "Researcher"
+          ],
+          "neutral": [
+            "Instructor",
+            "Academic",
+            "Scholar",
+            "Learned One"
+          ]
+        },
+        "low": {
+          "male": [
+            "Student",
+            "Apprentice",
+            "Pupil",
+            "Assistant"
+          ],
+          "female": [
+            "Student",
+            "Apprentice",
+            "Pupil",
+            "Assistant"
+          ],
+          "neutral": [
+            "Learner",
+            "Novice Scholar",
+            "Academic Apprentice",
+            "Study Assistant"
+          ]
+        }
+      }
+    }
+  },
+  "modern": {
+    "tiers": {
+      "law_enforcement": {
+        "high": {
+          "male": [
+            "Chief",
+            "Commissioner",
+            "Captain",
+            "Lieutenant",
+            "Inspector"
+          ],
+          "female": [
+            "Chief",
+            "Commissioner",
+            "Captain",
+            "Lieutenant",
+            "Inspector"
+          ],
+          "neutral": [
+            "Chief Inspector",
+            "Senior Detective",
+            "Division Commander"
+          ]
+        },
+        "mid": {
+          "male": [
+            "Detective",
+            "Sergeant",
+            "Agent",
+            "Investigator"
+          ],
+          "female": [
+            "Detective",
+            "Sergeant",
+            "Agent",
+            "Investigator"
+          ],
+          "neutral": [
+            "Senior Officer",
+            "Lead Investigator",
+            "Case Manager"
+          ]
+        },
+        "low": {
+          "male": [
+            "Officer",
+            "Deputy",
+            "Constable",
+            "Patrol Officer"
+          ],
+          "female": [
+            "Officer",
+            "Deputy",
+            "Constable",
+            "Patrol Officer"
+          ],
+          "neutral": [
+            "Junior Detective",
+            "Beat Officer",
+            "Rookie"
+          ]
+        }
+      },
+      "legal": {
+        "high": {
+          "male": [
+            "Judge",
+            "District Attorney",
+            "Chief Prosecutor"
+          ],
+          "female": [
+            "Judge",
+            "District Attorney",
+            "Chief Prosecutor"
+          ],
+          "neutral": [
+            "Chief Justice",
+            "Attorney General",
+            "Legal Director"
+          ]
+        },
+        "mid": {
+          "male": [
+            "Prosecutor",
+            "Defense Attorney",
+            "Legal Counsel"
+          ],
+          "female": [
+            "Prosecutor",
+            "Defense Attorney",
+            "Legal Counsel"
+          ],
+          "neutral": [
+            "Assistant DA",
+            "Public Defender",
+            "Legal Advisor"
+          ]
+        },
+        "low": {
+          "male": [
+            "Paralegal",
+            "Court Clerk",
+            "Legal Assistant"
+          ],
+          "female": [
+            "Paralegal",
+            "Court Clerk",
+            "Legal Assistant"
+          ],
+          "neutral": [
+            "Junior Attorney",
+            "Law Student",
+            "Legal Intern"
+          ]
+        }
+      },
+      "civilian": {
+        "high": {
+          "male": [
+            "Doctor",
+            "Professor",
+            "Director",
+            "Chief"
+          ],
+          "female": [
+            "Doctor",
+            "Professor",
+            "Director",
+            "Chief"
+          ],
+          "neutral": [
+            "Medical Examiner",
+            "Forensic Expert",
+            "Lab Director"
+          ]
+        },
+        "mid": {
+          "male": [
+            "Analyst",
+            "Specialist",
+            "Consultant"
+          ],
+          "female": [
+            "Analyst",
+            "Specialist",
+            "Consultant"
+          ],
+          "neutral": [
+            "Crime Scene Technician",
+            "Forensic Analyst",
+            "Lab Technician"
+          ]
+        },
+        "low": {
+          "male": [
+            "Assistant",
+            "Technician",
+            "Clerk"
+          ],
+          "female": [
+            "Assistant",
+            "Technician",
+            "Clerk"
+          ],
+          "neutral": [
+            "Junior Analyst",
+            "Lab Assistant",
+            "Research Assistant"
+          ]
+        }
+      },
+      "private": {
+        "high": {
+          "male": [
+            "Private Investigator",
+            "Security Chief",
+            "Investigation Director"
+          ],
+          "female": [
+            "Private Investigator",
+            "Security Chief",
+            "Investigation Director"
+          ],
+          "neutral": [
+            "Senior PI",
+            "Investigation Manager",
+            "Security Director"
+          ]
+        },
+        "mid": {
+          "male": [
+            "Investigator",
+            "Security Officer",
+            "Consultant"
+          ],
+          "female": [
+            "Investigator",
+            "Security Officer",
+            "Consultant"
+          ],
+          "neutral": [
+            "Private Detective",
+            "Security Specialist",
+            "Investigation Consultant"
+          ]
+        },
+        "low": {
+          "male": [
+            "Security Guard",
+            "Assistant",
+            "Trainee"
+          ],
+          "female": [
+            "Security Guard",
+            "Assistant",
+            "Trainee"
+          ],
+          "neutral": [
+            "Junior Investigator",
+            "Security Assistant",
+            "Investigation Trainee"
+          ]
+        }
+      }
+    },
+    "roles": {
+      "leader": [
+        "Director",
+        "Chief",
+        "Commander",
+        "General",
+        "Admiral",
+        "Secretary",
+        "Chairman",
+        "President",
+        "CEO",
+        "Executive",
+        "Supervisor",
+        "Administrator",
+        "Coordinator",
+        "Manager"
+      ],
+      "military": [
+        "Colonel",
+        "Major",
+        "Captain",
+        "Lieutenant",
+        "Sergeant",
+        "Operative",
+        "Agent",
+        "Specialist",
+        "Commander",
+        "Officer",
+        "Enforcer",
+        "Assassin",
+        "Sniper",
+        "Demolitions Expert"
+      ],
+      "administrative": [
+        "Deputy Director",
+        "Assistant Director",
+        "Chief of Staff",
+        "Operations Manager",
+        "Intelligence Analyst",
+        "Communications Officer",
+        "Logistics Coordinator",
+        "Security Chief",
+        "Legal Counsel",
+        "Financial Officer"
+      ],
+      "specialized": [
+        "Cyber Warfare Specialist",
+        "Psychological Operations Expert",
+        "Weapons Specialist",
+        "Surveillance Expert",
+        "Interrogation Specialist",
+        "Explosives Expert",
+        "Communications Specialist",
+        "Medical Officer",
+        "Pilot",
+        "Driver"
+      ],
+      "operational": [
+        "Field Agent",
+        "Operative",
+        "Contractor",
+        "Mercenary",
+        "Hacker",
+        "Analyst",
+        "Technician",
+        "Guard",
+        "Courier",
+        "Handler",
+        "Asset",
+        "Informant",
+        "Surveillance Operator",
+        "Communications Operator"
+      ]
+    },
+    "stripped_from_names": [
+      "Agent",
+      "Captain",
+      "Chief",
+      "Colonel",
+      "Commander",
+      "Detective",
+      "Director",
+      "Major"
+    ]
+  },
+  "scifi": {
+    "tiers": {
+      "military": {
+        "high": {
+          "male": [
+            "Admiral",
+            "Commander",
+            "Captain",
+            "Colonel",
+            "Major",
+            "General"
+          ],
+          "female": [
+            "Admiral",
+            "Commander",
+            "Captain",
+            "Colonel",
+            "Major",
+            "General"
+          ],
+          "neutral": [
+            "Fleet Commander",
+            "Wing Commander"
+          ]
+        },
+        "mid": {
+          "male": [
+            "Lieutenant",
+            "Sergeant",
+            "Ensign",
+            "Corporal"
+          ],
+          "female": [
+            "Lieutenant",
+            "Sergeant",
+            "Ensign",
+            "Corporal"
+          ],
+          "neutral": [
+            "Flight Officer",
+            "Squad Leader",
+            "Tactical Officer"
+          ]
+        },
+        "low": {
+          "male": [
+            "Private",
+            "Cadet",
+            "Recruit"
+          ],
+          "female": [
+            "Private",
+            "Cadet",
+            "Recruit"
+          ],
+          "neutral": [
+            "Specialist",
+            "Technician",
+            "Gunner",
+            "Scout"
+          ]
+        }
+      },
+      "civilian": {
+        "high": {
+          "male": [
+            "Doctor",
+            "Professor",
+            "Director",
+            "Consul",
+            "Minister"
+          ],
+          "female": [
+            "Doctor",
+            "Professor",
+            "Director",
+            "Consul",
+            "Minister"
+          ],
+          "neutral": [
+            "Ambassador",
+            "Chancellor",
+            "Archon",
+            "Overseer"
+          ]
+        },
+        "mid": {
+          "male": [
+            "Senior Researcher",
+            "Senior Analyst",
+            "Senior Supervisor"
+          ],
+          "female": [
+            "Senior Researcher",
+            "Senior Analyst",
+            "Senior Supervisor"
+          ],
+          "neutral": [
+            "Senior Coordinator",
+            "Senior Manager",
+            "Senior Consultant",
+            "Senior Specialist"
+          ]
+        },
+        "low": {
+          "male": [
+            "Assistant",
+            "Technician",
+            "Clerk"
+          ],
+          "female": [
+            "Assistant",
+            "Technician",
+            "Clerk"
+          ],
+          "neutral": [
+            "Operator",
+            "Junior Researcher",
+            "Junior Analyst",
+            "Junior Supervisor"
+          ]
+        }
+      },
+      "noble": {
+        "high": {
+          "male": [
+            "Lord",
+            "Baron",
+            "Count",
+            "Duke",
+            "Prince"
+          ],
+          "female": [
+            "Lady",
+            "Baroness",
+            "Countess",
+            "Duchess",
+            "Princess"
+          ],
+          "neutral": [
+            "Noble",
+            "Highborn"
+          ]
+        },
+        "mid": {
+          "male": [
+            "Knight",
+            "Viscount",
+            "Baronet"
+          ],
+          "female": [
+            "Dame",
+            "Viscountess",
+            "Baronetess"
+          ],
+          "neutral": [
+            "Noble Scion",
+            "Noble Heir"
+          ]
+        },
+        "low": {
+          "male": [
+            "Squire",
+            "Page"
+          ],
+          "female": [
+            "Squire",
+            "Page"
+          ],
+          "neutral": [
+            "Noble Apprentice",
+            "Noble Cadet",
+            "Noble Scion"
+          ]
+        }
+      }
+    }
+  },
+  "fantasy": {
+    "tiers": {
+      "military": {
+        "high": {
+          "male": [
+            "General",
+            "Marshal",
+            "Knight-Commander",
+            "Captain-General",
+            "War Leader",
+            "Lord Commander"
+          ],
+          "female": [
+            "General",
+            "Marshal",
+            "Knight-Commander",
+            "Captain-General",
+            "War Leader",
+            "Lady Commander"
+          ],
+          "neutral": [
+            "Battle Master",
+            "High Commander",
+            "Champion",
+            "Warlord"
+          ]
+        },
+        "mid": {
+          "male": [
+            "Captain",
+            "Knight",
+            "Lieutenant",
+            "Sergeant-at-Arms",
+            "Commander"
+          ],
+          "female": [
+            "Captain",
+            "Dame",
+            "Lieutenant",
+            "Sergeant-at-Arms",
+            "Commander"
+          ],
+          "neutral": [
+            "Squad Leader",
+            "Battle Captain",
+            "War Captain",
+            "Guard Captain"
+          ]
+        },
+        "low": {
+          "male": [
+            "Sergeant",
+            "Corporal",
+            "Guard",
+            "Soldier",
+            "Recruit"
+          ],
+          "female": [
+            "Sergeant",
+            "Corporal",
+            "Guard",
+            "Soldier",
+            "Recruit"
+          ],
+          "neutral": [
+            "Scout",
+            "Archer",
+            "Spearman",
+            "Warrior",
+            "Fighter"
+          ]
+        }
+      },
+      "noble": {
+        "high": {
+          "male": [
+            "King",
+            "Duke",
+            "Prince",
+            "High Lord",
+            "Sovereign",
+            "Overlord"
+          ],
+          "female": [
+            "Queen",
+            "Duchess",
+            "Princess",
+            "High Lady",
+            "Sovereign",
+            "Overlady"
+          ],
+          "neutral": [
+            "Regent",
+            "Chancellor",
+            "Ruler",
+            "Monarch"
+          ]
+        },
+        "mid": {
+          "male": [
+            "Lord",
+            "Baron",
+            "Count",
+            "Viscount",
+            "Earl"
+          ],
+          "female": [
+            "Lady",
+            "Baroness",
+            "Countess",
+            "Viscountess",
+            "Countess"
+          ],
+          "neutral": [
+            "Noble",
+            "Highborn",
+            "Heir",
+            "Scion"
+          ]
+        },
+        "low": {
+          "male": [
+            "Knight",
+            "Squire",
+            "Page",
+            "Baronet"
+          ],
+          "female": [
+            "Dame",
+            "Squire",
+            "Page",
+            "Baronetess"
+          ],
+          "neutral": [
+            "Noble Apprentice",
+            "Court Page",
+            "Noble Ward"
+          ]
+        }
+      },
+      "magical": {
+        "high": {
+          "male": [
+            "Archmage",
+            "Grand Wizard",
+            "High Sorcerer",
+            "Master Enchanter",
+            "Sage"
+          ],
+          "female": [
+            "Archmage",
+            "Grand Sorceress",
+            "High Sorceress",
+            "Master Enchantress",
+            "Sage"
+          ],
+          "neutral": [
+            "Grand Master",
+            "High Mystic",
+            "Elder Mage",
+            "Arcane Master"
+          ]
+        },
+        "mid": {
+          "male": [
+            "Wizard",
+            "Sorcerer",
+            "Mage",
+            "Enchanter",
+            "Warlock"
+          ],
+          "female": [
+            "Sorceress",
+            "Mage",
+            "Enchantress",
+            "Witch",
+            "Mystic"
+          ],
+          "neutral": [
+            "Spellcaster",
+            "Magician",
+            "Conjurer",
+            "Elementalist"
+          ]
+        },
+        "low": {
+          "male": [
+            "Apprentice",
+            "Hedge Wizard",
+            "Novice",
+            "Acolyte"
+          ],
+          "female": [
+            "Apprentice",
+            "Hedge Witch",
+            "Novice",
+            "Acolyte"
+          ],
+          "neutral": [
+            "Student",
+            "Initiate",
+            "Pupil",
+            "Adept"
+          ]
+        }
+      },
+      "religious": {
+        "high": {
+          "male": [
+            "High Priest",
+            "Archbishop",
+            "Cardinal",
+            "Pontiff",
+            "Divine Oracle"
+          ],
+          "female": [
+            "High Priestess",
+            "Archbishop",
+            "Cardinal",
+            "Pontiff",
+            "Divine Oracle"
+          ],
+          "neutral": [
+            "Elder",
+            "Divine Speaker",
+            "Sacred Guardian",
+            "Temple Master"
+          ]
+        },
+        "mid": {
+          "male": [
+            "Priest",
+            "Cleric",
+            "Chaplain",
+            "Abbot",
+            "Prior"
+          ],
+          "female": [
+            "Priestess",
+            "Cleric",
+            "Chaplain",
+            "Abbess",
+            "Prioress"
+          ],
+          "neutral": [
+            "Divine Servant",
+            "Temple Guardian",
+            "Sacred Keeper",
+            "Holy Warrior"
+          ]
+        },
+        "low": {
+          "male": [
+            "Acolyte",
+            "Novice",
+            "Deacon",
+            "Brother"
+          ],
+          "female": [
+            "Acolyte",
+            "Novice",
+            "Deacon",
+            "Sister"
+          ],
+          "neutral": [
+            "Initiate",
+            "Temple Student",
+            "Sacred Apprentice",
+            "Devotee"
+          ]
+        }
+      }
+    }
+  },
+  "western": {
+    "roles": {
+      "leader": [
+        "Sheriff",
+        "Marshal",
+        "Captain",
+        "Colonel",
+        "Chief",
+        "Boss",
+        "Foreman",
+        "Superintendent",
+        "President",
+        "Chairman",
+        "Director",
+        "Manager",
+        "Overseer",
+        "Warden"
+      ],
+      "military": [
+        "Sheriff",
+        "Deputy Sheriff",
+        "Marshal",
+        "Deputy Marshal",
+        "Captain",
+        "Lieutenant",
+        "Sergeant",
+        "Corporal",
+        "Ranger",
+        "Scout",
+        "Tracker",
+        "Gunfighter",
+        "Enforcer"
+      ],
+      "administrative": [
+        "Town Mayor",
+        "County Clerk",
+        "Territorial Judge",
+        "Land Commissioner",
+        "Tax Collector",
+        "Postmaster",
+        "Telegraph Operator",
+        "Station Agent",
+        "Bookkeeper",
+        "Secretary"
+      ],
+      "specialized": [
+        "Doctor",
+        "Preacher",
+        "Schoolteacher",
+        "Lawyer",
+        "Engineer",
+        "Surveyor",
+        "Assayer",
+        "Blacksmith",
+        "Gunsmith",
+        "Veterinarian",
+        "Banker",
+        "Merchant"
+      ],
+      "operational": [
+        "Cowboy",
+        "Ranch Hand",
+        "Miner",
+        "Prospector",
+        "Teamster",
+        "Stagecoach Driver",
+        "Train Conductor",
+        "Telegraph Operator",
+        "Saloon Keeper",
+        "Store Clerk",
+        "Stable Hand"
+      ]
+    },
+    "stripped_from_names": [
+      "Captain",
+      "Deputy",
+      "Doc",
+      "Judge",
+      "Major",
+      "Marshal",
+      "Preacher",
+      "Sheriff"
+    ]
+  },
+  "gothic": {
+    "roles": {
+      "general": [
+        "Dr.",
+        "Professor",
+        "Father",
+        "Sister",
+        "Reverend",
+        "Detective",
+        "Inspector",
+        "Agent",
+        "Lord",
+        "Lady",
+        "Master",
+        "Mistress",
+        "High Priest",
+        "High Priestess",
+        "Elder",
+        "Keeper",
+        "Guardian",
+        "Warden",
+        "Curator",
+        "Archivist",
+        "Scholar"
+      ]
+    }
+  }
+}
