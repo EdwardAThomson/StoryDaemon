@@ -659,7 +659,7 @@ Return ONLY JSON with these updates:
 {{
   "character_updates": [
     {{
-      "id": "C0",
+      "id": "C000",
       "changes": {{
         "emotional_state": "string or null",
         "physical_state": "string or null",
@@ -671,7 +671,7 @@ Return ONLY JSON with these updates:
   ],
   "location_updates": [
     {{
-      "id": "L0",
+      "id": "L000",
       "changes": {{
         "description": "string or null",
         "atmosphere": "string or null",
@@ -684,15 +684,15 @@ Return ONLY JSON with these updates:
       "description": "string",
       "importance": "low|medium|high|critical",
       "category": "mystery|relationship|goal|threat|etc",
-      "related_characters": ["C0"],
-      "related_locations": ["L0"]
+      "related_characters": ["C000"],
+      "related_locations": ["L000"]
     }}
   ],
   "open_loops_resolved": ["OL1", "OL2"],
   "relationship_changes": [
     {{
-      "character_a": "C0",
-      "character_b": "C1",
+      "character_a": "C000",
+      "character_b": "C001",
       "changes": {{
         "status": "string or null",
         "perspective_a": "string or null",
@@ -704,7 +704,7 @@ Return ONLY JSON with these updates:
 }}
 ```
 
-Rules: Use null for no change. Only extract what's clearly shown. For lists, only include NEW items."""
+Rules: Use null for no change. Only extract what's clearly shown. For lists, only include NEW items. Use ONLY the exact zero-padded IDs given in context (e.g. C000, L000) — never invent new IDs or abbreviate them (e.g. do not shorten C000 to C0)."""
 
 
 def format_planner_prompt(context: dict) -> str:
