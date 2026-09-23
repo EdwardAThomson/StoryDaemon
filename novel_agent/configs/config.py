@@ -279,6 +279,20 @@ DEFAULT_CONFIG = {
         # Max new loops per tick; entries beyond the cap are dropped lowest-importance
         # first. None or 0 disables the cap.
         'loop_creation_cap': 4,
+        # Creation-side hygiene for loops (Phase 3, loop-aging Slice L2a). The
+        # extraction prompt never said what an open loop IS, so the model settled on
+        # "any question this scene leaves unanswered", and a third of the resulting
+        # ledger was suspense the next scene answers by continuing: no scene ever
+        # announces an answer, so the closure judge rightly never closes it and it
+        # sits in the ledger as fake debt forever (docs/LOOP_AGING_BASELINE.md).
+        # This gate carries both halves of the fix, so False reproduces pre-L2a
+        # extraction exactly for an A/B: the qualification rules in the extraction
+        # prompt (prompts.loop_creation_rules) and the deterministic refusal at
+        # creation (loop_aging.scene_local_confident, the high-precision subset
+        # only, since the horizon classifier is 60 percent precise on "scene" and
+        # refusing on it alone would discard real debt). Defaults on, like the
+        # dedup and cap hygiene beside it.
+        'loop_scene_local_filter': True,
         # Loop-aging gauge (Phase 3, loop-aging Slice L1): records how old the open
         # loops are, what KIND of question each one asks, and which of them the
         # planner was actually shown. Instrument-only in this slice, so it defaults

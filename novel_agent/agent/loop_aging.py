@@ -360,6 +360,41 @@ def age_report(loops: Sequence[Any],
     return payload
 
 
+def scene_local_confident(description: Any) -> bool:
+    """True only for the loops it is SAFE to refuse at creation.
+
+    Creation-side hygiene (Phase 3, loop-aging Slice L2a). The horizon
+    classifier is 60 percent precise on ``scene`` against a hand-labelled sample
+    (docs/LOOP_AGING_BASELINE.md), so refusing every loop it calls scene-local
+    would discard real arc debt: six of its eighteen recorded errors were arc
+    loops misfiled as scene. This is the high-precision subset instead, and it
+    requires BOTH signals at once:
+
+    - a binary opener, so the question is answerable by the story simply
+      continuing ("Will she", "Can he", "Is it"), and
+    - a deadline in the loop's own text, so it dates itself to the next few
+      minutes or hours of story time.
+
+    Each signal alone is too loose. A deadline alone also fires on framing and
+    past-tense clauses ("Why did Zeloth remove a file *immediately after* Aris
+    logged in?" is a real mystery); a binary opener alone runs the length of a
+    book ("Will the cooperation agreement protect him?"). Together they reach 8
+    percent of the 1,553 loops on disk, and on the labelled sample the
+    conjunction made no false call.
+
+    The prompt rules do the bulk of the work; this is the deterministic backstop
+    for the blatant cases, in the spirit of the loop-dedup gate beside it.
+    """
+    text = _text(description)
+    if not text:
+        return False
+    try:
+        return bool(_BINARY_OPENER.match(text)) and bool(_DEADLINE_RE.search(text))
+    except Exception as e:  # pragma: no cover - defensive
+        logger.debug(f"scene_local_confident failed: {e}")
+        return False
+
+
 def importance_rank(loop: Any) -> int:
     """Sort key for importance, highest first when used with reverse=True.
 

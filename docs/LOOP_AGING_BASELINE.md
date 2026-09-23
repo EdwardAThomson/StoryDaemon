@@ -1,8 +1,9 @@
 # Loop-aging: the corpus baseline
 
-Status: **the gauge shipped 2026-09-23** (Phase 3, loop-aging Slice L1). No
-pressure is applied to planning yet, and this document is the measurement that
-the pressure slice has to be designed against.
+Status: **the gauge shipped 2026-09-23** (Phase 3, loop-aging Slice L1), and
+creation-side hygiene followed the same day (Slice L2a, see "What Slice L2a
+changed"). No pressure is applied to planning yet, and this document is the
+measurement that the pressure slice has to be designed against.
 Code: `novel_agent/agent/loop_aging.py`, script `scripts/loop_age_tables.py`,
 command `novel loops`.
 
@@ -259,6 +260,48 @@ chose its status marker by testing `loop.status` against `"urgent"` and
 rendered identically. Both are fixed: an explicit rank map, age as the
 tie-break, the age shown on the line, and the marker now carrying whether an arc
 loop is overdue.
+
+## What Slice L2a changed (creation-side hygiene, 2026-09-23)
+
+The baseline above said a third of the ledger should never have been registered,
+so the first change after the gauge is on the creation side rather than the
+pressure side. Two halves, both under one gate
+(`coherence.loop_scene_local_filter`, default on) so the pre-change behaviour is
+recoverable for an A/B.
+
+**The extraction prompt now says what an open loop is.** It never did: the rules
+line read "Use null for no change. Only extract what's clearly shown. For lists,
+only include NEW items", and nothing defined the concept, so the model settled on
+"any question this scene leaves unanswered". The new block
+(`prompts.LOOP_CREATION_RULES`) is three exclusion tests phrased so the model can
+apply them to its own candidate: would the next scene settle it just by
+continuing, does the reader already know the answer, and is it the story's central
+question restated. Plus a preference for few loops, since an empty list is a
+legitimate answer for a scene that plants nothing.
+
+**A deterministic refusal at creation**, as the backstop for the blatant cases.
+It is NOT the horizon classifier: that is 60 percent precise on `scene`, and six
+of its eighteen recorded errors were arc loops misfiled as scene, so refusing on
+it would discard real debt. `loop_aging.scene_local_confident` is the
+high-precision subset instead, requiring both a binary opener and a deadline in
+the loop's own text. Each signal alone is too loose: a deadline also fires on
+framing and past-tense clauses ("why did Zeloth remove a file *immediately after*
+Aris logged in" is a real mystery), and a binary opener alone runs the length of a
+book. Together they reach 132 of the 1,553 loops on disk (8 percent), and on the
+labelled sample the conjunction made no false call.
+
+The refusal runs as a pre-pass, **before** the per-tick creation cap. The cap
+drops lowest-importance-first and scene-local suspense is routinely minted as
+"critical", so refusing first is what keeps a candidate that was never debt from
+displacing a real arc loop. Dedup stays where it was, inside the per-candidate
+create, since it needs the ledger.
+
+**Not yet validated.** The baseline to beat is the 31 percent `scene` share and
+the 14 percent closure rate above. What a run after this change has to show is a
+lower scene share in `loop_horizon_counts` *and* no drop in loops created that
+turn out to matter: the failure mode to watch for is an extractor that, told to
+prefer few loops, stops registering arc debt too. Compare `loops_opened` per tick
+against the baseline as well as the horizon mix.
 
 ## The fork for the pressure slice (L2)
 

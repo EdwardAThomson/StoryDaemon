@@ -1,5 +1,7 @@
 """Prompt templates for agent LLM interactions."""
 
+from typing import Any
+
 PLANNER_PROMPT_TEMPLATE = """You are a creative story planner for an emergent narrative system.
 
 Your task is to analyze the current story state and create a plan for the next scene that ADVANCES THE PLOT.
@@ -645,6 +647,55 @@ def format_planner_prompt(context: dict) -> str:
     return PLANNER_PROMPT_TEMPLATE.format(**context)
 
 
+# What qualifies as an open loop (Phase 3, loop-aging Slice L2a). Until this
+# existed, the extraction prompt never said what a loop IS, and the model settled
+# on "any question this scene leaves unanswered". The corpus shows what that
+# costs: of 1,548 loops across 26 novels, a third were suspense carrying their own
+# deadline ("will security intercept her before she leaves the building"), which
+# the next scene answers by simply continuing, so no scene ever ANNOUNCES an
+# answer and the closure judge rightly refuses to close them; a further group
+# re-registered the story's central question as one loop among many; and one
+# surveillance-POV scene minted six questions the reader had already watched
+# answered. Only 14 percent of loops ever closed, and the ledger it left behind
+# is mostly not debt (docs/LOOP_AGING_BASELINE.md).
+#
+# So the rules are exclusions, phrased as tests the model can apply to its own
+# candidate rather than as a definition it has to interpret. Gated by
+# coherence.loop_scene_local_filter so the pre-change behaviour is recoverable
+# for an A/B.
+LOOP_CREATION_RULES = """
+An open loop is a question the READER will still be asking after this scene ends,
+whose answer belongs in a LATER scene. Before adding one, apply three tests:
+
+1. Would the very next scene settle it just by continuing? Then it is this
+   scene's suspense, not a loop. "Will she reach the car before they see her"
+   resolves itself on the page; do not register it.
+2. Does the reader already know the answer? A question that is open only to a
+   character (because they were not in the room) is not a loop.
+3. Is it the story's central question restated? Register the specific unanswered
+   thing, not "what is the full scope of the conspiracy".
+
+Prefer few loops: a scene that genuinely plants nothing returns an empty list.
+"""
+
+
+def loop_creation_rules(config: Any = None) -> str:
+    """The open-loop qualification rules, or "" when the gate is off.
+
+    Gated so a run can reproduce pre-Slice-L2a extraction exactly
+    (coherence.loop_scene_local_filter). Tolerates a plain dict config and a
+    missing config, like the other prompt helpers.
+    """
+    try:
+        if config is None:
+            return LOOP_CREATION_RULES
+        if not config.get('coherence.loop_scene_local_filter', True):
+            return ""
+    except Exception:
+        pass
+    return LOOP_CREATION_RULES
+
+
 FACT_EXTRACTION_PROMPT_TEMPLATE = """Extract structured updates from this scene.
 
 Scene: {scene_text}
@@ -704,7 +755,8 @@ Return ONLY JSON with these updates:
 }}
 ```
 
-Rules: Use null for no change. Only extract what's clearly shown. For lists, only include NEW items."""
+Rules: Use null for no change. Only extract what's clearly shown. For lists, only include NEW items.
+{loop_creation_rules}"""
 
 
 def format_planner_prompt(context: dict) -> str:

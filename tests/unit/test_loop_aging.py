@@ -33,6 +33,7 @@ from novel_agent.agent.loop_aging import (
     importance_rank,
     is_open,
     loop_age,
+    scene_local_confident,
     stale_threshold,
     staleness,
 )
@@ -520,3 +521,167 @@ def test_loops_command_on_a_project_with_no_ledger(project, capsys):
     assert info["count"] == 0
     display_loops(info, use_color=False)
     assert "No loops recorded yet" in capsys.readouterr().out
+
+
+# ---------------------------------------------------------------------------
+# Creation-side hygiene (Slice L2a): the extractor rules and the refusal gate
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("description", [
+    "Will Kyrax and Nyxiss escape the building before the morning board meeting?",
+    "Will Nyxiss access the hidden server tomorrow night within the 30-minute patrol window?",
+    "Can Caeleth reach the backup data before the merger closing decommissions the systems?",
+])
+def test_the_gate_refuses_blatant_scene_local_suspense(description):
+    assert scene_local_confident(description) is True
+
+
+@pytest.mark.parametrize("description", [
+    # A deadline word used as a framing or past-tense clause: a real mystery.
+    "Why did Zeloth remove a file immediately after Aris accessed the partition?",
+    "What is Kyrox's motivation for emphasising the timeline before the deal closes?",
+    # A binary that runs the length of the book, with no deadline of its own.
+    "Will the cooperation agreement protect him, or will the company eliminate him?",
+    # Ordinary arc debt.
+    "What were the three redacted entries in the March 8th data export?",
+    "",
+])
+def test_the_gate_keeps_everything_it_is_not_sure_about(description):
+    # The horizon classifier is only 60 percent precise on "scene", so the gate
+    # is deliberately the high-precision subset: both signals, or no refusal.
+    assert scene_local_confident(description) is False
+
+
+def test_the_gate_needs_both_signals():
+    deadline_only = "What other evidence is being destroyed right now?"
+    binary_only = "Will she testify, or will she recant?"
+    both = "Will she testify before the hearing closes?"
+    assert scene_local_confident(deadline_only) is False
+    assert scene_local_confident(binary_only) is False
+    assert scene_local_confident(both) is True
+
+
+def test_creation_refuses_scene_local_and_counts_it(project):
+    from novel_agent.agent.entity_updater import EntityUpdater
+
+    memory = MemoryManager(project)
+    updater = EntityUpdater(memory, Config())
+    stats = updater.apply_updates({
+        "open_loops_created": [
+            {"description": "Will she reach the dock before the patrol returns?",
+             "importance": "critical"},
+            {"description": "What were the three redacted entries?",
+             "importance": "critical"},
+        ],
+    }, tick=2, scene_id="S002")
+    assert stats["loops_created"] == 1
+    assert stats["loops_dropped_scene"] == 1
+    kept = memory.load_open_loops()
+    assert len(kept) == 1
+    assert kept[0].description == "What were the three redacted entries?"
+
+
+def test_the_gate_is_off_when_the_knob_is_off(project):
+    from novel_agent.agent.entity_updater import EntityUpdater
+
+    memory = MemoryManager(project)
+    config = Config()
+    config.config["coherence"]["loop_scene_local_filter"] = False
+    stats = EntityUpdater(memory, config).apply_updates({
+        "open_loops_created": [
+            {"description": "Will she reach the dock before the patrol returns?"},
+        ],
+    }, tick=2, scene_id="S002")
+    # False restores pre-L2a behaviour exactly: the loop is registered.
+    assert stats["loops_created"] == 1
+    assert stats["loops_dropped_scene"] == 0
+
+
+def test_the_refusal_runs_before_the_per_tick_cap(project):
+    from novel_agent.agent.entity_updater import EntityUpdater
+
+    memory = MemoryManager(project)
+    config = Config()
+    config.config["coherence"]["loop_creation_cap"] = 2
+    # The cap drops lowest-importance-first, and scene-local suspense is routinely
+    # minted "critical". Refused first, the cap spends its budget on real debt; the
+    # other way round, the two critical non-loops would displace the medium arc one.
+    stats = EntityUpdater(memory, config).apply_updates({
+        "open_loops_created": [
+            {"description": "Will she reach the dock before the patrol returns?",
+             "importance": "critical"},
+            {"description": "Can he silence the alarm within thirty seconds?",
+             "importance": "critical"},
+            {"description": "What were the three redacted entries?",
+             "importance": "high"},
+            {"description": "Who signed the export authorisation?",
+             "importance": "medium"},
+        ],
+    }, tick=3, scene_id="S003")
+    assert stats["loops_dropped_scene"] == 2
+    assert stats["loops_capped"] == 0  # only two real candidates, both fit
+    assert sorted(l.description for l in memory.load_open_loops()) == [
+        "What were the three redacted entries?",
+        "Who signed the export authorisation?",
+    ]
+
+
+def test_a_direct_create_still_dedups(project):
+    from novel_agent.agent.entity_updater import EntityUpdater
+
+    memory = MemoryManager(project)
+    # The refusal lives in the pre-pass, so _create_open_loop keeps its single
+    # job: dedup against the ledger.
+    memory.save_open_loops([_loop("OL0", "Will she reach the dock before the patrol returns?")])
+    result = EntityUpdater(memory, Config())._create_open_loop(
+        {"description": "Will she reach the dock before the patrol returns?"},
+        tick=3, scene_id="S003")
+    assert result == "duplicate"
+
+
+def test_extraction_prompt_states_what_a_loop_is():
+    from novel_agent.agent.prompts import format_fact_extraction_prompt, loop_creation_rules
+
+    rules = loop_creation_rules(Config())
+    assert "settle it just by continuing" in rules
+    assert "already know the answer" in rules
+    assert "central question restated" in rules
+
+    prompt = format_fact_extraction_prompt({
+        "scene_text": "prose", "pov_character_id": "C0", "location_id": "L0",
+        "existing_open_loops": "None", "loop_creation_rules": rules,
+    })
+    assert "An open loop is a question the READER" in prompt
+
+
+def test_extraction_prompt_is_unchanged_with_the_knob_off():
+    from novel_agent.agent.prompts import format_fact_extraction_prompt, loop_creation_rules
+
+    config = Config()
+    config.config["coherence"]["loop_scene_local_filter"] = False
+    assert loop_creation_rules(config) == ""
+    prompt = format_fact_extraction_prompt({
+        "scene_text": "prose", "pov_character_id": "C0", "location_id": "L0",
+        "existing_open_loops": "None", "loop_creation_rules": "",
+    })
+    assert "An open loop is" not in prompt
+
+
+def test_metrics_record_carries_the_refusal_count(project):
+    memory = MemoryManager(project)
+    record = CoherenceMetrics(project, memory, FakeVector(), Config()).record_tick(
+        tick=4, scene_id="S004", loops_dropped_scene=2,
+    )
+    assert record["loops_dropped_scene"] == 2
+
+
+def test_refusal_count_is_none_when_nothing_was_attempted(project):
+    from novel_agent.agent.agent import StoryAgent
+
+    shim = StoryAgent.__new__(StoryAgent)
+    shim.config = Config()
+    # No creations attempted: "refused none" and "did not check" stay distinct.
+    assert shim._loops_dropped_scene_metric({}, {}) is None
+    assert shim._loops_dropped_scene_metric(
+        {"open_loops_created": [{"description": "x"}]},
+        {"loops_dropped_scene": 3}) == 3

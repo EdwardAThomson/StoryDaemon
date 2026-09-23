@@ -486,6 +486,7 @@ class StoryAgent:
                 loop_closure_result=loop_closure_result,
                 loops_deduped=self._loops_deduped_metric(facts, update_stats),
                 loops_capped=self._loops_capped_metric(facts, update_stats),
+                loops_dropped_scene=self._loops_dropped_scene_metric(facts, update_stats),
                 expiry_result=expiry_result,
                 thread_result=thread_result,
                 construction_result=construction_result,
@@ -1564,6 +1565,23 @@ class StoryAgent:
         except Exception:
             return None
 
+    def _loops_dropped_scene_metric(self, facts, update_stats):
+        """The rubric's loops_dropped_scene value (loop-aging Slice L2a).
+
+        Same conventions as the two helpers above, keyed to its own gate: None
+        when coherence.loop_scene_local_filter is off or no loop creations were
+        attempted this tick, so "refused none" and "did not check" stay
+        distinguishable across an A/B. Never raises.
+        """
+        try:
+            if not self.config.get('coherence.loop_scene_local_filter', True):
+                return None
+            if not facts or not (facts.get("open_loops_created") or []):
+                return None
+            return int((update_stats or {}).get("loops_dropped_scene", 0) or 0)
+        except Exception:
+            return None
+
     def _update_thread_registry(self, tick, scene_id, tension_result, current_beat=None):
         """Phase 3 (interleaving Slice T1): thread attribution (step 11.8).
 
@@ -1635,7 +1653,8 @@ class StoryAgent:
     def _record_coherence_metrics(self, tick, scene_id, scene_data, tension_result,
                                   contract_result=None, finale_result=None,
                                   loop_closure_result=None, loops_deduped=None,
-                                  loops_capped=None, expiry_result=None,
+                                  loops_capped=None, loops_dropped_scene=None,
+                                  expiry_result=None,
                                   thread_result=None, construction_result=None):
         """Phase 3 coherence instrumentation. Never raises (graceful degradation).
 
@@ -1673,6 +1692,7 @@ class StoryAgent:
                 ),
                 loops_deduped=loops_deduped,
                 loops_capped=loops_capped,
+                loops_dropped_scene=loops_dropped_scene,
                 # Finale expiry (Phase 3, Slice 0 follow-ups): counts only on the
                 # finale tick with the loop_closure gate on; None otherwise.
                 loops_expired=(

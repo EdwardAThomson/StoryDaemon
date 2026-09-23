@@ -6,7 +6,7 @@ from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime
 
 from novel_agent.memory.entities import OpenLoop, RelationshipGraph, HistoryEntry, RelationshipHistoryEntry
-from .loop_aging import classify_horizon
+from .loop_aging import classify_horizon, scene_local_confident
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +52,9 @@ class EntityUpdater:
             "locations_updated": 0,
             "loops_created": 0,
             "loops_deduped": 0,
+            # Creation-side hygiene (Phase 3, loop-aging Slice L2a): candidates
+            # refused as this scene's own suspense rather than story debt.
+            "loops_dropped_scene": 0,
             "loops_capped": 0,
             "loops_resolved": 0,
             "relationships_updated": 0,
@@ -73,10 +76,16 @@ class EntityUpdater:
                     stats["locations_updated"] += 1
             
             # 3. Create open loops (Phase 3, Slice 0 of the interleaving design:
-            # creation hygiene, gated by coherence.loop_dedup). The per-tick cap
-            # runs first, then each survivor is fuzzy-deduped against existing
-            # open loops inside _create_open_loop.
-            new_loops, capped = self._cap_new_loops(facts.get("open_loops_created", []))
+            # creation hygiene, gated by coherence.loop_dedup). Order: refuse the
+            # candidates that are this scene's own suspense (Slice L2a), then the
+            # per-tick cap, then fuzzy dedup against existing open loops inside
+            # _create_open_loop. The refusal runs BEFORE the cap on purpose: the
+            # cap drops lowest-importance-first, and scene-local suspense is
+            # routinely minted as "critical", so a candidate that was never debt
+            # could otherwise displace a real arc loop.
+            candidates, dropped = self._drop_scene_local(facts.get("open_loops_created", []))
+            stats["loops_dropped_scene"] = dropped
+            new_loops, capped = self._cap_new_loops(candidates)
             stats["loops_capped"] = capped
             for loop_data in new_loops:
                 result = self._create_open_loop(loop_data, tick, scene_id)
@@ -333,7 +342,9 @@ class EntityUpdater:
             "" on error
         """
         try:
-            duplicate_of = self._find_duplicate_loop(loop_data.get("description", ""))
+            description = loop_data.get("description", "")
+
+            duplicate_of = self._find_duplicate_loop(description)
             if duplicate_of:
                 # Warning level so dedup skips are visible in run artifacts (the
                 # 2026-07-11 validation flagged info-level drops as unobservable).
@@ -392,6 +403,41 @@ class EntityUpdater:
         except Exception as e:
             logger.debug(f"Could not read primary goal for loop horizon: {e}")
             return None
+
+    def _drop_scene_local(self, loop_data_list: List[dict]) -> Tuple[List[dict], int]:
+        """Refuse the candidates that are this scene's own suspense, not debt.
+
+        Creation-side hygiene (Phase 3, loop-aging Slice L2a). The extraction
+        prompt now states what an open loop is (prompts.LOOP_CREATION_RULES);
+        this is the deterministic backstop for the blatant cases it still mints.
+
+        Two deliberate choices. It uses loop_aging.scene_local_confident rather
+        than the horizon classifier, because the classifier is 60 percent precise
+        on "scene" and refusing on it would discard real arc debt (six of its
+        eighteen recorded errors were arc loops misfiled as scene). And it runs
+        before the per-tick cap, because the cap drops lowest-importance-first
+        while scene-local suspense is routinely minted as "critical".
+
+        Refusals log at warning level with the description, so they are visible
+        in run artifacts the way dedup skips are. Returns (survivors, refused);
+        any failure keeps every candidate (graceful degradation).
+        """
+        try:
+            if not self.config.get('coherence.loop_scene_local_filter', True):
+                return list(loop_data_list or []), 0
+            survivors, refused = [], 0
+            for loop_data in loop_data_list or []:
+                description = (loop_data or {}).get("description", "")
+                if scene_local_confident(description):
+                    logger.warning("Skipping open loop (this scene's own suspense, "
+                                   f"not story debt): {description}")
+                    refused += 1
+                    continue
+                survivors.append(loop_data)
+            return survivors, refused
+        except Exception as e:
+            logger.warning(f"Scene-local loop filter failed; keeping all: {e}")
+            return list(loop_data_list or []), 0
 
     def _find_duplicate_loop(self, description: str) -> Optional[str]:
         """The ID of an existing OPEN loop this description duplicates, or None.

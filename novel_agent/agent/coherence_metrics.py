@@ -105,6 +105,7 @@ class CoherenceMetrics:
         loops_closed_by_beat: Optional[int] = None,
         loops_deduped: Optional[int] = None,
         loops_capped: Optional[int] = None,
+        loops_dropped_scene: Optional[int] = None,
         loops_expired: Optional[int] = None,
         dangling_threads: Optional[int] = None,
         thread_result: Optional[Dict[str, Any]] = None,
@@ -218,6 +219,11 @@ class CoherenceMetrics:
             # how many over-cap creations were dropped this tick, None when the
             # hygiene machinery did not run.
             "loops_capped": loops_capped,
+            # Creation-side hygiene (Phase 3, loop-aging Slice L2a): candidates
+            # refused at creation as this scene's own suspense rather than story
+            # debt. None when the hygiene machinery did not run this tick,
+            # matching loops_deduped/loops_capped.
+            "loops_dropped_scene": loops_dropped_scene,
             # Finale expiry (Phase 3, Slice 0 follow-ups): on the finale tick, how
             # many still-open loops were marked expired ("left open at story end")
             # and how many of those were high/critical importance (dangling

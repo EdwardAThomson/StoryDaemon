@@ -4,7 +4,7 @@ import json
 import logging
 from typing import Dict, Any, List, Optional
 
-from .prompts import format_fact_extraction_prompt
+from .prompts import format_fact_extraction_prompt, loop_creation_rules
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +111,11 @@ class FactExtractor:
             'scene_text': scene_text,
             'pov_character_id': pov_character_id,
             'location_id': location_id,
-            'existing_open_loops': existing_open_loops
+            'existing_open_loops': existing_open_loops,
+            # What qualifies as an open loop (Phase 3, loop-aging Slice L2a).
+            # Empty string when coherence.loop_scene_local_filter is off, which
+            # restores the pre-L2a prompt byte for byte.
+            'loop_creation_rules': loop_creation_rules(self.config),
         }
         
         return format_fact_extraction_prompt(prompt_context)
