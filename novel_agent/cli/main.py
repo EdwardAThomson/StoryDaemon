@@ -1121,6 +1121,53 @@ def threads(
 
 
 @app.command()
+def loops(
+    project: Optional[str] = typer.Option(
+        None,
+        "--project",
+        "-p",
+        help="Path to novel project"
+    ),
+    all_statuses: bool = typer.Option(
+        False,
+        "--all",
+        help="Include resolved, abandoned and expired loops, not just open ones"
+    ),
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help="Output as JSON"
+    )
+):
+    """List open loops with their age and horizon (Phase 3, loop-aging Slice L1).
+
+    Oldest loop first. The horizon says what kind of question each loop asks:
+    "scene" suspense that the prose already walked past, an "arc" question with a
+    payable answer, or the story's "throughline" restated. Only an arc loop can
+    be overdue. Read-only, and it never rewrites the ledger.
+
+    Example:
+        novel loops
+        novel loops --all --json
+    """
+    from .commands.loops import get_loops_info, display_loops, display_loops_json
+
+    try:
+        project_dir = Path(find_project_dir(project))
+
+        info = get_loops_info(project_dir, status=None if all_statuses else "open")
+
+        if json_output:
+            display_loops_json(info)
+        else:
+            display_loops(info)
+
+    except ValueError as e:
+        typer.echo(f"❌ Error: {e}", err=True)
+        raise typer.Exit(1)
+
+
+@app.command()
 def lore(
     project: Optional[str] = typer.Option(
         None,

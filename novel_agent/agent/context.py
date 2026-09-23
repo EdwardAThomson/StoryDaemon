@@ -6,6 +6,7 @@ from ..memory.manager import MemoryManager
 from ..memory.vector_store import VectorStore
 from ..memory.plot_outline import PlotOutlineManager
 from ..tools.registry import ToolRegistry
+from .loop_aging import importance_rank, loop_age, staleness
 
 
 class ContextBuilder:
@@ -221,30 +222,64 @@ class ContextBuilder:
     
     def _format_open_loops(self) -> str:
         """Format open story loops for prompt.
-        
+
+        Ordered by importance rank, then by age (oldest first within a rank).
+        Two defects lived here until the loop-aging gauge (Phase 3, Slice L1):
+        ``importance`` was sorted as a raw string with ``reverse=True``, which
+        orders medium, low, high, critical and so put the CRITICAL loops last;
+        and the status marker tested for "urgent"/"active", neither of which is
+        a valid OpenLoop status, so every loop rendered identically. The marker
+        now carries the only signal that discriminates in practice (62 percent
+        of the corpus's loops are marked critical): whether an arc loop is
+        overdue against the story's remaining runway.
+
         Returns:
             Formatted open loops list
         """
         open_loops = self.memory.get_open_loops()
-        
+
         if not open_loops:
             return "No open loops."
-        
-        # Sort by importance (descending)
+
+        current_tick = self.memory_state_tick()
+        # Oldest first within an importance rank: age is the tie-break, and
+        # unknown ages sort last rather than crashing the sort.
         sorted_loops = sorted(
             open_loops,
-            key=lambda x: x.importance,
+            key=lambda l: (importance_rank(l),
+                           loop_age(l, current_tick) if loop_age(l, current_tick) is not None else -1),
             reverse=True
         )
-        
+
         loop_lines = []
         for loop in sorted_loops:
-            status_marker = "🔴" if loop.status == "urgent" else "🟡" if loop.status == "active" else "⚪"
+            report = staleness(loop, current_tick, self.config)
+            marker = "🔴" if report["overdue"] else "⚪"
+            age = report["age"]
+            age_text = (f", {age} tick{'' if age == 1 else 's'} old"
+                        if age is not None else "")
             loop_lines.append(
-                f"{status_marker} **{loop.id}** (Importance: {loop.importance}): {loop.description}"
+                f"{marker} **{loop.id}** (Importance: {loop.importance}{age_text}): {loop.description}"
             )
-        
+
         return "\n".join(loop_lines)
+
+    def memory_state_tick(self):
+        """The current tick, read from state.json; None when unavailable.
+
+        Only the loop-aging display needs it here, and the context builder is
+        handed the state per call rather than holding it, so this reads the file
+        (the plot manager's _load_state pattern) and degrades to None.
+        """
+        try:
+            import json
+            state_file = self.memory.project_path / "state.json"
+            if not state_file.exists():
+                return None
+            with open(state_file, "r", encoding="utf-8") as f:
+                return json.load(f).get("current_tick")
+        except Exception:
+            return None
     
     def _format_relationships(self, character_id: str) -> str:
         """Format character relationships for prompt.

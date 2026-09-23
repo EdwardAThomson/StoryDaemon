@@ -437,9 +437,22 @@ class OpenLoop:
     resolution_summary: Optional[str] = None
     
     # NEW: Tracking fields (Phase 7A.2)
+    # KNOWN DEFECT: nothing writes scenes_mentioned or last_mentioned_tick, so
+    # both are 0/None on every loop ever created, which is also why the tick
+    # 10-15 goal promotion (needs 5+ mentions) can never fire. Left as-is by
+    # the loop-aging Slice L1 decision; see ROADMAP.md.
     scenes_mentioned: int = 0  # How many scenes has this appeared in?
     last_mentioned_tick: Optional[int] = None
     is_story_goal: bool = False  # Promoted to main story goal?
+    # Loop-aging gauge (Phase 3, loop-aging Slice L1). created_tick is the exact
+    # birth tick, recorded at creation rather than inferred from created_in_scene;
+    # horizon is the kind of question the loop asks ("scene" suspense, "arc" debt,
+    # or the story's "throughline" restated), which is what keeps a payoff
+    # pressure from aiming at questions the prose already walked past. Both
+    # default None so legacy open_loops.json loads unchanged, and MemoryManager
+    # backfills them on load (agent/loop_aging.py).
+    created_tick: Optional[int] = None
+    horizon: Optional[str] = None
     
     def __post_init__(self):
         """Set timestamp if not provided."""

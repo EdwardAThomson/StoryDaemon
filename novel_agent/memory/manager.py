@@ -562,9 +562,30 @@ class MemoryManager:
     # ========================================================================
     
     def load_open_loops(self) -> List[OpenLoop]:
-        """Load all open loops."""
+        """Load all open loops, backfilling the loop-aging fields.
+
+        Loops minted before the loop-aging gauge (Phase 3, Slice L1) carry no
+        ``created_tick`` and no ``horizon``. Both are derived on load rather
+        than in a migration, so every reader (planner, metrics, ``novel
+        loops``) sees a complete loop on a legacy project: the birth tick comes
+        from ``created_in_scene``, which is exact because scene ids are
+        allocated one per tick, and the horizon from the deterministic
+        classifier. Nothing is written here; the derived values reach disk the
+        next time anything saves the ledger.
+        """
+        # Imported inside the function: novel_agent.agent's package __init__
+        # imports StoryAgent, which imports this module, so a module-level
+        # import here is a cycle.
+        from novel_agent.agent.loop_aging import birth_tick, classify_horizon
+
         data = self._read_json(self.open_loops_file)
-        return [OpenLoop.from_dict(loop) for loop in data.get("loops", [])]
+        loops = [OpenLoop.from_dict(loop) for loop in data.get("loops", [])]
+        for loop in loops:
+            if loop.created_tick is None:
+                loop.created_tick = birth_tick(loop)
+            if not loop.horizon:
+                loop.horizon = classify_horizon(loop.description)
+        return loops
     
     def save_open_loops(self, loops: List[OpenLoop]):
         """Save open loops to disk."""

@@ -6,6 +6,7 @@ from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime
 
 from novel_agent.memory.entities import OpenLoop, RelationshipGraph, HistoryEntry, RelationshipHistoryEntry
+from .loop_aging import classify_horizon
 
 logger = logging.getLogger(__name__)
 
@@ -341,7 +342,10 @@ class EntityUpdater:
                 return "duplicate"
 
             loop_id = self.memory.generate_id("open_loop")
-            
+
+            # Loop-aging gauge (Slice L1): stamp the birth tick and the horizon
+            # at creation. Both are instrumentation, so a failure to classify
+            # must not cost the loop; classify_horizon never raises.
             open_loop = OpenLoop(
                 id=loop_id,
                 created_in_scene=scene_id,
@@ -353,7 +357,10 @@ class EntityUpdater:
                 related_locations=loop_data.get("related_locations", []),
                 notes="",
                 resolved_in_scene=None,
-                resolution_summary=None
+                resolution_summary=None,
+                created_tick=tick,
+                horizon=classify_horizon(loop_data["description"],
+                                         self._primary_goal_description())
             )
             
             self.memory.add_open_loop(open_loop)
@@ -363,6 +370,28 @@ class EntityUpdater:
         except Exception as e:
             logger.error(f"Error creating open loop: {e}")
             return ""
+
+    def _primary_goal_description(self) -> Optional[str]:
+        """The story's primary goal text, for loop-horizon classification.
+
+        Read straight off state.json (the plot manager's _load_state pattern)
+        because a loop that restates the primary goal IS the throughline and
+        must not be filed as ordinary debt. Returns None on any problem: the
+        classifier then falls back to its idiom test, which is the common case
+        anyway since most runs never set a primary goal.
+        """
+        try:
+            import json
+            state_file = self.memory.project_path / "state.json"
+            if not state_file.exists():
+                return None
+            with open(state_file, 'r', encoding='utf-8') as f:
+                state = json.load(f)
+            primary = (state.get("story_goals") or {}).get("primary") or {}
+            return primary.get("description")
+        except Exception as e:
+            logger.debug(f"Could not read primary goal for loop horizon: {e}")
+            return None
 
     def _find_duplicate_loop(self, description: str) -> Optional[str]:
         """The ID of an existing OPEN loop this description duplicates, or None.

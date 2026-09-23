@@ -25,6 +25,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from .arc_pressure import compute_arc_phase, compute_target_tension
+from .loop_aging import age_report
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +109,7 @@ class CoherenceMetrics:
         dangling_threads: Optional[int] = None,
         thread_result: Optional[Dict[str, Any]] = None,
         construction_result: Optional[Dict[str, Any]] = None,
+        loop_ids_shown: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """Compute one coherence record, append it to the JSONL log, and return it."""
         loops = self.memory.load_open_loops()
@@ -118,6 +120,11 @@ class CoherenceMetrics:
         loops_closed = sum(1 for l in loops if scene_id and l.resolved_in_scene == scene_id
                            and l.status == "resolved")
         open_loops_total = sum(1 for l in loops if l.status == "open")
+
+        # Loop-aging gauge (Phase 3, Slice L1): reuses the ledger already loaded
+        # above, so the whole age payload costs no extra I/O and no LLM call.
+        aging = age_report(loops, tick, self.config, shown_ids=loop_ids_shown,
+                           primary_goal_description=goal_description)
 
         all_lore = self.memory.load_all_lore()
         disputed_lore_total = sum(1 for l in all_lore if getattr(l, "status", "active") == "disputed")
@@ -243,6 +250,35 @@ class CoherenceMetrics:
             # via construction_would_fire (None vs False).
             "construction_would_fire": (construction_result or {}).get("would_fire"),
             "construction_trigger": (construction_result or {}).get("trigger"),
+            # Loop-aging gauge (Phase 3, loop-aging Slice L1, instrument-only).
+            # Scalars are flattened for plotting, following this file's
+            # convention; the id lists ride in loop_shown / loop_overdue_ids so a
+            # run can be audited loop by loop afterwards.
+            #
+            # Ages are in ticks. loop_overdue_total counts ARC loops only: a
+            # "scene" loop (suspense with a deadline in its own text) was never
+            # debt and a "throughline" loop is meant to stay open to the last
+            # page, so counting either would aim the pressure slice at noise.
+            #
+            # loop_shown_oldest_age vs loop_unshown_oldest_age is the pair the
+            # pressure design turns on: if the loops the planner never sees are
+            # systematically older, the fix is the selector
+            # (_filter_relevant_loops, which ranks by overlap with the planner's
+            # own intention and therefore hides exactly the loops the prose has
+            # moved away from); if the old loops are on the page and ignored, the
+            # fix is a mandate. All None when the gauge is off
+            # (coherence.loop_aging) or the ledger is empty.
+            "loop_oldest_age": aging.get("oldest_age"),
+            "loop_oldest_id": aging.get("oldest_id"),
+            "loop_median_age": aging.get("median_age"),
+            "loop_overdue_total": aging.get("overdue_total"),
+            "loop_overdue_ids": aging.get("overdue_ids"),
+            "loop_stale_threshold": aging.get("stale_threshold"),
+            "loop_horizon_counts": aging.get("by_horizon"),
+            "loop_shown_total": aging.get("shown_total"),
+            "loop_shown_oldest_age": aging.get("shown_oldest_age"),
+            "loop_unshown_oldest_age": aging.get("unshown_oldest_age"),
+            "loop_shown": aging.get("shown"),
             "recorded_at": datetime.utcnow().isoformat() + "Z",
         }
         self._append(record)

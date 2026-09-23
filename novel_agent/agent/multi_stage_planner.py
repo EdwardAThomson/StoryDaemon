@@ -65,6 +65,9 @@ class MultiStagePlanner:
             'stage2_time': 0.0,
             'stage3_tokens': 0,
             'stage3_time': 0.0,
+            # Loop-aging gauge (Phase 3, Slice L1): the ids of the open loops
+            # stage 2 put in front of the planner. Empty until stage 2 runs.
+            'loop_ids_shown': [],
         }
         
         # Create prompts directory if needed
@@ -267,7 +270,12 @@ class MultiStagePlanner:
         """
         import time
         start_time = time.time()
-        
+
+        # Loop-aging gauge (Phase 3, Slice L1): cleared here so a stage-2 failure
+        # reports "nothing shown" for THIS tick rather than last tick's set
+        # (stage_stats lives on the planner, not the tick).
+        self.stage_stats['loop_ids_shown'] = []
+
         context = {}
         items_count = 0
         
@@ -298,6 +306,15 @@ class MultiStagePlanner:
             top_k=5
         )
         items_count += len(context['relevant_loops'])
+        # Loop-aging gauge (Phase 3, Slice L1): record WHICH loops reached the
+        # planner, so the metrics record can compare the age of what was shown
+        # against the age of what was withheld. Selection itself is untouched in
+        # this slice; this line only reports it. stage_stats already rides out on
+        # plan['_stage_stats'] and is read by agent.py, so there is no new
+        # plumbing.
+        self.stage_stats['loop_ids_shown'] = [
+            getattr(loop, 'id', '') for loop in context['relevant_loops']
+        ]
         
         # Get protagonist's relationships (always relevant)
         if protagonist_id:

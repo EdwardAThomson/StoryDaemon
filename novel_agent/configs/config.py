@@ -279,6 +279,24 @@ DEFAULT_CONFIG = {
         # Max new loops per tick; entries beyond the cap are dropped lowest-importance
         # first. None or 0 disables the cap.
         'loop_creation_cap': 4,
+        # Loop-aging gauge (Phase 3, loop-aging Slice L1): records how old the open
+        # loops are, what KIND of question each one asks, and which of them the
+        # planner was actually shown. Instrument-only in this slice, so it defaults
+        # on; False drops the metrics payload and restores pre-L1 records exactly.
+        # The pressure it exists to inform is not built yet (see ROADMAP.md).
+        'loop_aging': True,
+        # Age at which an ARC loop is overdue, as a fraction of
+        # coherence.target_story_length rather than an absolute tick count: 8 ticks
+        # is half a 16-tick book and a fifth of a 40-tick one. 0.3 sits between what
+        # the pipeline manages and what it abandons, measured over the 26 novels in
+        # work/novels/ (docs/LOOP_AGING_BASELINE.md): closures land at a median 3
+        # ticks (0.19 of a 16-tick run) while loops still open at story end sit at a
+        # median 7 (0.44). "scene" and "throughline" loops are never overdue by
+        # construction.
+        'loop_stale_fraction': 0.3,
+        # Absolute floor for that threshold, so a short run does not flag every loop
+        # at tick 2.
+        'loop_stale_floor_ticks': 3,
         # Thread registry (Phase 3, interleaving Slice T1): ratio at or above which
         # a beat's plot_threads label maps to an existing thread instead of minting
         # a new one (difflib SequenceMatcher on normalized labels, deterministic,

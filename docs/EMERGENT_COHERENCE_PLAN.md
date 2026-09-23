@@ -167,12 +167,28 @@ instrumentation so every pressure below is measurable (see §5).
   "serves-the-goal" rubric, `coherence.use_llm_goal_relevance`, embedding fallback) —
   the embedding gauge measured topical overlap, not "advances the goal," so an A/B
   couldn't see the pressure. (Same crude-gauge lesson as the keyword tension heuristic.)
-- **Loop-aging pressure** — *not started.* Older open loops surface louder,
-  biasing toward payoff. (Motivation observed: a test run opened 23 loops and
-  closed 0 — threads pile up without payoff. Second evidence, 2026-07: the descent
-  re-run's resolution ticks opened 8 loops and closed 0 despite a mandate clause to
-  close them, and contracts can now *check* `loop_resolved` but nothing pressures the
-  planner to close loops.)
+- **Loop-aging** — *the gauge shipped 2026-09 (Slice L1), the pressure has not started.*
+  The intent is unchanged: older open loops surface louder, biasing toward payoff.
+  (Motivation observed: a test run opened 23 loops and closed 0 — threads pile up
+  without payoff. Second evidence, 2026-07: the descent re-run's resolution ticks
+  opened 8 loops and closed 0 despite a mandate clause to close them, and contracts
+  can now *check* `loop_resolved` but nothing pressures the planner to close loops.)
+  Slice L1 is `agent/loop_aging.py` plus a `loop_age` payload per tick, `novel loops`,
+  and the corpus baseline in `docs/LOOP_AGING_BASELINE.md`. Nothing reads it for
+  decisions, per the instrument-only habit. What the baseline changed: 220 of 1,548
+  loops across 26 novels ever closed (14%), 60% of those closures within three ticks
+  of birth, **but a third of the ledger is not story debt** — scene-local suspense
+  carrying its own deadline, which the prose answers by continuing; 4% restating the
+  story's own throughline, which should stay open to the last page; and
+  POV-asymmetric questions the reader already knows the answer to (one
+  surveillance-POV scene minted six of them). Each loop therefore carries a
+  `horizon` and only `arc` loops can be overdue, so the pressure cannot be aimed at
+  noise. The fork for the pressure slice is (a) age-weighted selection plus an
+  overdue section, scaled by `compute_arc_phase`, or (b) creation-side hygiene that
+  stops minting the noise; the recorded `loop_shown_oldest_age` vs
+  `loop_unshown_oldest_age` pair is meant to settle it, since
+  `_filter_relevant_loops` ranks by overlap with the intention the planner just
+  wrote and so hides the oldest loops by construction.
 - **Block/sub-block contracts (the DSL)**: *Slice 1 shipped 2026-07*, per the landing
   sketch (`docs/BLOCKS_CONTRACTS_LANDING_SKETCH.md`, "contracts ride the beats"):
   `PlotBeat` carries `preconditions`/`postconditions`/`contract_results`; postconditions
@@ -328,8 +344,9 @@ sacred finale, the write-until-concluded scene loop (with chapter-length
 calibration behind `generation.scene_length_preset`), contracts Slice 5
 (sectioned writing, default off and its A/B still owed), and the
 thread-interleaving groundwork (registry, thread identity by selection,
-construction-pressure detector) are all in; loop-aging, thread
-construction/selection itself, and contract Slices 2 and 3 are not yet started.
+construction-pressure detector) are all in; loop-aging has its gauge only
+(Slice L1, instrument-only), and thread construction/selection itself and
+contract Slices 2 and 3 are not yet started.
 
 Next, in rough priority:
 1. ~~**Arc-_phase_ planner mandate** — *validated 2026-06* (`progress_report_20260602.md`):
@@ -344,10 +361,15 @@ Next, in rough priority:
    resolution phase.~~ **Resolved: shipped and validated 2026-07**
    (`progress_report_20260709.md`); see the Phase 3 bullet. Residual descent-runway and
    rising-heat findings tracked there.
-2. **Loop-aging** — the rubric shows loops accumulating without payoff; surface
-   older open loops louder to bias toward resolution. Now the top open item: the descent
-   re-run's resolution ticks opened 8 loops and closed 0, and contracts can check
-   `loop_resolved` but nothing pressures the planner to close loops.
+2. **Loop-aging pressure** — still the top open item, but the question has narrowed.
+   The gauge is in (Slice L1) and the baseline says the problem is not only that loops
+   never close: a third of the ledger should never have been registered. So the pressure
+   slice must choose between payoff pressure on `arc` loops (age-weighted selection plus
+   an overdue section, arc-phase scaled) and creation-side hygiene that stops minting
+   scene-local and POV-asymmetric questions. Read `loop_shown_oldest_age` against
+   `loop_unshown_oldest_age` on a full run before choosing; see
+   `docs/LOOP_AGING_BASELINE.md`. Related, and worth folding in: loop mention tracking
+   is dead, which is why no run has ever auto-promoted a story goal.
 3. **Remaining contract slices** (Slice 2: precondition pressure; Slice 3: bounded
    repair + `event_occurs` judge), per the landing sketch. Slice 4 (scene skeletons)
    is done, and Slice 5 is built as sectioned writing (default off); what is left of

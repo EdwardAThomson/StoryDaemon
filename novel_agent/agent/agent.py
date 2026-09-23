@@ -1647,6 +1647,12 @@ class StoryAgent:
                 return None
             scene_data = scene_data if isinstance(scene_data, dict) else {}
             primary = (self.state.get("story_goals") or {}).get("primary") or {}
+            # Loop-aging gauge (Slice L1): resolved through getattr so the new
+            # field can never take down the whole record. Everything inside this
+            # method is one try block, so an AttributeError here would cost the
+            # entire tick's metrics, not just the shown-loop ids.
+            shown = getattr(self, "_loop_ids_shown", None)
+            loop_ids_shown = shown() if callable(shown) else None
             return self.coherence_metrics.record_tick(
                 tick=tick,
                 scene_id=scene_id,
@@ -1679,9 +1685,26 @@ class StoryAgent:
                 ),
                 thread_result=thread_result,
                 construction_result=construction_result,
+                loop_ids_shown=loop_ids_shown,
             )
         except Exception as e:
             logging.getLogger(__name__).warning(f"Coherence metrics failed (tick {tick}): {e}")
+            return None
+
+    def _loop_ids_shown(self):
+        """The open-loop ids the planner was shown this tick, or None.
+
+        Loop-aging gauge (Phase 3, Slice L1). Read off the multi-stage planner
+        rather than threaded through both tick paths, so the duplicated call
+        sites stay untouched. None when the multi-stage planner is not in use
+        (the legacy single-stage path builds no relevant-loop set), which keeps
+        "no data" distinct from "shown nothing".
+        """
+        try:
+            if not self.use_multi_stage:
+                return None
+            return self.multi_stage_planner.stage_stats.get('loop_ids_shown')
+        except Exception:
             return None
     
     def _extract_facts_with_retry(self, scene_text: str, scene_context: dict) -> dict:
