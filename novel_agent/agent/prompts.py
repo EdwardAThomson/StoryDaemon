@@ -92,7 +92,7 @@ Before you respond, make deliberate choices for these planning fields using the 
   - If recent QA or recent scenes show repeated `technical` mode, bias this scene toward `dialogue` or `political` to vary texture.
 - `palette_shift`  Short phrase or list that changes the sensory/emotional palette (e.g., `"heat, copper, crowd-noise"` or `"administrative neon, recycled air, clipped voices"`).
 - `transition_path`  1-3 sentence outline of how we move from the end of the previous scene into this one (physical/temporal bridge). Use this when changing location, time, or situation.
-- `dialogue_targets`  Optional dialogue goals. Prefer a structured object (e.g. `{{ "min_exchanges": 6, "conflict_axis": "leverage vs trust", "participants": ["C0", "corp_proxy"] }}`).
+- `dialogue_targets`  Optional dialogue goals. Prefer a structured object (e.g. `{{ "min_exchanges": 6, "conflict_axis": "leverage vs trust", "participants": ["C000", "corp_proxy"] }}`).
 - `beat_target`  Specify how this scene relates to the Next Plot Beat (if shown above). Choose from `"direct"`, `"setup"`, `"followup"`, or `"skip"` and provide a brief explanation in `notes`.
 
 Then emit the JSON object below:
@@ -710,7 +710,7 @@ Return ONLY JSON with these updates:
 {{
   "character_updates": [
     {{
-      "id": "C0",
+      "id": "C000",
       "changes": {{
         "emotional_state": "string or null",
         "physical_state": "string or null",
@@ -722,7 +722,7 @@ Return ONLY JSON with these updates:
   ],
   "location_updates": [
     {{
-      "id": "L0",
+      "id": "L000",
       "changes": {{
         "description": "string or null",
         "atmosphere": "string or null",
@@ -735,15 +735,15 @@ Return ONLY JSON with these updates:
       "description": "string",
       "importance": "low|medium|high|critical",
       "category": "mystery|relationship|goal|threat|etc",
-      "related_characters": ["C0"],
-      "related_locations": ["L0"]
+      "related_characters": ["C000"],
+      "related_locations": ["L000"]
     }}
   ],
   "open_loops_resolved": ["OL1", "OL2"],
   "relationship_changes": [
     {{
-      "character_a": "C0",
-      "character_b": "C1",
+      "character_a": "C000",
+      "character_b": "C001",
       "changes": {{
         "status": "string or null",
         "perspective_a": "string or null",
@@ -755,7 +755,7 @@ Return ONLY JSON with these updates:
 }}
 ```
 
-Rules: Use null for no change. Only extract what's clearly shown. For lists, only include NEW items.
+Rules: Use null for no change. Only extract what's clearly shown. For lists, only include NEW items. Use ONLY the exact zero-padded IDs given in context (e.g. C000, L000); never invent new IDs or abbreviate them (e.g. do not shorten C000 to C0).
 {loop_creation_rules}"""
 
 
