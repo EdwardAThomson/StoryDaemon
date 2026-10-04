@@ -442,6 +442,8 @@ def tick(
         llm_model = None
     if isinstance(codex_bin, OptionInfo):
         codex_bin = None
+    if isinstance(save_prompts, OptionInfo):
+        save_prompts = False
 
     try:
         # Find project directory
@@ -645,6 +647,8 @@ def run(
     if not isinstance(retries, int):  # programmatic callers may pass an OptionInfo
         retries = 1
     retries = max(0, retries)
+    if not isinstance(checkpoint_interval, int):  # programmatic callers may pass an OptionInfo
+        checkpoint_interval = 10
 
     from ..memory.checkpoint import create_checkpoint, should_create_checkpoint
     
