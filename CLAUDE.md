@@ -182,7 +182,7 @@ The writer path (`agent/writer_context.py`) appends to `pov_character_details`, 
 
 `main.py` remains the Typer app (it owns the command decorators and wires everything up), but the per-command implementation logic now lives in the `cli/commands/` package (`status.py`, `goals.py`, `lore.py`, `metrics.py`, `threads.py`, `list.py`, `inspect.py`, `plan.py`, `compile.py`, `checkpoint.py`, `titles.py`, `plot.py`). `plot revise` (Phase 2) is the manual rolling-horizon trigger — it abandons the pending beats and regenerates them from current canon (`revise_and_regenerate_beats_cli` in `commands/plot.py`). Both the CLI path (`commands/plot.py`) and the agent path (`plot/manager.py`) render the single shared `PLOT_GENERATION_PROMPT_TEMPLATE` in `agent/prompts.py` via `format_plot_generation_prompt`; they differ only in how they assemble the context dict.
 
-Typer quirk worked around in `tick()`: when `tick()` is called programmatically from `resume()`, Typer passes `OptionInfo` objects for unset options. The function defensively coerces them to `None`. Apply the same pattern if you add new programmatically-called commands.
+Typer quirk: `resume()` calls `tick()` and `run()` as plain functions, and a parameter declared the older way (`x: int = typer.Option(10, ...)`) then arrives as the `OptionInfo` object itself, not `10` (this crashed `novel resume --n 2` and silently turned on `--save-prompts`). So those two commands declare every option as `x: Annotated[int, typer.Option("--x", ...)] = 10`, which makes the default a real value. Use that form for any option you add to them, or to any other command you call from Python; `tests/unit/test_cli_programmatic_calls.py` fails if a `tick`/`run` default is a Typer marker.
 
 ### State machine constraints
 
