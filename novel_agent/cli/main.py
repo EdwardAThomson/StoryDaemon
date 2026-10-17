@@ -1,7 +1,7 @@
 """Main CLI entry point for StoryDaemon."""
 import typer
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Annotated, Optional, Dict, Any
 from ..configs.config import Config
 from .project import (
     create_novel_project,
@@ -506,34 +506,33 @@ def new(
         raise typer.Exit(1)
 
 
+# tick() and run() declare their options with Annotated so every default is a
+# real Python value. resume() calls them as plain functions, and with the older
+# `x = typer.Option(default, ...)` style such a caller receives the OptionInfo
+# object itself for any argument it leaves out.
 @app.command()
 def tick(
-    project: Optional[str] = typer.Option(
-        None,
+    project: Annotated[Optional[str], typer.Option(
         "--project",
         "-p",
         help="Path to novel project (default: current directory)"
-    ),
-    save_prompts: bool = typer.Option(
-        False,
+    )] = None,
+    save_prompts: Annotated[bool, typer.Option(
         "--save-prompts",
         help="Save prompts to prompts/ directory for inspection"
-    ),
-    llm_backend: Optional[str] = typer.Option(
-        None,
+    )] = False,
+    llm_backend: Annotated[Optional[str], typer.Option(
         "--llm-backend",
         help="LLM backend: codex, api (multi-provider API), gemini-cli (Gemini CLI), or claude-cli (Claude Code CLI)"
-    ),
-    llm_model: Optional[str] = typer.Option(
-        None,
+    )] = None,
+    llm_model: Annotated[Optional[str], typer.Option(
         "--llm-model",
         help="Model name for API backend (e.g., gpt-5.5, claude-sonnet-4-5, claude-haiku-4-5, gemini-3-flash-preview)"
-    ),
-    codex_bin: Optional[str] = typer.Option(
-        None,
+    )] = None,
+    codex_bin: Annotated[Optional[str], typer.Option(
         "--codex-bin",
         help="Path to Codex CLI binary"
-    ),
+    )] = None,
 ):
     """Run one story generation tick.
     
@@ -548,20 +547,6 @@ def tick(
         novel tick
         novel tick --project ~/novels/my-story
     """
-    # When tick() is called programmatically (e.g., from resume()), Typer
-    # may pass OptionInfo objects instead of plain strings for llm_* args.
-    # Normalize these to None so our backend/model resolution logic behaves
-    # the same as when invoked from the CLI.
-    from typer.models import OptionInfo  # type: ignore
-    if isinstance(llm_backend, OptionInfo):
-        llm_backend = None
-    if isinstance(llm_model, OptionInfo):
-        llm_model = None
-    if isinstance(codex_bin, OptionInfo):
-        codex_bin = None
-    if isinstance(save_prompts, OptionInfo):
-        save_prompts = False
-
     try:
         # Find project directory
         project_dir = Path(find_project_dir(project))
@@ -707,43 +692,36 @@ def tick(
 
 @app.command()
 def run(
-    n: int = typer.Option(
-        5,
+    n: Annotated[int, typer.Option(
         "--n",
         "-n",
         help="Number of ticks to run"
-    ),
-    project: Optional[str] = typer.Option(
-        None,
+    )] = 5,
+    project: Annotated[Optional[str], typer.Option(
         "--project",
         "-p",
         help="Path to novel project"
-    ),
-    checkpoint_interval: int = typer.Option(
-        10,
+    )] = None,
+    checkpoint_interval: Annotated[int, typer.Option(
         "--checkpoint-interval",
         help="Create checkpoint every N ticks (0 to disable)"
-    ),
-    retries: int = typer.Option(
-        1,
+    )] = 10,
+    retries: Annotated[int, typer.Option(
         "--retries",
         help="Retry a failed tick up to N times before stopping (helps transient CLI-backend timeouts)"
-    ),
-    llm_backend: Optional[str] = typer.Option(
-        None,
+    )] = 1,
+    llm_backend: Annotated[Optional[str], typer.Option(
         "--llm-backend",
         help="LLM backend: codex, api (multi-provider API), gemini-cli (Gemini CLI), or claude-cli (Claude Code CLI)"
-    ),
-    llm_model: Optional[str] = typer.Option(
-        None,
+    )] = None,
+    llm_model: Annotated[Optional[str], typer.Option(
         "--llm-model",
         help="Model name for API backend (e.g., gpt-5.5, claude-sonnet-4-5, claude-haiku-4-5, gemini-3-flash-preview)"
-    ),
-    codex_bin: Optional[str] = typer.Option(
-        None,
+    )] = None,
+    codex_bin: Annotated[Optional[str], typer.Option(
         "--codex-bin",
         help="Path to Codex CLI binary"
-    ),
+    )] = None,
 ):
     """Run multiple story generation ticks.
     
@@ -755,17 +733,7 @@ def run(
         novel run --n 5 --project ~/novels/my-story
         novel run --n 20 --checkpoint-interval 5
     """
-    if not isinstance(llm_backend, (str, type(None))):
-        llm_backend = None
-    if not isinstance(llm_model, (str, type(None))):
-        llm_model = None
-    if not isinstance(codex_bin, (str, type(None))):
-        codex_bin = None
-    if not isinstance(retries, int):  # programmatic callers may pass an OptionInfo
-        retries = 1
     retries = max(0, retries)
-    if not isinstance(checkpoint_interval, int):  # programmatic callers may pass an OptionInfo
-        checkpoint_interval = 10
 
     from ..memory.checkpoint import create_checkpoint, should_create_checkpoint
     
