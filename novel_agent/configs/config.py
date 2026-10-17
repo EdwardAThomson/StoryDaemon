@@ -356,6 +356,15 @@ DEFAULT_CONFIG = {
         'calm_threshold': 4,          # demand-gap: the calm band's top
         'serve_margin': 2,            # demand-gap: a thread serves a target within this
     },
+    'world': {
+        # `novel new --world <file>`: how much of a worldgen world becomes
+        # Location records (the planner's candidate scene stages). Cities and
+        # faction capitals always qualify; these cap the rest so a region with
+        # forty towns does not bury the ones that matter.
+        'max_towns': 12,               # largest towns kept, after the floor
+        'town_population_min': 3000,   # towns below this are not imported
+        'max_worlds': 24,              # sector: capital and temperate worlds kept
+    },
     'export': {
         # Book export settings for `novel compile --format epub|pdf`
         # (docs/EPUB_PDF_EXPORT_PLAN.md).

@@ -13,7 +13,16 @@ from .project import (
 from .foundation import (
     prompt_for_foundation,
     load_foundation_from_file,
-    create_foundation_from_args
+    create_foundation_from_args,
+    StoryFoundation,
+)
+from ..world_import import (
+    load_world,
+    map_world,
+    persist_world,
+    world_state_record,
+    UnknownWorldSchemaError,
+    WorldEntities,
 )
 from llm_backends import DEFAULT_API_MODEL
 
@@ -216,6 +225,81 @@ plot_app = typer.Typer(name="plot", help="Plot outline (PlotBeat Phase 3) comman
 app.add_typer(plot_app, name="plot")
 
 
+def _load_world_entities(world_path: Path) -> WorldEntities:
+    """Read and map a worldgen file, exiting with a clear message on failure."""
+    import json as _json
+    try:
+        data = load_world(str(world_path))
+    except FileNotFoundError:
+        typer.echo(f"❌ World file not found: {world_path}", err=True)
+        raise typer.Exit(1)
+    except UnknownWorldSchemaError as e:
+        typer.echo(f"❌ {e}", err=True)
+        raise typer.Exit(1)
+    except (_json.JSONDecodeError, UnicodeDecodeError) as e:
+        typer.echo(f"❌ World file is not valid JSON: {world_path} ({e})", err=True)
+        raise typer.Exit(1)
+    config = Config()
+    return map_world(
+        data,
+        max_towns=config.get('world.max_towns', 12),
+        town_population_min=config.get('world.town_population_min', 3000),
+        max_worlds=config.get('world.max_worlds', 24),
+    )
+
+
+def _foundation_from_world(
+    world_entities: WorldEntities,
+    genre: Optional[str] = None,
+    premise: Optional[str] = None,
+    protagonist: Optional[str] = None,
+    setting: Optional[str] = None,
+    tone: Optional[str] = None,
+    themes: Optional[str] = None,
+) -> StoryFoundation:
+    """A foundation whose genre and setting default to the imported world.
+
+    Premise, archetype and tone are the author's to give; when they are not,
+    they are filled with neutral text rather than refused, so
+    ``--world --no-interactive`` yields a project that can tick. Nothing here
+    chooses a story: the hooks are lore, not the premise.
+    """
+    theme_list = [t.strip() for t in themes.split(",") if t.strip()] if themes else []
+    return StoryFoundation(
+        genre=(genre or "").strip() or world_entities.genre,
+        premise=(premise or "").strip() or (
+            "A story set in this world; its central question is left to emerge "
+            "from the first scenes and the world's own tensions."),
+        protagonist_archetype=(protagonist or "").strip() or (
+            "an ordinary inhabitant of this world, drawn into its tensions"),
+        setting=(setting or "").strip() or world_entities.setting,
+        tone=(tone or "").strip() or "grounded, as the world suggests",
+        themes=theme_list,
+    )
+
+
+def _import_world_into_project(project_dir: str, world_path: Path,
+                               world_entities: WorldEntities) -> Dict[str, Any]:
+    """Persist the mapped world through MemoryManager, index it, record it in state.
+
+    The vector index is best-effort: if ChromaDB cannot open, the entities are
+    still on disk and the first tick's re-index picks them up.
+    """
+    memory_manager = MemoryManager(Path(project_dir))
+    vector_store = None
+    try:
+        vector_store = VectorStore(Path(project_dir))
+    except Exception as e:
+        typer.echo(f"⚠️  Vector index unavailable, entities saved without indexing: {e}")
+    created = persist_world(memory_manager, world_entities, vector_store)
+    if created.get("skipped_locations"):
+        typer.echo(f"   Skipped duplicate locations: {', '.join(created['skipped_locations'])}")
+    state = load_project_state(project_dir)
+    state['world'] = world_state_record(str(world_path), world_entities, created)
+    save_project_state(project_dir, state)
+    return created
+
+
 @app.command()
 def new(
     name: str = typer.Argument(..., help="Name of the novel"),
@@ -275,7 +359,17 @@ def new(
             "Places and titles stay on auto, so Victorian names can sit in a "
             "science-fiction setting."
         )
-    )
+    ),
+    world: Optional[Path] = typer.Option(
+        None,
+        "--world",
+        help=(
+            "Start from a worldgen world file (schema worldgen/sector@0.1 or "
+            "worldgen/region@0.1). Its factions or realms, worlds or settlements, "
+            "magic, calendar and story hooks are imported as factions, locations "
+            "and lore, and the foundation's genre and setting default to the world's."
+        )
+    ),
 ):
     """Create a new novel project with optional story foundation.
 
@@ -298,10 +392,21 @@ def new(
 
         # Specify foundation via command-line (non-interactive)
         novel new my-story --genre "science fiction" --premise "..." --protagonist "..." --setting "..." --tone "..."
+
+        # Start from a worldgen world; genre and setting come from the file
+        novel new my-story --world region.json --no-interactive
     """
     try:
         # Determine foundation source
         foundation = None
+
+        # A worldgen world is read and mapped before anything is created, so a
+        # bad file fails here rather than after a project directory exists.
+        world_entities: Optional[WorldEntities] = None
+        if world:
+            world_entities = _load_world_entities(world)
+            typer.echo(f"🌍 World: {world_entities.title} ({world_entities.schema})")
+            typer.echo(f"   {world_entities.setting}")
 
         # If the user has provided an explicit non-interactive source
         # (foundation file or CLI foundation fields), disable the
@@ -337,6 +442,12 @@ def new(
             # Load from file
             foundation = load_foundation_from_file(foundation_file)
             typer.echo(f"✅ Loaded foundation from: {foundation_file}")
+        elif world_entities is not None:
+            # The world supplies genre and setting wherever the user did not;
+            # the rest is filled so the project has a usable foundation.
+            foundation = _foundation_from_world(
+                world_entities, genre=genre, premise=premise,
+                protagonist=protagonist, setting=setting, tone=tone, themes=themes)
         else:
             # Try to create from command-line args (may return None)
             foundation = create_foundation_from_args(
@@ -359,6 +470,12 @@ def new(
             name_banks=name_banks,
         )
         typer.echo(f"✅ Created novel project: {project_dir}")
+
+        if world_entities is not None:
+            created = _import_world_into_project(project_dir, world, world_entities)
+            typer.echo(
+                f"🌍 Imported world: {len(created['factions'])} factions, "
+                f"{len(created['locations'])} locations, {len(created['lore'])} lore items")
         
         if name_banks and name_banks.get("person_bank"):
             typer.echo(f"   Character names: {name_banks['person_bank']} bank")
