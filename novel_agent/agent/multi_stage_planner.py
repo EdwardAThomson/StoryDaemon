@@ -585,11 +585,21 @@ Scene intention:"""
         # Arc-phase mandate section (Phase 3): only supplied on the beat-first path.
         arc_section = f"\n## Arc Phase Mandate\n{arc_mandate}\n" if arc_mandate else ""
 
+        # Language situation (an imported world's languages): one line, so the
+        # planner can request a phrase (language.phrase) or stage a
+        # misunderstanding on purpose. Absent when no languages were imported.
+        language_section = ""
+        situation_line = self._language_situation_line(state)
+        if situation_line:
+            language_section = (f"\n## Language Situation\n{situation_line} Request at most "
+                                "one native phrase or word with the language tools, and only "
+                                "when a line of native speech is the point of a moment.\n")
+
         prompt = f"""You are creating a detailed plan for the next scene.
 
 ## Scene Intention
 {scene_intention}
-{arc_section}
+{arc_section}{language_section}
 ## Relevant Context
 
 ### Relevant Past Scenes
@@ -679,6 +689,15 @@ Generate your plan now:"""
         
         return prompt
     
+    def _language_situation_line(self, state: dict) -> str:
+        """The active character's language situation, or '' (never raises)."""
+        try:
+            from .language_situation import planner_language_fact
+            return planner_language_fact(self.memory, state).get("line", "")
+        except Exception as e:
+            logger.warning(f"Language situation unavailable to the planner: {e}")
+            return ""
+
     def _format_tools_description(self) -> str:
         """Format available tools for prompt.
         

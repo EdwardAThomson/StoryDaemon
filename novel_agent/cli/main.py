@@ -52,6 +52,7 @@ from ..tools.memory_tools import (
     FactionQueryTool
 )
 from ..tools.name_generator import NameGenerator, NameGeneratorTool
+from ..tools.language_tools import language_tools_for
 from ..memory.manager import MemoryManager
 from ..memory.vector_store import VectorStore
 from ..agent.agent import StoryAgent
@@ -371,15 +372,11 @@ def _import_world_into_project(project_dir: str, world_path: Path,
 def _import_languages_into_project(project_dir: str, languages_path: Path,
                                    language_entities: LanguageEntities,
                                    auto_detected: bool = False) -> Dict[str, Any]:
-    """Persist the languages: one lore item each, the per-people name banks
-    under memory/, and the notes block under state["world"]["languages"]."""
+    """Persist the languages: the per-people banks (names, lexicon, phrases)
+    under memory/, and the notes block under state["world"]["languages"].
+    No lore: a language is texture in the prose, not a fact to be told."""
     memory_manager = MemoryManager(Path(project_dir))
-    vector_store = None
-    try:
-        vector_store = VectorStore(Path(project_dir))
-    except Exception as e:
-        typer.echo(f"⚠️  Vector index unavailable, language lore saved without indexing: {e}")
-    created = persist_languages(memory_manager, language_entities, vector_store)
+    created = persist_languages(memory_manager, language_entities)
     state = load_project_state(project_dir)
     state.setdefault('world', {})['languages'] = languages_state_record(
         str(languages_path), language_entities, created, auto_detected=auto_detected)
@@ -462,10 +459,11 @@ def new(
         "--languages",
         help=(
             "A worldgen languages file (schema worldgen/languages@0.1) for the "
-            "same world: each people's language becomes a lore item, a name bank "
-            "name.generate can draw from by affiliation, and a Languages note the "
-            "writer sees. Without it, <world stem>-languages.json beside the world "
-            "file is used when present."
+            "same world: each people's language becomes a bank name.generate can "
+            "draw from by affiliation, a lexicon and phrasebook the planner can "
+            "request one native phrase from (language.phrase, language.word), "
+            "and one line the writer sees. Without it, <world stem>-languages.json "
+            "beside the world file is used when present."
         )
     ),
 ):
@@ -592,8 +590,9 @@ def new(
                 counts = language_entities.counts()
                 typer.echo(
                     f"🗣️  Imported languages: {counts['languages']} languages, "
-                    f"{len(lang_created['lore'])} lore items, {counts['names']} names "
-                    f"in {Path(lang_created['bank_file']).relative_to(project_dir)}")
+                    f"{counts['words']} words, {counts['phrases']} phrases, "
+                    f"{counts['names']} names in "
+                    f"{Path(lang_created['bank_file']).relative_to(project_dir)}")
         
         if name_banks and name_banks.get("person_bank"):
             typer.echo(f"   Character names: {name_banks['person_bank']} bank")
@@ -753,6 +752,9 @@ def tick(
         tool_registry.register(FactionGenerateTool(memory_manager, vector_store, name_gen_tool.generator, genre=genre))
         tool_registry.register(FactionUpdateTool(memory_manager, vector_store))
         tool_registry.register(FactionQueryTool(memory_manager, vector_store))
+        # Native-language tools, only when the world's languages were imported
+        for language_tool in language_tools_for(_languages_file_for(project_dir), name_gen_tool.generator):
+            tool_registry.register(language_tool)
         
         typer.echo(f"   Registered {len(tool_registry)} tools")
         
@@ -978,6 +980,9 @@ def run(
                     tool_registry.register(FactionGenerateTool(memory_manager, vector_store, name_gen_tool.generator, genre=genre))
                     tool_registry.register(FactionUpdateTool(memory_manager, vector_store))
                     tool_registry.register(FactionQueryTool(memory_manager, vector_store))
+                    # Native-language tools, only when the world's languages were imported
+                    for language_tool in language_tools_for(_languages_file_for(project_dir), name_gen_tool.generator):
+                        tool_registry.register(language_tool)
 
                     # Create agent
                     agent = StoryAgent(project_dir, llm, tool_registry, config)

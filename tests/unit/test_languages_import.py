@@ -2,7 +2,9 @@
 
 The mapping tests run on tests/fixtures/region-small-languages.json, a small
 synthetic languages file keyed to region-small.json's realms (R0, R2) plus an
-unaffiliated "elder" tongue. No LLM anywhere. The persistence and writer tests
+unaffiliated "elder" tongue; R0 carries a ``phrases`` array, the others do
+not. No LLM anywhere. The language tools and the scene's language situation
+have their own files (test_language_tools.py, test_language_situation.py). The persistence and writer tests
 use a real MemoryManager on a temporary directory; the ones that touch the
 vector index or the CLI skip when chromadb or llm-backends is missing.
 """
@@ -134,6 +136,12 @@ def test_notes_per_people(entities, lang_data):
     assert quqo.in_world is True
     assert len(quqo.places) == 4 and quqo.places[0] == {"name": "Puyeyukok", "meaning": "Deep Field"}
     assert len(quqo.persons) == 4 and quqo.persons[0]["name"] == "Tukkuye"
+    # the whole lexicon and the phrasebook travel to the bank, in file order
+    assert len(quqo.lexicon) == 39
+    assert quqo.lexicon[0] == {"english": "person", "pos": "n", "spelling": "kuq", "ipa": "ˈkuq", "tier": 1}
+    assert len(quqo.phrases) == 9
+    assert quqo.phrases[0] == {"english": "Greetings, friend!", "text": "Kuyek yele!",
+                               "gloss": "greetings friend", "kind": "greeting"}
 
     elder = entities.languages[2]
     assert elder.in_world is False
@@ -141,6 +149,7 @@ def test_notes_per_people(entities, lang_data):
     assert elder.relatives == [] and elder.family is None
     assert elder.word_order.startswith("subject, object, verb")
     assert "5 noun cases" in elder.morphology
+    assert elder.phrases == [] and len(elder.lexicon) == 39     # no phrasebook: tolerated
 
 
 def test_everyday_words_are_a_dozen_tier_1_and_2_nouns_and_verbs(entities, lang_data):
@@ -166,22 +175,19 @@ def test_mapping_is_deterministic(lang_data, region_data):
     b = map_languages(lang_data, region_data)
     assert a.notes_block() == b.notes_block()
     assert a.bank_file() == b.bank_file()
-    assert a.lore == b.lore
 
 
-def test_one_lore_item_per_language(entities):
-    assert len(entities.lore) == 3
-    quqo = entities.lore[0]
-    assert quqo["category"] == "language" and quqo["lore_type"] == "fact"
-    assert "id" not in quqo
-    assert quqo["tags"][:2] == ["worldgen", "language"] and "R0" in quqo["tags"]
-    content = quqo["content"]
-    assert content.startswith("The people of Vokekuk Principality speak Quqo, a tongue of the Vokic family "
-                              "related to Gaipo (Principality of Vavarsrai).")
-    assert "Their word for water is" in content and "king is" in content
-    assert "Puyeyukok (Deep Field)" in content
-    elder = entities.lore[2]["content"]
-    assert elder.startswith("The old tongue of the wilds is Cocqor, related to no other living tongue.")
+def test_no_lore_is_written_for_a_language(entities, project):
+    """A language is texture, not a fact: the lore items an earlier version
+    wrote were re-extracted into every scene as paragraphs about the tongue."""
+    assert not hasattr(entities, "lore")
+    assert "lore" not in entities.counts()
+    memory = MemoryManager(project)
+    created = persist_languages(memory, entities)
+    assert "lore" not in created
+    assert memory.load_all_lore() == []
+    record = languages_state_record("x", entities, created)
+    assert "entity_ids" not in record
 
 
 def test_blocks_and_setting_sentence(entities):
@@ -195,9 +201,14 @@ def test_blocks_and_setting_sentence(entities):
     assert set(bank["peoples"]) == {"R0", "R2", "elder"}
     assert bank["peoples"]["R2"]["language"] == "Gaipo"
     assert bank["peoples"]["R2"]["people"][0] == {"name": "Zhailo", "meaning": "Bright Star"}
+    assert bank["peoples"]["R0"]["family"] == "RF0" and bank["peoples"]["elder"]["family"] is None
+    assert len(bank["peoples"]["R0"]["lexicon"]) == 39 and len(bank["peoples"]["R0"]["phrases"]) == 9
+    assert bank["peoples"]["elder"]["phrases"] == []
+    # the state block stays small: no lexicon or phrasebook in state.json
+    assert "lexicon" not in block["peoples"][0] and "phrases" not in block["peoples"][0]
     assert entities.setting_sentence() == (
         "2 tongues are spoken: Quqo (Vokekuk Principality) and Gaipo (Principality of Vavarsrai).")
-    assert entities.counts() == {"languages": 3, "families": 1, "lore": 3, "names": 24}
+    assert entities.counts() == {"languages": 3, "families": 1, "names": 24, "words": 117, "phrases": 9}
 
 
 def test_map_without_world_uses_the_files_own_names(lang_data):
@@ -210,19 +221,16 @@ def test_map_without_world_uses_the_files_own_names(lang_data):
 # The writer's line
 # ============================================================================
 
-def test_languages_line_is_one_language_and_compact(entities):
+def test_languages_line_is_one_short_line(entities):
+    """No word list, no grammar: the words reach the writer only through the
+    language tools when the plan asks, and a prompt that listed them was
+    answered with a paragraph about the language."""
     block = entities.notes_block()
-    line = languages_line(block, "R0")
-    assert line.startswith("**Language:** The people of Vokekuk Principality speak Quqo (kin to Gaipo")
-    assert "Order: subject, verb, object, as in English; adjectives before the noun; words do not inflect." in line
-    assert "water *" in line and "king *" in line
-    assert "Gaipo" not in line.split("Everyday words")[1]       # the other realm's words are absent
-    assert "never invent words" in line
-    assert len(line) < 700
-    assert "(kin to Gaipo)" in line
-    assert languages_line(block, "R0", max_words=3).count("*") == 4 + 6   # the bold label, three words
+    assert languages_line(block, "R0") == "**Language:** speaks Quqo (related to Gaipo)."
+    assert languages_line(block, "elder") == "**Language:** speaks Cocqor."
+    assert "Everyday words" not in languages_line(block, "R0") and "Order:" not in languages_line(block, "R0")
     # by name as well as id; nothing for an unknown people or an empty block
-    assert languages_line(block, "Principality of Vavarsrai").startswith("**Language:** The people of Principality of Vavarsrai speak Gaipo")
+    assert languages_line(block, "Principality of Vavarsrai") == "**Language:** speaks Gaipo (related to Quqo)."
     assert find_language_notes(block, "gaipo")["people"] == "R2"
     assert languages_line(block, "R9") == ""
     assert languages_line(None, "R0") == "" and languages_line(block, None) == ""
@@ -232,22 +240,18 @@ def test_languages_line_is_one_language_and_compact(entities):
 # Persistence and the name banks
 # ============================================================================
 
-def test_persist_languages_writes_lore_and_bank_file(entities, project):
+def test_persist_languages_writes_the_bank_file(entities, project):
     memory = MemoryManager(project)
     created = persist_languages(memory, entities)
-    assert len(created["lore"]) == 3 and len(set(created["lore"])) == 3
     assert Path(created["bank_file"]) == bank_file_path(project)
-    lore = {l.id: l for l in memory.load_all_lore()}
-    first = lore[created["lore"][0]]
-    assert first.category == "language"
-    assert "speak Quqo" in first.content
     bank = json.loads(bank_file_path(project).read_text(encoding="utf-8"))
     assert bank["schema"] == "storydaemon/language-banks@0.1"
     assert bank["peoples"]["R0"]["places"][0]["name"] == "Puyeyukok"
+    assert bank["peoples"]["R0"]["phrases"][0]["text"] == "Kuyek yele!"
 
     record = languages_state_record("/tmp/x-languages.json", entities, created, auto_detected=True)
     assert record["auto_detected"] is True
-    assert record["entity_ids"]["lore"] == created["lore"]
+    assert record["bank_file"] == created["bank_file"]
     assert record["peoples"][0]["name"] == "Quqo"
     assert record["counts"]["languages"] == 3
 
@@ -380,11 +384,12 @@ def test_writer_context_carries_the_pov_language(entities, project):
     plan = {"pov_character": "C001", "target_location": "L000", "scene_intention": "x", "key_change": "y"}
     ctx = wcb.build_writer_context(plan, {"actions_executed": []}, state)
     assert ctx["pov_people"] == "R2"
-    assert ctx["languages_section"].startswith("**Language:** The people of Principality of Vavarsrai speak Gaipo")
+    assert ctx["languages_section"] == "**Language:** speaks Gaipo (related to Quqo)."
     assert ctx["languages_section"] in ctx["pov_character_details"]
-    assert "Quqo" not in ctx["languages_section"].split("Everyday words")[1]
+    assert ctx["languages_imported"] is True
     text = format_writer_prompt(ctx)
-    assert "speak Gaipo" in text
+    assert "speaks Gaipo" in text
+    assert "LANGUAGE RULES" in text
     # half the approved pool comes from that people
     pool = [line[2:] for line in ctx["approved_new_names"].splitlines()]
     gaipo_names = {p["name"] for p in entities.languages[1].persons}
@@ -394,14 +399,16 @@ def test_writer_context_carries_the_pov_language(entities, project):
     plan = {"pov_character": "C000", "target_location": "L000", "scene_intention": "x", "key_change": "y"}
     ctx = wcb.build_writer_context(plan, {"actions_executed": []}, state)
     assert ctx["pov_people"] == "R0"
-    assert "speak Quqo" in ctx["languages_section"]
+    assert "speaks Quqo" in ctx["languages_section"]
 
     # no languages block: nothing is added and nothing breaks
     ctx = wcb.build_writer_context(plan, {"actions_executed": []},
                                    {"novel_name": "N", "current_tick": 1,
                                     "story_foundation": {"genre": "fantasy"}})
     assert ctx["languages_section"] == ""
+    assert ctx["languages_imported"] is False
     assert "**Language:**" not in ctx["pov_character_details"]
+    assert "LANGUAGE RULES" not in format_writer_prompt(ctx)
 
 
 # ============================================================================
@@ -426,7 +433,8 @@ def test_novel_new_auto_detects_languages_beside_the_world():
         assert result.exit_code == 0, result.output
         assert "region-small-languages.json (found beside the world file)" in result.output
         assert "3 languages: Quqo, Gaipo, Cocqor" in result.output
-        assert "Imported languages: 3 languages, 3 lore items, 24 names in memory/languages.json" in result.output
+        assert ("Imported languages: 3 languages, 117 words, 9 phrases, 24 names "
+                "in memory/languages.json") in result.output
 
         project = next(Path(tmpdir).glob("lang-novel_*"))
         state = json.loads((project / "state.json").read_text(encoding="utf-8"))
@@ -440,11 +448,12 @@ def test_novel_new_auto_detects_languages_beside_the_world():
         assert bank_file_path(project).exists()
 
         memory = MemoryManager(project)
-        language_lore = [l for l in memory.load_all_lore() if l.category == "language"]
-        assert len(language_lore) == 3
-        # the world's own lore is still there alongside
-        assert len(memory.load_all_lore()) > 3
+        # no language lore: the world's own lore is all there is
+        assert [l for l in memory.load_all_lore() if l.category == "language"] == []
+        assert len(memory.load_all_lore()) > 0
         assert sorted(memory.list_factions()) == ["F0", "F1"]
+        bank = json.loads(bank_file_path(project).read_text(encoding="utf-8"))
+        assert len(bank["peoples"]["R0"]["phrases"]) == 9
 
 
 def test_novel_new_with_explicit_languages_file():

@@ -220,6 +220,34 @@ CRAFT_RULES_TEMPLATE = """**WRITING RULES:**
 **AVOID:** first-person POV outside dialogue, placeholder names, head-hopping, telling emotions instead of showing, and repeating actions or emotional beats from the recent scenes above."""
 
 
+# The world's constructed languages (novel new --world --languages). Emitted
+# only when a project imported some, and shared by every writing call through
+# craft_rules(), so a section or a revision holds to it as the single shot
+# does. These exist because the first version handed the writer a word list
+# and a family tree, and got back paragraphs explaining the language: the
+# tongue is texture in the prose, never a subject of it.
+LANGUAGE_RULES_TEMPLATE = """
+**LANGUAGE RULES** (this world has its own tongues; they are texture, not exposition):
+- NEVER explain, describe or comment on a language: not its sound, its grammar, its history, its family, who speaks it. No character notices that a language exists.
+- At most ONE native word or phrase in the scene, and only if "Native speech available this scene" lists it; use it exactly as written. If nothing is listed, the scene has no native words at all. Never coin a word, never string listed words together. (A scene whose intention is itself about language may use what is listed, still nothing more.)
+- NEVER gloss a word in narration ("ye, which means friend"): let the context carry the meaning, or let it stay opaque.
+- Untranslated speech only when {pov_character_name} would not understand it (see the Language situation line): then render it as sound and gesture, not as subtitled dialogue. Where {pov_character_name} understands, write the dialogue in English."""
+
+
+def language_rules(context: dict) -> str:
+    """The language rules, or '' for a project without imported languages.
+
+    Keyed on ``languages_imported`` (set by WriterContextBuilder when
+    ``state["world"]["languages"]`` exists) with the Language line as the
+    fallback signal for hand-built contexts.
+    """
+    ctx = context or {}
+    if not (ctx.get("languages_imported") or str(ctx.get("languages_section") or "").strip()):
+        return ""
+    name = ctx.get("pov_character_name") or "the POV character"
+    return LANGUAGE_RULES_TEMPLATE.format(pov_character_name=name)
+
+
 def craft_rules(context: dict) -> str:
     """Per-call craft discipline: POV, naming, showing, sensory grounding.
 
@@ -232,7 +260,9 @@ def craft_rules(context: dict) -> str:
     comes from the position instruction instead.
     """
     name = (context or {}).get("pov_character_name") or "the POV character"
-    return CRAFT_RULES_TEMPLATE.format(pov_character_name=name)
+    rules = CRAFT_RULES_TEMPLATE.format(pov_character_name=name)
+    extra = language_rules(context)
+    return f"{rules}\n{extra}" if extra else rules
 
 
 STORY_CONTEXT_TEMPLATE = """## Story Context

@@ -9,12 +9,19 @@ novel can use without an LLM:
 
 - a compact *notes* block per people (language name, family and relatives,
   word order in one phrase, a dozen everyday words) that lands under
-  ``state["world"]["languages"]`` and from there in the writer prompt;
-- one ``Lore`` item per language, through the same path ``world_import``
-  uses for world lore, so the planner finds it by search like any fact;
-- a project-local name bank per people, written to ``memory/languages.json``
-  and read by ``NameGenerator`` so ``name.generate`` can draw a realm's own
-  names for a character of that realm.
+  ``state["world"]["languages"]``; the writer sees one line of it ("speaks
+  Quqo, related to Gaipo") and the language situation of the scene;
+- a project-local bank per people, written to ``memory/languages.json`` and
+  read by ``NameGenerator`` (its meaningful place and person names, so
+  ``name.generate`` can draw a realm's own names) and by the
+  ``language.phrase``/``language.word`` tools (its lexicon and phrases, so
+  the planner can request one native phrase on purpose).
+
+No lore is written. An earlier version made one ``category: language`` Lore
+item per tongue; the fact extractor re-extracted it from every scene and the
+planner offered it back as a summary paragraph about the language, which is
+the exposition this layer exists to avoid. A language is texture in the
+prose, not a fact of the world the reader is told.
 
 It is pure and deterministic given the two files: no LLM calls, no I/O
 beyond ``load_languages``, and ids come from ``MemoryManager`` at persist
@@ -34,11 +41,7 @@ import logging
 from .world_import import (
     REGION_SCHEMA,
     SECTOR_SCHEMA,
-    WORLDGEN_TAG,
-    _cap,
-    _index,
     _join,
-    _lore,
     schema_of,
 )
 
@@ -91,6 +94,8 @@ class LanguageNotes:
     words: Dict[str, str] = field(default_factory=dict)  # english -> native spelling
     places: List[Dict[str, str]] = field(default_factory=list)   # {name, meaning}
     persons: List[Dict[str, str]] = field(default_factory=list)  # {name, meaning}
+    lexicon: List[Dict[str, str]] = field(default_factory=list)  # {english, pos, spelling, ipa, tier}
+    phrases: List[Dict[str, str]] = field(default_factory=list)  # {english, text, gloss, kind}
     in_world: bool = True             # the people id matched the world file
 
     def to_dict(self) -> Dict[str, Any]:
@@ -115,14 +120,14 @@ class LanguageEntities:
     seed: str
     families: List[Dict[str, Any]]
     languages: List[LanguageNotes]
-    lore: List[Dict[str, Any]] = field(default_factory=list)
 
     def counts(self) -> Dict[str, int]:
         return {
             "languages": len(self.languages),
             "families": len(self.families),
-            "lore": len(self.lore),
             "names": sum(len(n.places) + len(n.persons) for n in self.languages),
+            "words": sum(len(n.lexicon) for n in self.languages),
+            "phrases": sum(len(n.phrases) for n in self.languages),
         }
 
     def notes_block(self) -> Dict[str, Any]:
@@ -139,7 +144,9 @@ class LanguageEntities:
         }
 
     def bank_file(self) -> Dict[str, Any]:
-        """The per-people name banks ``NameGenerator`` loads."""
+        """The per-people banks: names for ``NameGenerator``, the lexicon and
+        phrases for the ``language.*`` tools. One file, so a project stays
+        self-contained once the source JSON moves."""
         return {
             "schema": BANK_FILE_SCHEMA,
             "seed": self.seed,
@@ -147,8 +154,12 @@ class LanguageEntities:
                 n.people: {
                     "people_name": n.people_name,
                     "language": n.name,
+                    "family": n.family,
+                    "family_name": n.family_name,
                     "people": [dict(p) for p in n.persons],
                     "places": [dict(p) for p in n.places],
+                    "lexicon": [dict(w) for w in n.lexicon],
+                    "phrases": [dict(p) for p in n.phrases],
                 }
                 for n in self.languages
             },
@@ -263,7 +274,7 @@ def map_languages(
     world_data: Optional[Dict[str, Any]] = None,
     words_per_language: int = DEFAULT_WORDS_PER_LANGUAGE,
 ) -> LanguageEntities:
-    """Reduce a languages file to notes, lore and name banks.
+    """Reduce a languages file to notes and per-people banks.
 
     ``world_data`` supplies the peoples' names and is checked for a match
     when given; without it the file's own ``peopleName`` is used throughout.
@@ -305,16 +316,16 @@ def map_languages(
             words=everyday_words(lang.get("lexicon") or [], words_per_language),
             places=_names(names.get("places")),
             persons=_names(names.get("people")),
+            lexicon=lexicon_entries(lang.get("lexicon") or []),
+            phrases=phrase_entries(entry.get("phrases") or lang.get("phrases") or []),
             in_world=pid in peoples,
         ))
 
-    lore = [language_lore(n) for n in notes]
     return LanguageEntities(
         schema=LANGUAGES_SCHEMA,
         seed=str(lang_data.get("seed") or ""),
         families=families,
         languages=notes,
-        lore=lore,
     )
 
 
@@ -426,69 +437,87 @@ def everyday_words(lexicon: Iterable[Dict[str, Any]], count: int = DEFAULT_WORDS
     return words
 
 
-def language_lore(notes: LanguageNotes) -> Dict[str, Any]:
-    """One lore fact per language, for the planner's lore list and search."""
-    sentences = []
-    if notes.in_world:
-        head = f"The people of {notes.people_name} speak {notes.name}"
-    else:
-        head = f"{_cap(notes.people_name)} is {notes.name}"
-    if notes.family_name and notes.relatives:
-        head += f", a tongue of {notes.family_name} related to {_join(notes.relatives)}"
-    elif notes.relatives:
-        head += f", related to {_join(notes.relatives)}"
-    elif notes.family_name:
-        head += f", the only tongue of {notes.family_name}"
-    else:
-        head += ", related to no other living tongue"
-    sentences.append(head + ".")
-    structure = [p for p in (notes.word_order, notes.morphology) if p]
-    if structure:
-        sentences.append(f"Its order is {structure[0]}" + (f"; {structure[1]}" if len(structure) > 1 else "") + ".")
-    if notes.script:
-        sentences.append(_cap(notes.script) + ".")
-    sample = list(notes.words.items())[:4]
-    if sample:
-        sentences.append("Their word for " + _join([f"{e} is {w}" for e, w in sample]) + ".")
-    if notes.places:
-        shown = notes.places[:3]
-        sentences.append("Place names in it: " + _join(
-            [f"{p['name']} ({p['meaning']})" if p.get("meaning") else p["name"] for p in shown]) + ".")
-    return _lore(" ".join(sentences), category="language", lore_type="fact",
-                 importance="normal", tags=["language", notes.people, notes.name])
+PHRASE_KINDS = ("greeting", "farewell", "thanks", "oath", "curse", "toast",
+                "proverb", "question")
+
+
+def lexicon_entries(lexicon: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """The lexicon reduced to what ``language.word`` answers with.
+
+    Every entry with an English meaning and a form, in file order (the file
+    orders by tier, so an exact-meaning lookup finds the basic word first).
+    ``tier`` is kept as an int where the file has one.
+    """
+    out: List[Dict[str, Any]] = []
+    for w in lexicon:
+        if not isinstance(w, dict):
+            continue
+        eng = (w.get("english") or "").strip()
+        spelling = (w.get("spelling") or w.get("ipa") or "").strip()
+        if not eng or not spelling:
+            continue
+        entry: Dict[str, Any] = {
+            "english": eng,
+            "pos": (w.get("pos") or "").strip(),
+            "spelling": spelling,
+            "ipa": (w.get("ipa") or "").strip(),
+        }
+        try:
+            entry["tier"] = int(w.get("tier"))
+        except (TypeError, ValueError):
+            pass
+        out.append(entry)
+    return out
+
+
+def phrase_entries(phrases: Iterable[Dict[str, Any]]) -> List[Dict[str, str]]:
+    """The optional ``phrases`` array, ``[{english, text, gloss, kind}]``.
+
+    The world-building export writes two dozen per language (three of each
+    kind in PHRASE_KINDS); a file without the array yields an empty list and
+    ``language.phrase`` falls back to single words. Entries missing the text
+    or the English are dropped; ``kind`` is lower-cased and defaults to
+    "saying" so an unlabelled phrase is still offered.
+    """
+    out: List[Dict[str, str]] = []
+    for p in phrases:
+        if not isinstance(p, dict):
+            continue
+        text = (p.get("text") or "").strip()
+        english = (p.get("english") or "").strip()
+        if not text or not english:
+            continue
+        out.append({
+            "english": english,
+            "text": text,
+            "gloss": (p.get("gloss") or "").strip(),
+            "kind": (p.get("kind") or "saying").strip().lower(),
+        })
+    return out
 
 
 # ============================================================================
 # The writer's line
 # ============================================================================
 
-def languages_line(block: Optional[Dict[str, Any]], people_id: Optional[str],
-                   max_words: Optional[int] = None) -> str:
-    """The compact Languages line for one people, or '' when it has none.
+def languages_line(block: Optional[Dict[str, Any]], people_id: Optional[str]) -> str:
+    """The Language line for one people, or '' when it has none.
 
-    Reads the ``state["world"]["languages"]`` block. Limited to one language
-    so the prompt does not grow with the number of realms in the world.
+    Reads the ``state["world"]["languages"]`` block. Deliberately short:
+    "speaks Quqo (related to Gaipo)" and nothing else. The words now reach
+    the writer only through ``language.word``/``language.phrase`` when the
+    plan asks for them, because a word list in the prompt was answered with
+    a paragraph about the language in the prose.
     """
     notes = find_language_notes(block, people_id)
     if not notes:
         return ""
-    head = f"**Language:** The people of {notes.get('people_name') or notes.get('people')} speak {notes.get('name')}"
+    line = f"**Language:** speaks {notes.get('name')}"
     if notes.get("relatives"):
         # "Gaipo (Principality of Vavarsrai)" -> "Gaipo": the line is compact
         kin = [r.split(" (")[0] for r in list(notes["relatives"])[:3]]
-        head += f" (kin to {_join(kin)})"
-    parts = [head + "."]
-    structure = [p for p in (notes.get("word_order"), notes.get("morphology")) if p]
-    if structure:
-        parts.append("Order: " + "; ".join(structure) + ".")
-    words = list((notes.get("words") or {}).items())
-    if max_words is not None:
-        words = words[:max(0, int(max_words))]
-    if words:
-        parts.append("Everyday words: " + ", ".join(f"{e} *{w}*" for e, w in words) + ".")
-    parts.append("A native word may be dropped into dialogue or thought where this "
-                 "character would use one; never invent words beyond these.")
-    return " ".join(parts)
+        line += f" (related to {_join(kin)})"
+    return line + "."
 
 
 def find_language_notes(block: Optional[Dict[str, Any]], people_id: Optional[str]) -> Optional[Dict[str, Any]]:
@@ -509,20 +538,14 @@ def find_language_notes(block: Optional[Dict[str, Any]], people_id: Optional[str
 # ============================================================================
 
 def persist_languages(memory, entities: LanguageEntities, vector_store=None) -> Dict[str, Any]:
-    """Write the lore through a MemoryManager and the name banks to memory/.
+    """Write the per-people banks to memory/languages.json.
 
-    Mirrors ``world_import.persist_world``: ids from ``generate_lore_id``,
-    indexing best-effort.
+    Nothing goes through the entity store: no lore, no index (``vector_store``
+    is accepted so the call matches ``world_import.persist_world`` and is
+    unused). The languages reach the prose through the writer's one line, the
+    scene's language situation and the ``language.*`` tools, never as facts.
     """
-    from .memory.entities import Lore
-
-    created: Dict[str, Any] = {"lore": [], "bank_file": ""}
-    for spec in entities.lore:
-        lore = Lore(id=memory.generate_lore_id(), **spec)
-        memory.save_lore(lore)
-        _index(vector_store, "index_lore", lore)
-        created["lore"].append(lore.id)
-
+    created: Dict[str, Any] = {"bank_file": ""}
     bank_path = bank_file_path(memory.project_path)
     bank_path.parent.mkdir(parents=True, exist_ok=True)
     with open(bank_path, "w", encoding="utf-8") as f:
@@ -547,8 +570,6 @@ def languages_state_record(path: str, entities: LanguageEntities,
         "imported_at": datetime.now().isoformat(),
         "counts": entities.counts(),
     })
-    if created:
-        record["entity_ids"] = {"lore": list(created.get("lore", []))}
-        if created.get("bank_file"):
-            record["bank_file"] = created["bank_file"]
+    if created and created.get("bank_file"):
+        record["bank_file"] = created["bank_file"]
     return record
