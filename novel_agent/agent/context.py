@@ -68,6 +68,13 @@ class ContextBuilder:
                 context["character_relationships"] = self._format_relationships(
                     context["active_character_id"]
                 )
+
+        # Language situation (an imported world's languages): one fact, so the
+        # planner can ask for a phrase or stage a misunderstanding on purpose.
+        # Rides the character-details slot; no new template placeholder.
+        context["language_situation"] = self._language_situation(project_state)
+        if context["language_situation"].get("line"):
+            context["active_character_details"] += "\n" + context["language_situation"]["line"]
         
         # Get overall summary (if enabled) and recent scenes
         if self.include_overall_summary:
@@ -111,6 +118,12 @@ class ContextBuilder:
         context["beat_enforcement_instructions"] = self._get_beat_enforcement_instructions()
 
         return context
+
+    def _language_situation(self, project_state: dict) -> dict:
+        """The active character's language situation at its current location
+        (agent/language_situation.py); ``status: unknown`` without data."""
+        from .language_situation import planner_language_fact
+        return planner_language_fact(self.memory, project_state)
 
     def _get_next_plot_beat_hint(self, project_state: dict) -> str:
         """Get a formatted hint for the next pending plot beat, if available.

@@ -1,10 +1,15 @@
 """Writer context builder for scene prose generation."""
 
+import logging
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 
 from ..tools.name_generator import NameGenerator
+from ..tools.language_tools import native_speech_from_results, native_speech_section
 from .arc_pressure import arc_pressure_guidance_for_writer, beat_target_is_stale
+from .language_situation import language_situation, people_of_character, people_of_location
+
+logger = logging.getLogger(__name__)
 
 
 class WriterContextBuilder:
@@ -21,7 +26,21 @@ class WriterContextBuilder:
         self.memory = memory_manager
         self.vector = vector_store
         self.config = config
-        self.name_generator = NameGenerator(Path(__file__).parent.parent / "data" / "names")
+        self.name_generator = NameGenerator(
+            Path(__file__).parent.parent / "data" / "names",
+            languages_file=self._languages_file(memory_manager),
+        )
+
+    @staticmethod
+    def _languages_file(memory_manager) -> Optional[Path]:
+        """The project's per-people name banks, when a world's languages were
+        imported; None (and the generator is unchanged) otherwise."""
+        try:
+            from ..languages_import import bank_file_path
+            path = bank_file_path(memory_manager.project_path)
+            return path if path.exists() else None
+        except Exception:  # a mock memory manager, or no project path
+            return None
     
     def build_writer_context(
         self,
@@ -60,6 +79,25 @@ class WriterContextBuilder:
         
         # Get location details
         location_name, location_details = self._get_location_details(location_id)
+
+        # The POV character's language (an imported world's constructed
+        # languages): one line ("speaks Quqo, related to Gaipo"), the scene's
+        # language situation (who here can follow whom) and the native speech
+        # this tick's plan requested through language.phrase/language.word.
+        # Nothing else about the languages reaches the writer. It rides the
+        # character-details slot rather than a new template placeholder, so
+        # hand-built writer contexts keep rendering.
+        languages_imported = bool(((project_state or {}).get("world") or {}).get("languages"))
+        pov_people = self._pov_people(pov_character_id, location_id)
+        languages_section = self._languages_section(project_state, pov_people)
+        situation = self._language_situation(
+            project_state, pov_people, pov_character_id, pov_character_name,
+            location_id, plan, execution_results)
+        native_speech = native_speech_from_results(execution_results) if languages_imported else []
+        language_block = "\n".join(part for part in (
+            languages_section, situation.get("line", ""), native_speech_section(native_speech)) if part)
+        if language_block:
+            pov_character_details = f"{pov_character_details}\n\n{language_block}"
         
         # Format recent context with full text for immediate scenes
         full_text_count = self.config.get('generation.full_text_scenes_count', 2)
@@ -111,7 +149,7 @@ class WriterContextBuilder:
 
         # Cast roster + a pool of pre-minted names for any new character (Phase 1 grounding)
         existing_characters, approved_new_names = self._build_cast_and_name_pool(
-            project_state, pov_character_id
+            project_state, pov_character_id, pov_people
         )
 
         return {
@@ -139,8 +177,117 @@ class WriterContextBuilder:
             "word_target": word_target,
             "scene_skeleton": scene_skeleton,
             "existing_characters": existing_characters,
-            "approved_new_names": approved_new_names
+            "approved_new_names": approved_new_names,
+            "languages_section": languages_section,
+            "languages_imported": languages_imported,
+            "language_situation": situation,
+            "native_speech": native_speech,
+            "pov_people": pov_people or "",
         }
+
+    def _pov_people(self, pov_character_id: Optional[str],
+                    location_id: Optional[str]) -> Optional[str]:
+        """Which people the POV character belongs to, by worldgen id or name.
+
+        The character's own record wins (``metadata.worldgen.people`` set by
+        character.generate, or a free-text ``metadata.affiliation``); failing
+        that, the realm or faction that holds the scene's location, which an
+        imported settlement or world carries. None when neither says.
+        """
+        people = people_of_character(self._load_character(pov_character_id))
+        if people:
+            return people
+        return people_of_location(self._load_location(location_id))
+
+    def _load_character(self, character_id: Optional[str]):
+        try:
+            return self.memory.load_character(character_id) if character_id else None
+        except Exception:
+            return None
+
+    def _load_location(self, location_id: Optional[str]):
+        try:
+            return self.memory.load_location(location_id) if location_id else None
+        except Exception:
+            return None
+
+    def _language_situation(self, project_state: Dict[str, Any], pov_people: Optional[str],
+                            pov_character_id: Optional[str], pov_character_name: str,
+                            location_id: Optional[str], plan: Dict[str, Any],
+                            execution_results: Dict[str, Any]) -> Dict[str, Any]:
+        """Who in this scene can follow whom (agent/language_situation.py).
+
+        The other parties are the location's realm or faction and the
+        characters the plan puts in the room: the dialogue targets'
+        participants and any character created by this tick's plan. Never
+        raises; an unknown situation is an empty line.
+        """
+        block = ((project_state or {}).get("world") or {}).get("languages")
+        if not block:
+            return language_situation(None, None, [])
+        try:
+            others: List[tuple] = []
+            location = self._load_location(location_id)
+            if location is not None:
+                others.append(("the people here", people_of_location(location)))
+            for character in self._present_characters(plan, execution_results, pov_character_id):
+                others.append((character.display_name, people_of_character(character)))
+            return language_situation(block, pov_people, others,
+                                      resolve=self.name_generator.resolve_people,
+                                      pov_label=pov_character_name)
+        except Exception as e:  # never cost a scene
+            logger.warning(f"Could not compute the language situation: {e}")
+            return language_situation(None, None, [])
+
+    def _present_characters(self, plan: Dict[str, Any], execution_results: Dict[str, Any],
+                            pov_character_id: Optional[str]) -> list:
+        """Characters the plan puts in the scene besides the POV: dialogue
+        participants (ids or names) and characters created this tick."""
+        wanted: List[str] = []
+        targets = (plan or {}).get("dialogue_targets")
+        if isinstance(targets, dict):
+            participants = targets.get("participants") or targets.get("characters") or []
+            if isinstance(participants, str):
+                participants = [p.strip() for p in participants.replace(";", ",").split(",")]
+            wanted.extend(str(p) for p in participants if p)
+        for action in (execution_results or {}).get("actions_executed") or []:
+            if action.get("tool") == "character.generate":
+                cid = (action.get("result") or {}).get("character_id")
+                if cid:
+                    wanted.append(str(cid))
+        if not wanted:
+            return []
+        roster = {}
+        for cid in self.memory.list_characters():
+            character = self._load_character(cid)
+            if character is not None:
+                roster[cid] = character
+        found, seen = [], set()
+        for ref in wanted:
+            key = ref.strip().lower()
+            match = roster.get(ref.strip())
+            if match is None:
+                match = next((c for c in roster.values()
+                              if key in (c.display_name.lower(), c.full_name.lower())), None)
+            if match is None or match.id == pov_character_id or match.id in seen:
+                continue
+            seen.add(match.id)
+            found.append(match)
+        return found
+
+    def _languages_section(self, project_state: Dict[str, Any],
+                           pov_people: Optional[str]) -> str:
+        """The compact Languages line for the POV's people, or ''."""
+        block = ((project_state or {}).get("world") or {}).get("languages")
+        if not block or not pov_people:
+            return ""
+        try:
+            from ..languages_import import languages_line
+            people_id = self.name_generator.resolve_people(pov_people) or pov_people
+            return languages_line(block, people_id)
+        except Exception as e:  # never cost a scene
+            logger.warning(f"Could not build the languages line: {e}")
+            return ""
 
     def _build_arc_pressure_section(self, plan: Dict[str, Any], current_tick: int) -> str:
         """Firm arc-pressure tension instruction for the writer, or "" when not applicable.
@@ -213,11 +360,14 @@ class WriterContextBuilder:
             return ""
 
     def _build_cast_and_name_pool(self, project_state: Dict[str, Any],
-                                  pov_character_id: str) -> tuple[str, str]:
+                                  pov_character_id: str,
+                                  pov_people: Optional[str] = None) -> tuple[str, str]:
         """List the existing cast and mint a small pool of unused, grounded names.
 
         The writer is told to use cast names or, only when a new character truly
-        needs a name, one of the pooled names — so it never invents one.
+        needs a name, one of the pooled names — so it never invents one. When
+        the POV's people has a language bank, half the pool comes from it, so
+        a walk-on in that realm can carry one of its own names.
         """
         cast_lines = []
         for cid in sorted(self.memory.list_characters()):
@@ -230,11 +380,15 @@ class WriterContextBuilder:
         existing_characters = "\n".join(cast_lines) if cast_lines else "(none yet)"
 
         genre = (project_state.get("story_foundation") or {}).get("genre") or "scifi"
+        people_id = self.name_generator.resolve_people(pov_people) if pov_people else None
         pool = []
-        for _ in range(4):
+        for i in range(4):
             try:
                 gender = "male" if len(pool) % 2 == 0 else "female"
-                pool.append(self.name_generator.generate_name(gender=gender, genre=genre)["full_name"])
+                affiliation = people_id if (people_id and i < 2) else None
+                minted = self.name_generator.generate_name(
+                    gender=gender, genre=genre, affiliation=affiliation)
+                pool.append(minted["full_name"])
             except ValueError:
                 break
         approved_new_names = "\n".join(f"- {n}" for n in pool) if pool else "(use a role descriptor instead)"
@@ -459,6 +613,14 @@ class WriterContextBuilder:
             
             elif tool_name == "relationship.update":
                 summary_parts.append(f"- Updated relationship")
+
+            elif tool_name in ("language.phrase", "language.word"):
+                if result.get("found") and result.get("text"):
+                    summary_parts.append(
+                        f"- Native speech requested: \u201c{result['text']}\u201d "
+                        f"({result.get('english') or result.get('gloss') or ''}, {result.get('language') or ''})")
+                else:
+                    summary_parts.append(f"- {tool_name} found nothing usable; the scene has no native words")
             
             else:
                 summary_parts.append(f"- Executed {tool_name}")
