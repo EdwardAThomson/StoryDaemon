@@ -1,7 +1,7 @@
 """Main CLI entry point for StoryDaemon."""
 import typer
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Tuple
 from ..configs.config import Config
 from .project import (
     create_novel_project,
@@ -15,6 +15,17 @@ from .foundation import (
     load_foundation_from_file,
     create_foundation_from_args,
     StoryFoundation,
+)
+from ..languages_import import (
+    LanguageEntities,
+    LanguagesMismatchError,
+    UnknownLanguagesSchemaError,
+    bank_file_path,
+    default_languages_path,
+    languages_state_record,
+    load_languages,
+    map_languages,
+    persist_languages,
 )
 from ..world_import import (
     load_world,
@@ -225,6 +236,12 @@ plot_app = typer.Typer(name="plot", help="Plot outline (PlotBeat Phase 3) comman
 app.add_typer(plot_app, name="plot")
 
 
+def _languages_file_for(project_dir) -> Optional[Path]:
+    """The project's per-people name banks (memory/languages.json), if any."""
+    path = bank_file_path(project_dir)
+    return path if path.exists() else None
+
+
 def _load_world_entities(world_path: Path) -> WorldEntities:
     """Read and map a worldgen file, exiting with a clear message on failure."""
     import json as _json
@@ -248,6 +265,52 @@ def _load_world_entities(world_path: Path) -> WorldEntities:
     )
 
 
+def _load_language_entities(languages_path: Path, world_path: Path) -> LanguageEntities:
+    """Read and map a worldgen languages file against its world, exiting
+    with a clear message on failure."""
+    import json as _json
+    try:
+        lang_data = load_languages(str(languages_path))
+        world_data = load_world(str(world_path))
+    except FileNotFoundError:
+        typer.echo(f"❌ Languages file not found: {languages_path}", err=True)
+        raise typer.Exit(1)
+    except (UnknownLanguagesSchemaError, UnknownWorldSchemaError) as e:
+        typer.echo(f"❌ {e}", err=True)
+        raise typer.Exit(1)
+    except (_json.JSONDecodeError, UnicodeDecodeError) as e:
+        typer.echo(f"❌ Languages file is not valid JSON: {languages_path} ({e})", err=True)
+        raise typer.Exit(1)
+    config = Config()
+    try:
+        return map_languages(
+            lang_data, world_data,
+            words_per_language=config.get('world.language_words', 12))
+    except LanguagesMismatchError as e:
+        typer.echo(f"❌ {e}", err=True)
+        raise typer.Exit(1)
+
+
+def _resolve_languages_path(world: Optional[Path], languages: Optional[Path]) -> Tuple[Optional[Path], bool]:
+    """The languages file to import, and whether it was found rather than given.
+
+    ``--languages`` without ``--world`` is refused: the file is keyed by the
+    world's realm or faction ids and means nothing without it. With a world
+    and no ``--languages``, ``<world stem>-languages.json`` beside the world
+    file is used when it exists, and the command says so.
+    """
+    if languages and not world:
+        typer.echo("❌ --languages needs --world: the languages file is keyed by "
+                   "the world's realm or faction ids.", err=True)
+        raise typer.Exit(1)
+    if languages or not world:
+        return languages, False
+    candidate = default_languages_path(world)
+    if candidate.exists():
+        return candidate, True
+    return None, False
+
+
 def _foundation_from_world(
     world_entities: WorldEntities,
     genre: Optional[str] = None,
@@ -256,15 +319,20 @@ def _foundation_from_world(
     setting: Optional[str] = None,
     tone: Optional[str] = None,
     themes: Optional[str] = None,
+    language_entities: Optional[LanguageEntities] = None,
 ) -> StoryFoundation:
     """A foundation whose genre and setting default to the imported world.
 
     Premise, archetype and tone are the author's to give; when they are not,
     they are filled with neutral text rather than refused, so
     ``--world --no-interactive`` yields a project that can tick. Nothing here
-    chooses a story: the hooks are lore, not the premise.
+    chooses a story: the hooks are lore, not the premise. Imported languages
+    add one sentence (who speaks what) to the world's own setting text only.
     """
     theme_list = [t.strip() for t in themes.split(",") if t.strip()] if themes else []
+    world_setting = world_entities.setting
+    if language_entities is not None and language_entities.setting_sentence():
+        world_setting = f"{world_setting} {language_entities.setting_sentence()}"
     return StoryFoundation(
         genre=(genre or "").strip() or world_entities.genre,
         premise=(premise or "").strip() or (
@@ -272,7 +340,7 @@ def _foundation_from_world(
             "from the first scenes and the world's own tensions."),
         protagonist_archetype=(protagonist or "").strip() or (
             "an ordinary inhabitant of this world, drawn into its tensions"),
-        setting=(setting or "").strip() or world_entities.setting,
+        setting=(setting or "").strip() or world_setting,
         tone=(tone or "").strip() or "grounded, as the world suggests",
         themes=theme_list,
     )
@@ -296,6 +364,25 @@ def _import_world_into_project(project_dir: str, world_path: Path,
         typer.echo(f"   Skipped duplicate locations: {', '.join(created['skipped_locations'])}")
     state = load_project_state(project_dir)
     state['world'] = world_state_record(str(world_path), world_entities, created)
+    save_project_state(project_dir, state)
+    return created
+
+
+def _import_languages_into_project(project_dir: str, languages_path: Path,
+                                   language_entities: LanguageEntities,
+                                   auto_detected: bool = False) -> Dict[str, Any]:
+    """Persist the languages: one lore item each, the per-people name banks
+    under memory/, and the notes block under state["world"]["languages"]."""
+    memory_manager = MemoryManager(Path(project_dir))
+    vector_store = None
+    try:
+        vector_store = VectorStore(Path(project_dir))
+    except Exception as e:
+        typer.echo(f"⚠️  Vector index unavailable, language lore saved without indexing: {e}")
+    created = persist_languages(memory_manager, language_entities, vector_store)
+    state = load_project_state(project_dir)
+    state.setdefault('world', {})['languages'] = languages_state_record(
+        str(languages_path), language_entities, created, auto_detected=auto_detected)
     save_project_state(project_dir, state)
     return created
 
@@ -370,6 +457,17 @@ def new(
             "and lore, and the foundation's genre and setting default to the world's."
         )
     ),
+    languages: Optional[Path] = typer.Option(
+        None,
+        "--languages",
+        help=(
+            "A worldgen languages file (schema worldgen/languages@0.1) for the "
+            "same world: each people's language becomes a lore item, a name bank "
+            "name.generate can draw from by affiliation, and a Languages note the "
+            "writer sees. Without it, <world stem>-languages.json beside the world "
+            "file is used when present."
+        )
+    ),
 ):
     """Create a new novel project with optional story foundation.
 
@@ -395,6 +493,9 @@ def new(
 
         # Start from a worldgen world; genre and setting come from the file
         novel new my-story --world region.json --no-interactive
+
+        # ... with its peoples' languages (auto-detected as region-languages.json)
+        novel new my-story --world region.json --languages languages.json --no-interactive
     """
     try:
         # Determine foundation source
@@ -403,10 +504,18 @@ def new(
         # A worldgen world is read and mapped before anything is created, so a
         # bad file fails here rather than after a project directory exists.
         world_entities: Optional[WorldEntities] = None
+        language_entities: Optional[LanguageEntities] = None
+        languages_path, languages_auto = _resolve_languages_path(world, languages)
         if world:
             world_entities = _load_world_entities(world)
             typer.echo(f"🌍 World: {world_entities.title} ({world_entities.schema})")
             typer.echo(f"   {world_entities.setting}")
+        if languages_path is not None:
+            language_entities = _load_language_entities(languages_path, world)
+            spoken = ", ".join(n.name for n in language_entities.languages)
+            found = " (found beside the world file)" if languages_auto else ""
+            typer.echo(f"🗣️  Languages: {languages_path}{found}")
+            typer.echo(f"   {len(language_entities.languages)} languages: {spoken}")
 
         # If the user has provided an explicit non-interactive source
         # (foundation file or CLI foundation fields), disable the
@@ -447,7 +556,8 @@ def new(
             # the rest is filled so the project has a usable foundation.
             foundation = _foundation_from_world(
                 world_entities, genre=genre, premise=premise,
-                protagonist=protagonist, setting=setting, tone=tone, themes=themes)
+                protagonist=protagonist, setting=setting, tone=tone, themes=themes,
+                language_entities=language_entities)
         else:
             # Try to create from command-line args (may return None)
             foundation = create_foundation_from_args(
@@ -476,6 +586,14 @@ def new(
             typer.echo(
                 f"🌍 Imported world: {len(created['factions'])} factions, "
                 f"{len(created['locations'])} locations, {len(created['lore'])} lore items")
+            if language_entities is not None and languages_path is not None:
+                lang_created = _import_languages_into_project(
+                    project_dir, languages_path, language_entities, auto_detected=languages_auto)
+                counts = language_entities.counts()
+                typer.echo(
+                    f"🗣️  Imported languages: {counts['languages']} languages, "
+                    f"{len(lang_created['lore'])} lore items, {counts['names']} names "
+                    f"in {Path(lang_created['bank_file']).relative_to(project_dir)}")
         
         if name_banks and name_banks.get("person_bank"):
             typer.echo(f"   Character names: {name_banks['person_bank']} bank")
@@ -616,8 +734,10 @@ def tick(
         data_dir = Path(__file__).parent.parent / "data" / "names"
         genre = (state.get('story_foundation') or {}).get('genre') or 'scifi'
         # Name banks come from the names.* config block, falling back to genre
-        # routing. Settled here, once, so no tool asks the model for it.
-        name_gen_tool = NameGeneratorTool.from_config(data_dir, config, genre)
+        # routing. Settled here, once, so no tool asks the model for it. An
+        # imported world's languages add per-people banks from memory/.
+        name_gen_tool = NameGeneratorTool.from_config(
+            data_dir, config, genre, languages_file=_languages_file_for(project_dir))
         
         # Get beat_mode for strict name generation enforcement
         beat_mode = config.get('plot.beat_mode', 'soft_hint')
@@ -841,7 +961,8 @@ def run(
                     genre = (state.get('story_foundation') or {}).get('genre') or 'scifi'
                     # Same resolution as tick(): config first, genre routing
                     # second, the model nowhere.
-                    name_gen_tool = NameGeneratorTool.from_config(data_dir, config, genre)
+                    name_gen_tool = NameGeneratorTool.from_config(
+                        data_dir, config, genre, languages_file=_languages_file_for(project_dir))
 
                     # Get beat_mode for strict name generation enforcement
                     beat_mode = config.get('plot.beat_mode', 'soft_hint')

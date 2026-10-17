@@ -364,6 +364,9 @@ DEFAULT_CONFIG = {
         'max_towns': 12,               # largest towns kept, after the floor
         'town_population_min': 3000,   # towns below this are not imported
         'max_worlds': 24,              # sector: capital and temperate worlds kept
+        # `--languages <file>` (or the auto-detected <world>-languages.json):
+        # how many everyday words of each people's language the writer sees.
+        'language_words': 12,
     },
     'export': {
         # Book export settings for `novel compile --format epub|pdf`

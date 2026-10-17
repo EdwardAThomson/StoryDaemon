@@ -326,6 +326,7 @@ novel new <name> --genre <genre> --premise <text> # Command-line args
 
 # Start from a generated world (see "Starting from a worldgen world" below)
 novel new <name> --world <world.json> --no-interactive
+novel new <name> --world <world.json> --languages <languages.json> --no-interactive
 
 # Generate one scene
 novel tick [--project <path>]
@@ -371,6 +372,33 @@ schema or a missing file is refused before any project directory is created.
 The source path and schema are recorded under `world` in `state.json`. How
 many towns or worlds are kept is set by `world.max_towns`,
 `world.town_population_min` and `world.max_worlds` in the config.
+
+**Languages.** World-building can also write every people's constructed
+language (`npm run cli -- region --seed demo --languages-json languages.json`,
+schema `worldgen/languages@0.1`). Pass it with `--languages <path>`; when
+the flag is absent and `<world stem>-languages.json` sits beside the world
+file, it is used and the command says so. The file is keyed by the world's
+realm or faction ids, so one whose peoples do not match the world is refused
+before anything is created (`--languages` without `--world` likewise). Still
+no LLM: `novel_agent/languages_import.py` reduces each language to
+
+- a **notes block** under `world.languages` in `state.json` (language name,
+  family and relatives, word order in a phrase, a dozen everyday words from
+  the lexicon's tiers 1 and 2: water, fire, king, mother, sword, friend, see,
+  give...), plus one sentence on who speaks what appended to the world's
+  setting text;
+- one **lore item** per language (`category: language`), through the same
+  path as the world's lore;
+- a **name bank per people** in `memory/languages.json`, built from the
+  file's meaningful place and person names. `name.generate`,
+  `character.generate` and `location.generate` take an optional
+  `affiliation` (a realm or faction by name) and draw from that people's own
+  tongue; the people is recorded on the character.
+
+The writer then sees one compact `Language:` line for the POV character's
+people (the character's recorded people, else the realm that holds the
+scene's location), never the whole world's, so the prompt does not grow with
+the number of realms. `world.language_words` sets how many words it shows.
 
 ### Project Management Commands
 

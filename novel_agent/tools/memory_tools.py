@@ -113,6 +113,15 @@ class CharacterGenerateTool(Tool):
                     "items": {"type": "string"},
                     "description": "Initial goals",
                     "optional": True
+                },
+                "affiliation": {
+                    "type": "string",
+                    "description": (
+                        "Optional realm or faction the character belongs to, by name. "
+                        "When the world's languages were imported, the name is drawn "
+                        "from that people's own tongue."
+                    ),
+                    "optional": True
                 }
             }
         )
@@ -137,7 +146,8 @@ class CharacterGenerateTool(Tool):
                 gender: Optional[str] = None,
                 title: Optional[str] = None,
                 traits: Optional[List[str]] = None,
-                goals: Optional[List[str]] = None) -> Dict[str, Any]:
+                goals: Optional[List[str]] = None,
+                affiliation: Optional[str] = None) -> Dict[str, Any]:
         """Create a new character.
 
         The canonical name is always system-generated. ``gender`` and ``title``
@@ -151,6 +161,9 @@ class CharacterGenerateTool(Tool):
             title: Optional honorific/rank hint
             traits: Optional personality traits
             goals: Optional initial goals
+            affiliation: Optional realm/faction name; with an imported world's
+                languages the name comes from that people's bank, and the
+                people is recorded on the character for the writer
 
         Returns:
             Success status and character ID
@@ -158,16 +171,29 @@ class CharacterGenerateTool(Tool):
         first_name = ""
         family_name = ""
         gen_title = title or ""
+        metadata: Dict[str, Any] = {}
+        affiliation = (affiliation or "").strip()
+        if affiliation:
+            metadata["affiliation"] = affiliation
 
         if self.name_generator:
             # Random 50/50 if gender not specified (to avoid LLM bias)
             char_gender = gender or random.choice(["male", "female"])
+            # Passed only when given, so a generator without the keyword
+            # (an older fake, a custom one) keeps working.
+            extra = {"affiliation": affiliation} if affiliation else {}
             name_result = self.name_generator.generate_name(
-                gender=char_gender, genre=self.genre, title=title or None
+                gender=char_gender, genre=self.genre, title=title or None, **extra
             )
             first_name = name_result["first_name"]
             family_name = name_result["last_name"]
             gen_title = name_result.get("title", "") or (title or "")
+            if name_result.get("people"):
+                metadata["worldgen"] = {
+                    "people": name_result["people"],
+                    "language": name_result.get("language", ""),
+                    "name_meaning": name_result.get("meaning", ""),
+                }
         else:
             # Fallback if no generator available - generate ID here for fallback name
             character_id = self.memory_manager.generate_id("character")
@@ -224,7 +250,8 @@ class CharacterGenerateTool(Tool):
             role=role,
             description=description,
             personality=Personality(core_traits=traits or []),
-            current_state=CurrentState(goals=goals or [])
+            current_state=CurrentState(goals=goals or []),
+            metadata=metadata,
         )
         
         # Save to disk
@@ -271,6 +298,15 @@ class LocationGenerateTool(Tool):
                     "items": {"type": "string"},
                     "description": "Notable features",
                     "optional": True
+                },
+                "affiliation": {
+                    "type": "string",
+                    "description": (
+                        "Optional realm or faction whose land this is, by name. "
+                        "When the world's languages were imported, the name is one "
+                        "of that people's own place names."
+                    ),
+                    "optional": True
                 }
             }
         )
@@ -293,19 +329,33 @@ class LocationGenerateTool(Tool):
                 descriptor: Optional[str] = None,
                 name: Optional[str] = None,
                 atmosphere: Optional[str] = None,
-                features: Optional[List[str]] = None) -> Dict[str, Any]:
+                features: Optional[List[str]] = None,
+                affiliation: Optional[str] = None) -> Dict[str, Any]:
         """Create a new location.
 
         The canonical proper name is system-generated from an optional
         ``descriptor`` common noun. Any ``name`` passed by the LLM is ignored
-        when a generator is available.
+        when a generator is available. ``affiliation`` names the people whose
+        land it is; with imported languages the name is one of theirs.
 
         Returns:
             Success status and location ID
         """
+        metadata: Dict[str, Any] = {}
+        affiliation = (affiliation or "").strip()
+        if affiliation:
+            metadata["affiliation"] = affiliation
         if self.name_generator:
-            place = self.name_generator.generate_place_name(descriptor=descriptor, genre=self.genre)
+            extra = {"affiliation": affiliation} if affiliation else {}
+            place = self.name_generator.generate_place_name(
+                descriptor=descriptor, genre=self.genre, **extra)
             loc_name = place["full_name"]
+            if place.get("people"):
+                metadata["worldgen"] = {
+                    "realm_id": place["people"],
+                    "language": place.get("language", ""),
+                    "name_meaning": place.get("meaning", ""),
+                }
         else:
             loc_name = (name or descriptor or "Unnamed Location").strip()
 
@@ -327,7 +377,8 @@ class LocationGenerateTool(Tool):
             name=loc_name,
             description=description,
             atmosphere=atmosphere or "",
-            features=features or []
+            features=features or [],
+            metadata=metadata,
         )
         self.memory_manager.save_location(location)
         self.vector_store.index_location(location)

@@ -85,7 +85,8 @@ class NameGenerator:
                  person_bank: Optional[str] = None,
                  place_bank: Optional[str] = None,
                  title_bank: Optional[str] = None,
-                 register: Optional[str] = None):
+                 register: Optional[str] = None,
+                 languages_file: Optional[Path] = None):
         """Initialize name generator with data files.
 
         The three bank arguments are the author's settings (config, the
@@ -93,8 +94,18 @@ class NameGenerator:
         which routes from the story's genre exactly as before. They are
         independent, so Victorian character names can sit in a novel whose
         places are still science fiction.
+
+        ``languages_file`` is a project's ``memory/languages.json``, written
+        by ``novel new --world ... --languages``: one bank of meaningful
+        person and place names per people of the imported world. A name
+        asked for with an ``affiliation`` that resolves to one of those
+        peoples is drawn from its own tongue; everything else is unchanged.
         """
         self.data_dir = Path(data_dir)
+        self.language_banks: Dict[str, Dict[str, Any]] = {}
+        self.languages_file: Optional[Path] = None
+        if languages_file:
+            self.load_language_banks(languages_file)
         self.scifi_data = self._load_json("scifi_syllables.json")
         self.titles_data = self._load_json("titles.json")
         self.title_banks = self._load_json(self.TITLE_BANK_FILE, required=False) or {}
@@ -263,6 +274,136 @@ class NameGenerator:
         bank = self.place_banks.get(self.resolve_place_bank(genre))
         return bank if bank else self.place_data
 
+    # ------------------------------------------------------------------
+    # Per-people language banks (an imported world's constructed languages)
+    # ------------------------------------------------------------------
+
+    LANGUAGE_BANK_SCHEMA = "storydaemon/language-banks@0.1"
+
+    def load_language_banks(self, path) -> int:
+        """Load a project's per-people name banks; returns how many peoples.
+
+        The file is optional and never required: a project created without
+        an imported world has none, and the generator behaves exactly as
+        before. A file with the wrong schema is refused loudly, since it was
+        written by this codebase and a mismatch means something else is
+        parked at its path.
+        """
+        path = Path(path)
+        if not path.exists():
+            return 0
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if not isinstance(data, dict) or data.get("schema") != self.LANGUAGE_BANK_SCHEMA:
+            raise ValueError(
+                f"{path} is not a language-bank file "
+                f"(expected schema {self.LANGUAGE_BANK_SCHEMA!r})")
+        banks = {}
+        for people_id, bank in (data.get("peoples") or {}).items():
+            if not isinstance(bank, dict):
+                continue
+            banks[str(people_id)] = {
+                "people_name": bank.get("people_name") or str(people_id),
+                "language": bank.get("language") or "",
+                "people": [self._bank_name(n) for n in bank.get("people") or []],
+                "places": [self._bank_name(n) for n in bank.get("places") or []],
+            }
+        self.language_banks = banks
+        self.languages_file = path
+        return len(banks)
+
+    @staticmethod
+    def _bank_name(item) -> Dict[str, str]:
+        if isinstance(item, str):
+            return {"name": item, "meaning": ""}
+        return {"name": str(item.get("name") or ""), "meaning": str(item.get("meaning") or "")}
+
+    def peoples_roster(self) -> List[str]:
+        """Each people with a language bank, as "People (Language)"."""
+        return [
+            f"{b['people_name']} ({b['language']})" if b.get("language") else b["people_name"]
+            for b in self.language_banks.values()
+        ]
+
+    def resolve_people(self, affiliation: Optional[str]) -> Optional[str]:
+        """The people id an affiliation names, or None.
+
+        The model selects a people, it does not invent one, the same
+        sanitize-not-trust rule titles follow: an exact id, people name or
+        language name (case-insensitive) matches, a near miss is normalised,
+        and anything else is dropped with a log line so the genre bank
+        applies.
+        """
+        key = (affiliation or "").strip().lower()
+        if not key or not self.language_banks:
+            return None
+        by_key: Dict[str, str] = {}
+        for pid, bank in self.language_banks.items():
+            by_key.setdefault(pid.lower(), pid)
+            by_key.setdefault((bank.get("people_name") or "").lower(), pid)
+            if bank.get("language"):
+                by_key.setdefault(bank["language"].lower(), pid)
+        by_key.pop("", None)
+        if key in by_key:
+            return by_key[key]
+        close = difflib.get_close_matches(key, list(by_key), n=1, cutoff=0.8)
+        if close:
+            logger.info("affiliation %r normalised to %r", affiliation, by_key[close[0]])
+            return by_key[close[0]]
+        # "the Vokekuk" or "Vokekuk soldier": a people name inside the text.
+        for name, pid in by_key.items():
+            if len(name) >= 4 and re.search(rf"\b{re.escape(name)}\b", key):
+                return pid
+        logger.warning("affiliation %r matches no people with a language bank "
+                       "(%s); using the genre bank", affiliation,
+                       ", ".join(sorted(self.language_banks)))
+        return None
+
+    def _draw_from_language(self, people_id: str) -> Dict[str, str]:
+        """A person name from a people's own bank.
+
+        Worldgen person names are mononyms with meanings ("Tukkuye, Red
+        Fire"), so the first unused one is the whole name. When every single
+        name is taken, two are paired as given and family name, which keeps
+        the pool from running dry in a long novel.
+        """
+        bank = self.language_banks[people_id]
+        names = [n for n in bank["people"] if n["name"]]
+        if not names:
+            raise ValueError(f"the {bank['people_name']} bank has no person names")
+        unused = [n for n in names if n["name"] not in self.used_first_names
+                  and n["name"] not in self.used_names]
+        if unused:
+            pick = random.choice(unused)
+            return {"first_name": pick["name"], "last_name": "", "meaning": pick["meaning"]}
+        shuffled = list(names)
+        random.shuffle(shuffled)
+        for first in shuffled:
+            for last in shuffled:
+                if first is last:
+                    continue
+                if f"{first['name']} {last['name']}" not in self.used_names:
+                    return {"first_name": first["name"], "last_name": last["name"],
+                            "meaning": f"{first['meaning']}; {last['meaning']}".strip("; ")}
+        raise ValueError(
+            f"The {bank['people_name']} name bank is exhausted "
+            f"({len(self.used_names)} names already used).")
+
+    def _draw_place_from_language(self, people_id: str, descriptor: str) -> Optional[Dict[str, str]]:
+        """An unused place name from a people's bank, or None when all are taken."""
+        bank = self.language_banks[people_id]
+        # A root counts as used with or without a descriptor: "Stavai" and
+        # "Stavai harbour" are the same place to a reader.
+        taken = {w.split()[0].lower() for w in self.used_places if w.split()}
+        unused = [p for p in bank["places"] if p["name"] and p["name"].lower() not in taken]
+        if not unused:
+            return None
+        pick = random.choice(unused)
+        full_name = f"{pick['name']} {descriptor}".strip() if descriptor else pick["name"]
+        self.used_places.add(full_name)
+        return {"full_name": full_name, "root": pick["name"], "meaning": pick["meaning"],
+                "people": people_id, "language": bank.get("language") or ""}
+
     def register_used_name(self, full_name: Optional[str]) -> None:
         """Mark a person name as taken so it won't be regenerated."""
         if not full_name:
@@ -430,14 +571,38 @@ class NameGenerator:
         genre: str = "scifi",
         title: Optional[str] = None,
         register: Optional[str] = None,
-        max_attempts: int = 50
+        max_attempts: int = 50,
+        affiliation: Optional[str] = None,
     ) -> Dict[str, str]:
-        """Generate a unique character name."""
+        """Generate a unique character name.
+
+        ``affiliation`` names the realm or faction the character belongs to.
+        When it resolves to a people with a language bank (an imported
+        world's languages), the name comes from that people's own tongue and
+        the result also carries ``meaning``, ``people`` and ``language``.
+        """
         # Validate and correct gender-specific titles, then hold the result to
         # the story's roster.
         if title:
             title = self._validate_title_gender(title, gender, genre)
             title = self._sanitize_title(title, genre) if title else title
+
+        people_id = self.resolve_people(affiliation)
+        if people_id:
+            drawn = self._draw_from_language(people_id)
+            first_name, last_name = drawn["first_name"], drawn["last_name"]
+            full_name = f"{first_name} {last_name}".strip()
+            self.used_names.add(full_name)
+            self.used_first_names.add(first_name)
+            return {
+                "full_name": f"{title} {full_name}" if title else full_name,
+                "first_name": first_name,
+                "last_name": last_name,
+                "title": title or "",
+                "meaning": drawn["meaning"],
+                "people": people_id,
+                "language": self.language_banks[people_id].get("language") or "",
+            }
 
         bank = self._bank_for_genre(genre)
         register = self._resolve_register(bank, register)
@@ -602,9 +767,22 @@ class NameGenerator:
         descriptor: Optional[str] = None,
         genre: str = "scifi",
         max_attempts: int = 50,
+        affiliation: Optional[str] = None,
     ) -> Dict[str, str]:
-        """Coin a unique place name."""
+        """Coin a unique place name.
+
+        With an ``affiliation`` that resolves to a people with a language
+        bank, the name is one of that people's own place names (with its
+        meaning) while any remain; after that the genre bank coins one.
+        """
         descriptor = (descriptor or "").strip()
+        people_id = self.resolve_people(affiliation)
+        if people_id:
+            drawn = self._draw_place_from_language(people_id, descriptor)
+            if drawn:
+                return drawn
+            logger.info("every %s place name is in use; coining one from the genre bank",
+                        self.language_banks[people_id]["people_name"])
         bank = self._place_bank_for_genre(genre)
         join = bank.get("join", "")
         for _ in range(max_attempts):
@@ -672,36 +850,65 @@ class NameGeneratorTool(Tool):
                  person_bank: Optional[str] = None,
                  place_bank: Optional[str] = None,
                  title_bank: Optional[str] = None,
-                 register: Optional[str] = None):
+                 register: Optional[str] = None,
+                 languages_file: Optional[Path] = None):
         """Initialize name generator tool."""
         generator = NameGenerator(
             data_dir, use_drawn_banks=use_drawn_banks, person_bank=person_bank,
             place_bank=place_bank, title_bank=title_bank, register=register,
+            languages_file=languages_file,
         )
         self.genre = genre or "scifi"
         bank = generator.resolve_person_bank(self.genre)
+        description = f"Generate a unique character name from the story's {bank} name bank"
+        parameters = {
+            "gender": {
+                "type": "string",
+                "enum": ["male", "female"],
+                "description": "Character gender for name generation"
+            },
+            "register": self._register_parameter(generator, bank),
+            "title": self._title_parameter(generator, self.genre),
+        }
+        if generator.language_banks:
+            description += (
+                ", or from a people's own language when the character's "
+                "affiliation is one of the world's peoples"
+            )
+            parameters["affiliation"] = self._affiliation_parameter(generator)
         super().__init__(
             name="name.generate",
-            description=(
-                f"Generate a unique character name from the story's {bank} name bank"
-            ),
-            parameters={
-                "gender": {
-                    "type": "string",
-                    "enum": ["male", "female"],
-                    "description": "Character gender for name generation"
-                },
-                "register": self._register_parameter(generator, bank),
-                "title": self._title_parameter(generator, self.genre),
-            }
+            description=description,
+            parameters=parameters,
         )
         self.generator = generator
         self._warned_about_genre = False
 
     @classmethod
-    def from_config(cls, data_dir: Path, config, genre: str) -> "NameGeneratorTool":
-        """Build the tool from the names.* config block and the story's genre."""
-        return cls(data_dir, genre=genre, **bank_settings_from_config(config))
+    def from_config(cls, data_dir: Path, config, genre: str,
+                    languages_file: Optional[Path] = None) -> "NameGeneratorTool":
+        """Build the tool from the names.* config block and the story's genre.
+
+        ``languages_file`` is the project's ``memory/languages.json`` when an
+        imported world brought its languages; a missing file is simply no
+        language banks.
+        """
+        return cls(data_dir, genre=genre, languages_file=languages_file,
+                   **bank_settings_from_config(config))
+
+    @staticmethod
+    def _affiliation_parameter(generator: NameGenerator) -> Dict[str, Any]:
+        """Offer the peoples whose languages were imported with the world."""
+        return {
+            "type": "string",
+            "description": (
+                "Optional: the realm or faction the character belongs to, by "
+                "name. The name is then drawn from that people's own language "
+                "(peoples: " + "; ".join(generator.peoples_roster()) + "). "
+                "Anything else falls back to the story's name bank."
+            ),
+            "optional": True,
+        }
 
     @staticmethod
     def _register_parameter(generator: NameGenerator, bank: str) -> Dict[str, Any]:
@@ -752,11 +959,14 @@ class NameGeneratorTool(Tool):
         title: Optional[str] = None,
         register: Optional[str] = None,
         genre: Optional[str] = None,
+        affiliation: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Execute name generation.
 
         ``genre`` is accepted and ignored so a plan saved before the bank
         became an author setting still replays; the bank comes from config.
+        ``affiliation`` selects a people's language bank when the world's
+        languages were imported, and is ignored otherwise.
         """
         if genre is not None and not self._warned_about_genre:
             logger.info(
@@ -765,7 +975,8 @@ class NameGeneratorTool(Tool):
             )
             self._warned_about_genre = True
         try:
-            result = self.generator.generate_name(gender, self.genre, title, register)
+            result = self.generator.generate_name(gender, self.genre, title, register,
+                                                  affiliation=affiliation)
             return {
                 "success": True,
                 **result
