@@ -1,0 +1,616 @@
+{
+ "schema": "worldgen/region@0.1",
+ "params": {
+  "width": 6,
+  "height": 4,
+  "cellKm": 20,
+  "northLatitude": 52,
+  "landFraction": 0.45,
+  "islandness": 0.35,
+  "plateCount": 8,
+  "realmCount": 2,
+  "upwindOcean": true,
+  "seed": "demo"
+ },
+ "grid": {
+  "width": 6,
+  "height": 4,
+  "cellKm": 20,
+  "southLatitude": 50.5
+ },
+ "seaLevelRaw": 0.127,
+ "cells": {
+  "elevationM": [
+   -200,
+   -200,
+   -200,
+   -200,
+   -200,
+   -200,
+   40,
+   60,
+   120,
+   300,
+   1800,
+   2400,
+   30,
+   10,
+   150,
+   500,
+   900,
+   1200,
+   20,
+   80,
+   200,
+   700,
+   2100,
+   2800
+  ],
+  "temperatureC": [
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8,
+   8
+  ],
+  "precipitationMm": [
+   700,
+   700,
+   700,
+   700,
+   700,
+   700,
+   700,
+   700,
+   700,
+   700,
+   700,
+   700,
+   700,
+   700,
+   700,
+   700,
+   700,
+   700,
+   700,
+   700,
+   700,
+   700,
+   700,
+   700
+  ],
+  "biome": [
+   "deep ocean",
+   "deep ocean",
+   "deep ocean",
+   "deep ocean",
+   "deep ocean",
+   "deep ocean",
+   "temperate forest",
+   "temperate grassland",
+   "temperate forest",
+   "steppe",
+   "alpine",
+   "alpine",
+   "temperate grassland",
+   "marsh",
+   "temperate forest",
+   "steppe",
+   "boreal forest",
+   "tundra",
+   "temperate rainforest",
+   "temperate forest",
+   "temperate forest",
+   "cold desert",
+   "alpine",
+   "ice"
+  ],
+  "realm": [
+   -1,
+   -1,
+   -1,
+   -1,
+   -1,
+   -1,
+   0,
+   0,
+   0,
+   1,
+   1,
+   1,
+   0,
+   0,
+   0,
+   1,
+   1,
+   -1,
+   -1,
+   -1,
+   -1,
+   -1,
+   -1,
+   -1
+  ],
+  "river": [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   420,
+   120,
+   0,
+   0,
+   0,
+   0,
+   300,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "downhill": [
+   -1,
+   -1,
+   -1,
+   -1,
+   -1,
+   -1,
+   -1,
+   -1,
+   -1,
+   -1,
+   -1,
+   -1,
+   -1,
+   -1,
+   -1,
+   -1,
+   -1,
+   -1,
+   -1,
+   -1,
+   -1,
+   -1,
+   -1,
+   -1
+  ],
+  "road": [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ]
+ },
+ "settlements": [
+  {
+   "id": "T0",
+   "name": "Esuk up Qokesvok",
+   "cell": 7,
+   "kind": "city",
+   "population": 20897,
+   "realmId": "R0",
+   "capital": true,
+   "site": [
+    "river",
+    "coast",
+    "river mouth"
+   ]
+  },
+  {
+   "id": "T6",
+   "name": "Staysha",
+   "cell": 9,
+   "kind": "city",
+   "population": 23821,
+   "realmId": "R2",
+   "capital": true,
+   "site": [
+    "river"
+   ]
+  },
+  {
+   "id": "T1",
+   "name": "Swanhin",
+   "cell": 8,
+   "kind": "city",
+   "population": 7461,
+   "realmId": "R0",
+   "capital": false,
+   "site": [
+    "river",
+    "coast"
+   ]
+  },
+  {
+   "id": "T10",
+   "name": "Opes",
+   "cell": 13,
+   "kind": "town",
+   "population": 6803,
+   "realmId": "R0",
+   "capital": false,
+   "site": [
+    "river"
+   ]
+  },
+  {
+   "id": "T11",
+   "name": "Utop",
+   "cell": 14,
+   "kind": "town",
+   "population": 4120,
+   "realmId": "R0",
+   "capital": false,
+   "site": [
+    "defensible"
+   ]
+  },
+  {
+   "id": "T12",
+   "name": "Coqêffeq",
+   "cell": 15,
+   "kind": "town",
+   "population": 3015,
+   "realmId": "R2",
+   "capital": false,
+   "site": [
+    "trade"
+   ]
+  },
+  {
+   "id": "T13",
+   "name": "Aqik",
+   "cell": 16,
+   "kind": "town",
+   "population": 1152,
+   "realmId": "R2",
+   "capital": false,
+   "site": [
+    "defensible"
+   ]
+  },
+  {
+   "id": "T14",
+   "name": "Uktokes",
+   "cell": 20,
+   "kind": "town",
+   "population": 559,
+   "realmId": null,
+   "capital": false,
+   "site": [
+    "water"
+   ]
+  }
+ ],
+ "realms": [
+  {
+   "id": "R0",
+   "name": "Vokekuk",
+   "government": {
+    "family": "Monarchy",
+    "form": "Principality",
+    "fullName": "Vokekuk Principality",
+    "rulerTitle": "Prince",
+    "succession": "primogeniture",
+    "genderLaw": "male-only"
+   },
+   "capitalSettlementId": "T0",
+   "cells": 6,
+   "areaKm2": 2400,
+   "population": 90000,
+   "coastal": true,
+   "ruler": {
+    "title": "Prince",
+    "name": "Vok Tektosngo",
+    "gender": "male"
+   },
+   "language": {
+    "id": "R0",
+    "sample": [
+     "Rekyusmos",
+     "Rekpekquk",
+     "Usgukos",
+     "Rekus",
+     "Okes"
+    ],
+    "orthography": "circumflex",
+    "customs": {
+     "order": "given-first",
+     "surname": "patronymic",
+     "patronym": {
+      "affix": "ngo",
+      "position": "suffix"
+     },
+     "feminine": null,
+     "masculine": null
+    }
+   }
+  },
+  {
+   "id": "R2",
+   "name": "Vavarsrai",
+   "government": {
+    "family": "Monarchy",
+    "form": "Principality",
+    "fullName": "Principality of Vavarsrai",
+    "rulerTitle": "Prince",
+    "succession": "tanistry",
+    "genderLaw": "female-preference"
+   },
+   "capitalSettlementId": "T6",
+   "cells": 5,
+   "areaKm2": 2000,
+   "population": 60000,
+   "coastal": false,
+   "ruler": {
+    "title": "Princess",
+    "name": "Saipyada Vai",
+    "gender": "female"
+   },
+   "language": {
+    "id": "R2",
+    "sample": [
+     "Snaspes",
+     "Stavai",
+     "Chaisaish",
+     "Vashekzha",
+     "Zhailopgon"
+    ],
+    "orthography": "plain",
+    "customs": {
+     "order": "family-first",
+     "surname": "patronymic",
+     "patronym": {
+      "affix": "da",
+      "position": "suffix"
+     },
+     "feminine": "ai",
+     "masculine": "a"
+    }
+   }
+  }
+ ],
+ "rivers": [
+  {
+   "id": "RV0",
+   "name": "Gainaistai",
+   "cells": [
+    13,
+    8,
+    7
+   ],
+   "mouthCell": 7,
+   "dischargeM3s": 420
+  },
+  {
+   "id": "RV1",
+   "name": "Vaipait",
+   "cells": [
+    21,
+    15,
+    9
+   ],
+   "mouthCell": 9,
+   "dischargeM3s": 90
+  }
+ ],
+ "ranges": [
+  {
+   "id": "M0",
+   "name": "Cetcotdot Gaen",
+   "cells": [
+    10,
+    11,
+    16,
+    17,
+    22,
+    23
+   ],
+   "peakCell": 23,
+   "peakM": 2800
+  }
+ ],
+ "roads": [
+  {
+   "id": "RD0",
+   "from": "T0",
+   "to": "T6",
+   "cells": [
+    7,
+    8,
+    9
+   ]
+  }
+ ],
+ "calendar": {
+  "yearDays": 344.994,
+  "leapRuleText": "345 days; drop a day every 161 years",
+  "moons": [
+   {
+    "name": "Sŷgw",
+    "synodicDays": 28.96
+   },
+   {
+    "name": "Siacesisia",
+    "synodicDays": 41.89
+   }
+  ],
+  "monthsPerYear": 11.91,
+  "moonAlignmentDays": 94
+ },
+ "magic": {
+  "name": "the Cosisae",
+  "setting": "fantasy",
+  "hardness": "mostly hard",
+  "source": "consumable substance",
+  "energyBalance": "net gain",
+  "whoCanUse": "anyone who studies",
+  "rarity": "very rare",
+  "acquisition": "study",
+  "learning": "a religious order",
+  "mechanism": "alchemical preparation",
+  "grammar": {
+   "kind": "verb × noun",
+   "verbs": [
+    "Perceive",
+    "Create",
+    "Unravel",
+    "Bind"
+   ],
+   "nouns": [
+    "Shadow",
+    "Mind",
+    "Air",
+    "Plants"
+   ]
+  },
+  "cannotDo": [
+   "affect the user's own body",
+   "raise the dead"
+  ],
+  "weakness": "the focus can be taken or broken",
+  "cost": {
+   "kind": "materials",
+   "concrete": true,
+   "description": "costs a measured quantity of a named material per working"
+  },
+  "backfire": "fizzles harmlessly",
+  "limits": {},
+  "castingTime": "hours",
+  "groupCasting": false,
+  "storable": true,
+  "duration": "while the user concentrates",
+  "reliability": "a matter of skill",
+  "visibility": "obvious",
+  "socialStatus": "tolerated",
+  "organisation": "a church",
+  "economicRole": "a profession",
+  "technology": "replaces it",
+  "militaryRole": "decisive",
+  "lifespanEffect": "none",
+  "abilityOverTime": "a finite store",
+  "origin": "a gift of the gods",
+  "theme": "sacrifice",
+  "balance": [
+   "there are too few of them"
+  ],
+  "spells": [
+   {
+    "name": "Gilded Veil",
+    "effect": "Create Shadow"
+   },
+   {
+    "name": "Weeping Door",
+    "effect": "Unravel Air"
+   },
+   {
+    "name": "Hollow Choir",
+    "effect": "Perceive Shadow"
+   }
+  ],
+  "traditions": [
+   {
+    "cultureId": "R0",
+    "name": "the Ukrekes way",
+    "mechanism": "alchemical preparation",
+    "socialStatus": "tolerated",
+    "organisation": "guilds"
+   },
+   {
+    "cultureId": "R2",
+    "name": "the Zhosske way",
+    "mechanism": "alchemical preparation",
+    "socialStatus": "licensed",
+    "organisation": "families"
+   }
+  ],
+  "rules": [
+   "A hard system needs firm limits: it has things it cannot do and a concrete cost.",
+   "Its limits remove Strengthen the body, Heighten the senses, Awareness (self only), Store and release strength, Spirits from what it can work on.",
+   "One magic, practised differently by each culture (Sanderson's third law)."
+  ]
+ },
+ "hooks": [
+  {
+   "kind": "mountain-pass",
+   "summary": "The road between Staysha and Swanhin climbs to 2668 m crossing the Cetcotdot Gaen: whoever holds the pass controls the trade.",
+   "entityIds": [
+    "RD31",
+    "M0",
+    "T6",
+    "T1"
+   ]
+  },
+  {
+   "kind": "river-border",
+   "summary": "A river marks much of the border between the Vokekuk Principality and the Principality of Vavarsrai; its fords and bridges are the crossings that matter.",
+   "entityIds": [
+    "R0",
+    "R2"
+   ]
+  },
+  {
+   "kind": "wilds",
+   "summary": "About 1,600 km² of alpine and ice around the Cetcotdot Gaen that no realm holds.",
+   "entityIds": [
+    "M0"
+   ]
+  }
+ ],
+ "stats": {
+  "landCells": 18,
+  "realms": 2,
+  "cities": 3,
+  "towns": 5,
+  "ranges": 1,
+  "population": 150000
+ }
+}

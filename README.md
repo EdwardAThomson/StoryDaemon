@@ -324,6 +324,9 @@ novel new <name> --no-interactive [--dir <path>]
 novel new <name> --foundation <yaml_file>         # From YAML file
 novel new <name> --genre <genre> --premise <text> # Command-line args
 
+# Start from a generated world (see "Starting from a worldgen world" below)
+novel new <name> --world <world.json> --no-interactive
+
 # Generate one scene
 novel tick [--project <path>]
 
@@ -333,6 +336,41 @@ novel run --n <count> [--checkpoint-interval 10] [--project <path>]
 # Compile scene summaries
 novel summarize [--project <path>]
 ```
+
+#### Starting from a worldgen world
+
+`--world <path>` seeds a new project from a JSON world written by the
+[world-building](https://github.com/EdwardAThomson/world-building) generator
+(schema `worldgen/sector@0.1`, an SF star sector, or `worldgen/region@0.1`, a
+fantasy region). No LLM is involved in the import; the file is mapped in
+Python (`novel_agent/world_import.py`) and persisted through the normal
+`MemoryManager`/`VectorStore` path, so the planner sees the world exactly as
+it sees entities created during ticks:
+
+- **Region:** each realm becomes a faction (government form, ruler,
+  succession and gender law, population and area, its magic tradition);
+  every city and the largest towns above a population floor become locations
+  (population, realm, biome, river and coast); the magic system, the calendar,
+  each named mountain range and river, and each story hook become lore.
+- **Sector:** each faction becomes a faction (type, tech level, capital,
+  population, fleets, its psionic tradition); every capital's main world and
+  every temperate world become locations (star, gravity, temperature, day and
+  year, plant colour, who holds it); psionics, the FTL model, each chokepoint
+  lane and each story hook become lore.
+
+Ranges and rivers are lore rather than locations because a StoryDaemon
+location is a stage a scene is set on; a 300 km river is something a scene
+refers to. Hooks are lore tagged `hook`: the planner can draw on them, but
+none of them is promoted to the premise.
+
+The foundation's genre and setting default to the world's when you do not
+give them, so `--world region.json --no-interactive` alone yields a project
+that can tick; `--genre`, `--setting`, `--premise`, `--protagonist`, `--tone`
+and the interactive wizard all still win over the world's text. An unknown
+schema or a missing file is refused before any project directory is created.
+The source path and schema are recorded under `world` in `state.json`. How
+many towns or worlds are kept is set by `world.max_towns`,
+`world.town_population_min` and `world.max_worlds` in the config.
 
 ### Project Management Commands
 

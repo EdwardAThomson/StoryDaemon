@@ -1,0 +1,1405 @@
+{
+ "schema": "worldgen/sector@0.1",
+ "params": {
+  "cells": {
+   "x0": 0,
+   "x1": 5,
+   "y0": 0,
+   "y1": 4
+  },
+  "cellSizeLy": 10,
+  "slabThicknessLy": 10,
+  "densityPerLy3": 0.004,
+  "ftl": {
+   "kind": "jump",
+   "maxJumpLy": 7,
+   "daysPerJump": 4
+  },
+  "factionCount": 4,
+  "seed": "demo"
+ },
+ "systems": [
+  {
+   "id": "S2.0.0",
+   "name": "Tânvoum",
+   "position": {
+    "x": 22.039,
+    "y": 8.716,
+    "z": -3.681
+   },
+   "star": {
+    "spectralType": "K2V",
+    "spectralClass": "K",
+    "massSolar": 0.724,
+    "luminositySolar": 0.275,
+    "radiusSolar": 0.772,
+    "temperatureK": 4755.306,
+    "lifetimeGyr": 26.347,
+    "ageGyr": 10.881,
+    "colour": "#ffd2a1",
+    "habitableZoneAU": [
+     0.526,
+     0.961
+    ],
+    "frostLineAU": 2.542
+   },
+   "planets": [
+    {
+     "id": "S2.0.0c",
+     "designation": "Tânvoum c",
+     "kind": "rocky",
+     "orbitAU": 0.622,
+     "eccentricity": 0.078,
+     "yearEarthDays": 210.69,
+     "massEarth": 0.171,
+     "radiusEarth": 0.621,
+     "gravityG": 0.444,
+     "escapeVelocityKmS": 5.873,
+     "equilibriumK": 233.901,
+     "surfaceK": 266.901,
+     "atmosphere": "standard",
+     "retainedGases": [
+      "N2",
+      "O2",
+      "CO2"
+     ],
+     "tidallyLocked": false,
+     "rotationHours": 30.495,
+     "axialTiltDeg": 9.43,
+     "inHabitableZone": true,
+     "habitability": "temperate",
+     "moons": [
+      {
+       "distancePlanetRadii": 46.585,
+       "periodDays": 22.026,
+       "sizeVsLuna": 0.228
+      }
+     ],
+     "plantColour": "red-orange to Earth-like",
+     "calendar": {
+      "solarDayHours": 30.68,
+      "yearLocalDays": 164.816,
+      "baseYearDays": 165,
+      "leapRules": [
+       {
+        "every": 5,
+        "days": -1
+       },
+       {
+        "every": 65,
+        "days": 1
+       },
+       {
+        "every": 1820,
+        "days": 1
+       }
+      ],
+      "driftDaysPer10kYears": 0.033,
+      "months": [
+       {
+        "moonIndex": 0,
+        "synodicLocalDays": 19.242
+       }
+      ],
+      "monthsPerYear": 8.566,
+      "doubleMoonAlignmentYears": null,
+      "seasons": "mild seasons",
+      "leapRuleText": "165 days; drop a day every 5 years, except every 65 years, and add another every 1820 years"
+     },
+     "localName": "Nanstif",
+     "colony": {
+      "kind": "homeworld",
+      "factionId": "F0",
+      "populationMillions": 4420.13,
+      "resources": "Poor",
+      "stability": 78,
+      "governor": {
+       "title": "Colonial Prefect",
+       "name": "Dezvim It Pifhěz"
+      }
+     }
+    },
+    {
+     "id": "S2.0.0e",
+     "designation": "Tânvoum e",
+     "kind": "dwarf",
+     "orbitAU": 3.394,
+     "eccentricity": 0.004,
+     "yearEarthDays": 2683.597,
+     "massEarth": 0.006,
+     "radiusEarth": 0.256,
+     "gravityG": 0.098,
+     "escapeVelocityKmS": 1.773,
+     "equilibriumK": 100.155,
+     "surfaceK": 100.155,
+     "atmosphere": "none",
+     "retainedGases": [],
+     "tidallyLocked": false,
+     "rotationHours": 52.977,
+     "axialTiltDeg": 27.11,
+     "inHabitableZone": false,
+     "habitability": "hostile",
+     "moons": [
+      {
+       "distancePlanetRadii": 17.369,
+       "periodDays": 6.849,
+       "sizeVsLuna": 0.157
+      }
+     ],
+     "colony": {
+      "kind": "outpost",
+      "factionId": "F0",
+      "populationMillions": 8.72,
+      "resources": "Poor",
+      "stability": 81,
+      "governor": {
+       "title": "Planetary Overseer",
+       "name": "Kofpif It Voztěf"
+      }
+     }
+    },
+    {
+     "id": "S2.0.0b",
+     "designation": "Tânvoum b",
+     "kind": "super-earth",
+     "orbitAU": 0.222,
+     "eccentricity": 0.22,
+     "yearEarthDays": 44.953,
+     "massEarth": 2.287,
+     "radiusEarth": 1.25,
+     "gravityG": 1.463,
+     "escapeVelocityKmS": 15.129,
+     "equilibriumK": 391.435,
+     "surfaceK": 424.435,
+     "atmosphere": "standard",
+     "retainedGases": [
+      "H2O",
+      "N2",
+      "O2",
+      "CO2"
+     ],
+     "tidallyLocked": true,
+     "rotationHours": 1078.881,
+     "axialTiltDeg": 1.037,
+     "inHabitableZone": false,
+     "habitability": "hostile",
+     "moons": [],
+     "calendar": {
+      "solarDayHours": null,
+      "yearLocalDays": 44.953,
+      "baseYearDays": 45,
+      "leapRules": [
+       {
+        "every": 21,
+        "days": -1
+       },
+       {
+        "every": 987,
+        "days": 1
+       }
+      ],
+      "driftDaysPer10kYears": -0.096,
+      "months": [],
+      "monthsPerYear": null,
+      "doubleMoonAlignmentYears": null,
+      "seasons": "none: one face always lit, climate fixed by distance from the sub-stellar point",
+      "leapRuleText": "45 days; drop a day every 21 years, except every 987 years"
+     }
+    }
+   ],
+   "ownerFactionId": "F0"
+  },
+  {
+   "id": "S3.1.0",
+   "name": "Bihgob",
+   "position": {
+    "x": 39.832,
+    "y": 19.992,
+    "z": -3.354
+   },
+   "star": {
+    "spectralType": "M4V",
+    "spectralClass": "M",
+    "massSolar": 0.211,
+    "luminositySolar": 0.006,
+    "radiusSolar": 0.288,
+    "temperatureK": 3043.289,
+    "lifetimeGyr": 329.554,
+    "ageGyr": 2.541,
+    "colour": "#ffad51",
+    "habitableZoneAU": [
+     0.083,
+     0.165
+    ],
+    "frostLineAU": 0.388
+   },
+   "planets": [
+    {
+     "id": "S3.1.0d",
+     "designation": "Bihgob d",
+     "kind": "rocky",
+     "orbitAU": 0.088,
+     "eccentricity": 0.057,
+     "yearEarthDays": 20.784,
+     "massEarth": 0.257,
+     "radiusEarth": 0.693,
+     "gravityG": 0.536,
+     "escapeVelocityKmS": 6.817,
+     "equilibriumK": 242.85,
+     "surfaceK": 275.85,
+     "atmosphere": "standard",
+     "retainedGases": [
+      "N2",
+      "O2",
+      "CO2"
+     ],
+     "tidallyLocked": true,
+     "rotationHours": 498.824,
+     "axialTiltDeg": 1.107,
+     "inHabitableZone": true,
+     "habitability": "temperate",
+     "moons": [],
+     "plantColour": "near-black (absorbs near-infrared)",
+     "calendar": {
+      "solarDayHours": null,
+      "yearLocalDays": 20.784,
+      "baseYearDays": 21,
+      "leapRules": [
+       {
+        "every": 5,
+        "days": -1
+       },
+       {
+        "every": 65,
+        "days": -1
+       },
+       {
+        "every": 3315,
+        "days": -1
+       }
+      ],
+      "driftDaysPer10kYears": 0.009,
+      "months": [],
+      "monthsPerYear": null,
+      "doubleMoonAlignmentYears": null,
+      "seasons": "none: one face always lit, climate fixed by distance from the sub-stellar point",
+      "leapRuleText": "21 days; drop a day every 5 years, and drop another every 65 years, and drop another every 3315 years"
+     }
+    },
+    {
+     "id": "S3.1.0b",
+     "designation": "Bihgob b",
+     "kind": "rocky",
+     "orbitAU": 0.023,
+     "eccentricity": 0.009,
+     "yearEarthDays": 2.758,
+     "massEarth": 0.489,
+     "radiusEarth": 0.824,
+     "gravityG": 0.72,
+     "escapeVelocityKmS": 8.615,
+     "equilibriumK": 476.136,
+     "surfaceK": 509.136,
+     "atmosphere": "standard",
+     "retainedGases": [
+      "N2",
+      "O2",
+      "CO2"
+     ],
+     "tidallyLocked": true,
+     "rotationHours": 66.186,
+     "axialTiltDeg": 2.192,
+     "inHabitableZone": false,
+     "habitability": "hostile",
+     "moons": [],
+     "calendar": {
+      "solarDayHours": null,
+      "yearLocalDays": 2.758,
+      "baseYearDays": 3,
+      "leapRules": [
+       {
+        "every": 4,
+        "days": -1
+       },
+       {
+        "every": 128,
+        "days": 1
+       }
+      ],
+      "driftDaysPer10kYears": -0.69,
+      "months": [],
+      "monthsPerYear": null,
+      "doubleMoonAlignmentYears": null,
+      "seasons": "none: one face always lit, climate fixed by distance from the sub-stellar point",
+      "leapRuleText": "3 days; drop a day every 4 years, except every 128 years"
+     }
+    }
+   ],
+   "ownerFactionId": null
+  },
+  {
+   "id": "S4.2.0",
+   "name": "Mouzmouz",
+   "position": {
+    "x": 46.315,
+    "y": 27.483,
+    "z": 1.834
+   },
+   "star": {
+    "spectralType": "A8V",
+    "spectralClass": "A",
+    "massSolar": 1.545,
+    "luminositySolar": 5.694,
+    "radiusSolar": 1.281,
+    "temperatureK": 7877.024,
+    "lifetimeGyr": 2.713,
+    "ageGyr": 2.687,
+    "colour": "#cad7ff",
+    "habitableZoneAU": [
+     2.096,
+     3.615
+    ],
+    "frostLineAU": 11.573
+   },
+   "planets": [
+    {
+     "id": "S4.2.0d",
+     "designation": "Mouzmouz d",
+     "kind": "rocky",
+     "orbitAU": 1.734,
+     "eccentricity": 0.064,
+     "yearEarthDays": 671.249,
+     "massEarth": 0.103,
+     "radiusEarth": 0.541,
+     "gravityG": 0.351,
+     "escapeVelocityKmS": 4.871,
+     "equilibriumK": 298.911,
+     "surfaceK": 298.911,
+     "atmosphere": "none",
+     "retainedGases": [],
+     "tidallyLocked": false,
+     "rotationHours": 25.375,
+     "axialTiltDeg": 16.104,
+     "inHabitableZone": false,
+     "habitability": "hostile",
+     "moons": [
+      {
+       "distancePlanetRadii": 46.62,
+       "periodDays": 23.15,
+       "sizeVsLuna": 0.554
+      }
+     ],
+     "calendar": {
+      "solarDayHours": 25.415,
+      "yearLocalDays": 633.87,
+      "baseYearDays": 634,
+      "leapRules": [
+       {
+        "every": 8,
+        "days": -1
+       },
+       {
+        "every": 224,
+        "days": -1
+       }
+      ],
+      "driftDaysPer10kYears": -0.59,
+      "months": [
+       {
+        "moonIndex": 0,
+        "synodicLocalDays": 22.641
+       }
+      ],
+      "monthsPerYear": 27.996,
+      "doubleMoonAlignmentYears": null,
+      "seasons": "Earth-like seasons",
+      "leapRuleText": "634 days; drop a day every 8 years, and drop another every 224 years"
+     },
+     "colony": {
+      "kind": "outpost",
+      "factionId": "F2",
+      "populationMillions": 0.58,
+      "resources": "Moderate",
+      "stability": 64,
+      "governor": {
+       "title": "Trade Zone Director",
+       "name": "Kufpekbaile Niaktiafrish"
+      }
+     }
+    },
+    {
+     "id": "S4.2.0f",
+     "designation": "Mouzmouz f",
+     "kind": "super-earth",
+     "orbitAU": 4.716,
+     "eccentricity": 0.013,
+     "yearEarthDays": 3009.888,
+     "massEarth": 2.94,
+     "radiusEarth": 1.338,
+     "gravityG": 1.642,
+     "escapeVelocityKmS": 16.582,
+     "equilibriumK": 181.268,
+     "surfaceK": 214.268,
+     "atmosphere": "standard",
+     "retainedGases": [
+      "He",
+      "H2O",
+      "N2",
+      "O2",
+      "CO2"
+     ],
+     "tidallyLocked": false,
+     "rotationHours": 11.781,
+     "axialTiltDeg": 26.123,
+     "inHabitableZone": false,
+     "habitability": "hostile",
+     "moons": [],
+     "calendar": {
+      "solarDayHours": 11.783,
+      "yearLocalDays": 6130.643,
+      "baseYearDays": 6131,
+      "leapRules": [
+       {
+        "every": 3,
+        "days": -1
+       },
+       {
+        "every": 42,
+        "days": -1
+       },
+       {
+        "every": 2058,
+        "days": 1
+       }
+      ],
+      "driftDaysPer10kYears": 0.045,
+      "months": [],
+      "monthsPerYear": null,
+      "doubleMoonAlignmentYears": null,
+      "seasons": "Earth-like seasons",
+      "leapRuleText": "6131 days; drop a day every 3 years, and drop another every 42 years, except every 2058 years"
+     },
+     "colony": {
+      "kind": "outpost",
+      "factionId": "F2",
+      "populationMillions": 0.61,
+      "resources": "Rich",
+      "stability": 50,
+      "governor": {
+       "title": "Trade Zone Director",
+       "name": "Nemgeve Hikpubsithrish"
+      }
+     }
+    },
+    {
+     "id": "S4.2.0g",
+     "designation": "Mouzmouz g",
+     "kind": "super-earth",
+     "orbitAU": 8.955,
+     "eccentricity": 0.005,
+     "yearEarthDays": 7875.38,
+     "massEarth": 2.867,
+     "radiusEarth": 1.329,
+     "gravityG": 1.623,
+     "escapeVelocityKmS": 16.43,
+     "equilibriumK": 131.547,
+     "surfaceK": 131.547,
+     "atmosphere": "hydrogen",
+     "retainedGases": [
+      "H2",
+      "He",
+      "H2O",
+      "N2",
+      "O2",
+      "CO2"
+     ],
+     "tidallyLocked": false,
+     "rotationHours": 15.097,
+     "axialTiltDeg": 15.292,
+     "inHabitableZone": false,
+     "habitability": "hostile",
+     "moons": [
+      {
+       "distancePlanetRadii": 29.892,
+       "periodDays": 8.661,
+       "sizeVsLuna": 0.684
+      }
+     ],
+     "calendar": {
+      "solarDayHours": 15.099,
+      "yearLocalDays": 12518.315,
+      "baseYearDays": 12518,
+      "leapRules": [
+       {
+        "every": 3,
+        "days": 1
+       },
+       {
+        "every": 57,
+        "days": -1
+       },
+       {
+        "every": 2679,
+        "days": -1
+       }
+      ],
+      "driftDaysPer10kYears": -0.034,
+      "months": [
+       {
+        "moonIndex": 1,
+        "synodicLocalDays": 44.812
+       },
+       {
+        "moonIndex": 0,
+        "synodicLocalDays": 13.783
+       }
+      ],
+      "monthsPerYear": 279.35,
+      "doubleMoonAlignmentYears": 0.014,
+      "seasons": "Earth-like seasons",
+      "leapRuleText": "12518 days; add a day every 3 years, except every 57 years, and drop another every 2679 years"
+     },
+     "colony": {
+      "kind": "outpost",
+      "factionId": "F2",
+      "populationMillions": 0.16,
+      "resources": "Poor",
+      "stability": 73,
+      "governor": {
+       "title": "Trade Zone Director",
+       "name": "Gevnaskuge Nasmuvrish"
+      }
+     }
+    },
+    {
+     "id": "S4.2.0h",
+     "designation": "Mouzmouz h",
+     "kind": "dwarf",
+     "orbitAU": 14.06,
+     "eccentricity": 0.002,
+     "yearEarthDays": 15493.417,
+     "massEarth": 0.021,
+     "radiusEarth": 0.351,
+     "gravityG": 0.168,
+     "escapeVelocityKmS": 2.713,
+     "equilibriumK": 104.983,
+     "surfaceK": 104.983,
+     "atmosphere": "none",
+     "retainedGases": [],
+     "tidallyLocked": false,
+     "rotationHours": 16.955,
+     "axialTiltDeg": 28.431,
+     "inHabitableZone": false,
+     "habitability": "hostile",
+     "moons": [
+      {
+       "distancePlanetRadii": 30.367,
+       "periodDays": 14.173,
+       "sizeVsLuna": 0.332
+      }
+     ],
+     "colony": {
+      "kind": "outpost",
+      "factionId": "F2",
+      "populationMillions": 0.58,
+      "resources": "Scarce",
+      "stability": 52,
+      "governor": {
+       "title": "Commerce Regent",
+       "name": "Ruslupe Pekhuigpubrish"
+      }
+     }
+    },
+    {
+     "id": "S4.2.0i",
+     "designation": "Mouzmouz i",
+     "kind": "dwarf",
+     "orbitAU": 25.365,
+     "eccentricity": 0.017,
+     "yearEarthDays": 37540.438,
+     "massEarth": 0.012,
+     "radiusEarth": 0.302,
+     "gravityG": 0.13,
+     "escapeVelocityKmS": 2.215,
+     "equilibriumK": 78.163,
+     "surfaceK": 78.163,
+     "atmosphere": "none",
+     "retainedGases": [],
+     "tidallyLocked": false,
+     "rotationHours": 20.988,
+     "axialTiltDeg": 33.404,
+     "inHabitableZone": false,
+     "habitability": "hostile",
+     "moons": [],
+     "colony": {
+      "kind": "outpost",
+      "factionId": "F2",
+      "populationMillions": 0.19,
+      "resources": "Moderate",
+      "stability": 77,
+      "governor": {
+       "title": "Trade Port Governor",
+       "name": "Reushkeugr Gevkeugrish"
+      }
+     }
+    },
+    {
+     "id": "S4.2.0b",
+     "designation": "Mouzmouz b",
+     "kind": "super-earth",
+     "orbitAU": 0.377,
+     "eccentricity": 0.002,
+     "yearEarthDays": 68.032,
+     "massEarth": 4.21,
+     "radiusEarth": 1.474,
+     "gravityG": 1.937,
+     "escapeVelocityKmS": 18.903,
+     "equilibriumK": 641.11,
+     "surfaceK": 761.11,
+     "atmosphere": "dense",
+     "retainedGases": [
+      "H2O",
+      "N2",
+      "O2",
+      "CO2"
+     ],
+     "tidallyLocked": true,
+     "rotationHours": 1632.765,
+     "axialTiltDeg": 2.98,
+     "inHabitableZone": false,
+     "habitability": "hostile",
+     "moons": [],
+     "calendar": {
+      "solarDayHours": null,
+      "yearLocalDays": 68.032,
+      "baseYearDays": 68,
+      "leapRules": [
+       {
+        "every": 31,
+        "days": 1
+       },
+       {
+        "every": 2573,
+        "days": -1
+       }
+      ],
+      "driftDaysPer10kYears": 0.01,
+      "months": [],
+      "monthsPerYear": null,
+      "doubleMoonAlignmentYears": null,
+      "seasons": "none: one face always lit, climate fixed by distance from the sub-stellar point",
+      "leapRuleText": "68 days; add a day every 31 years, except every 2573 years"
+     }
+    }
+   ],
+   "ownerFactionId": "F2"
+  },
+  {
+   "id": "S5.2.1",
+   "name": "Pizchih",
+   "position": {
+    "x": 51.718,
+    "y": 27.791,
+    "z": 2.829
+   },
+   "star": {
+    "spectralType": "M7V",
+    "spectralClass": "M",
+    "massSolar": 0.092,
+    "luminositySolar": 0.001,
+    "radiusSolar": 0.148,
+    "temperatureK": 2633.046,
+    "lifetimeGyr": 966.209,
+    "ageGyr": 10.122,
+    "colour": "#ffad51",
+    "habitableZoneAU": [
+     0.032,
+     0.065
+    ],
+    "frostLineAU": 0.15
+   },
+   "planets": [
+    {
+     "id": "S5.2.1b",
+     "designation": "Pizchih b",
+     "kind": "rocky",
+     "orbitAU": 0.036,
+     "eccentricity": 0.249,
+     "yearEarthDays": 8.091,
+     "massEarth": 0.346,
+     "radiusEarth": 0.751,
+     "gravityG": 0.614,
+     "escapeVelocityKmS": 7.597,
+     "equilibriumK": 237.235,
+     "surfaceK": 270.235,
+     "atmosphere": "standard",
+     "retainedGases": [
+      "H2O",
+      "N2",
+      "O2",
+      "CO2"
+     ],
+     "tidallyLocked": true,
+     "rotationHours": 194.192,
+     "axialTiltDeg": 2.752,
+     "inHabitableZone": true,
+     "habitability": "temperate",
+     "moons": [],
+     "plantColour": "near-black (absorbs near-infrared)",
+     "calendar": {
+      "solarDayHours": null,
+      "yearLocalDays": 8.091,
+      "baseYearDays": 8,
+      "leapRules": [
+       {
+        "every": 11,
+        "days": 1
+       },
+       {
+        "every": 2398,
+        "days": 1
+       }
+      ],
+      "driftDaysPer10kYears": -0.008,
+      "months": [],
+      "monthsPerYear": null,
+      "doubleMoonAlignmentYears": null,
+      "seasons": "none: one face always lit, climate fixed by distance from the sub-stellar point",
+      "leapRuleText": "8 days; add a day every 11 years, and add another every 2398 years"
+     },
+     "localName": "Hiehhin",
+     "colony": {
+      "kind": "colony",
+      "factionId": "F2",
+      "populationMillions": 527.38,
+      "resources": "Moderate",
+      "stability": 98,
+      "governor": {
+       "title": "Trade Port Governor",
+       "name": "Sibmebe Nakpekhiehrish"
+      }
+     }
+    },
+    {
+     "id": "S5.2.1c",
+     "designation": "Pizchih c",
+     "kind": "rocky",
+     "orbitAU": 0.051,
+     "eccentricity": 0.022,
+     "yearEarthDays": 14.022,
+     "massEarth": 0.515,
+     "radiusEarth": 0.836,
+     "gravityG": 0.737,
+     "escapeVelocityKmS": 8.78,
+     "equilibriumK": 197.508,
+     "surfaceK": 230.508,
+     "atmosphere": "standard",
+     "retainedGases": [
+      "H2O",
+      "N2",
+      "O2",
+      "CO2"
+     ],
+     "tidallyLocked": true,
+     "rotationHours": 336.522,
+     "axialTiltDeg": 0.599,
+     "inHabitableZone": true,
+     "habitability": "marginal",
+     "moons": [],
+     "plantColour": "near-black (absorbs near-infrared)",
+     "calendar": {
+      "solarDayHours": null,
+      "yearLocalDays": 14.022,
+      "baseYearDays": 14,
+      "leapRules": [
+       {
+        "every": 46,
+        "days": 1
+       }
+      ],
+      "driftDaysPer10kYears": 0.132,
+      "months": [],
+      "monthsPerYear": null,
+      "doubleMoonAlignmentYears": null,
+      "seasons": "none: one face always lit, climate fixed by distance from the sub-stellar point",
+      "leapRuleText": "14 days; add a day every 46 years"
+     },
+     "localName": "Fimturthes",
+     "colony": {
+      "kind": "colony",
+      "factionId": "F2",
+      "populationMillions": 563.59,
+      "resources": "Moderate",
+      "stability": 80,
+      "governor": {
+       "title": "Trade Port Governor",
+       "name": "Keugnase Nakpevhuigrish"
+      }
+     }
+    },
+    {
+     "id": "S5.2.1d",
+     "designation": "Pizchih d",
+     "kind": "dwarf",
+     "orbitAU": 0.089,
+     "eccentricity": 0.013,
+     "yearEarthDays": 31.877,
+     "massEarth": 0.052,
+     "radiusEarth": 0.451,
+     "gravityG": 0.258,
+     "escapeVelocityKmS": 3.813,
+     "equilibriumK": 150.208,
+     "surfaceK": 152.208,
+     "atmosphere": "trace",
+     "retainedGases": [
+      "CO2"
+     ],
+     "tidallyLocked": true,
+     "rotationHours": 765.038,
+     "axialTiltDeg": 2.962,
+     "inHabitableZone": false,
+     "habitability": "hostile",
+     "moons": []
+    }
+   ],
+   "ownerFactionId": "F2"
+  },
+  {
+   "id": "S5.2.5",
+   "name": "Regfih",
+   "position": {
+    "x": 56.493,
+    "y": 20.67,
+    "z": 3.14
+   },
+   "star": {
+    "spectralType": "G7V",
+    "spectralClass": "G",
+    "massSolar": 0.903,
+    "luminositySolar": 0.665,
+    "radiusSolar": 0.922,
+    "temperatureK": 5429.395,
+    "lifetimeGyr": 13.579,
+    "ageGyr": 2.505,
+    "colour": "#fff4ea",
+    "habitableZoneAU": [
+     0.791,
+     1.41
+    ],
+    "frostLineAU": 3.955
+   },
+   "planets": [
+    {
+     "id": "S5.2.5c",
+     "designation": "Regfih c",
+     "kind": "rocky",
+     "orbitAU": 0.847,
+     "eccentricity": 0.074,
+     "yearEarthDays": 299.692,
+     "massEarth": 0.922,
+     "radiusEarth": 0.978,
+     "gravityG": 0.963,
+     "escapeVelocityKmS": 10.858,
+     "equilibriumK": 250.025,
+     "surfaceK": 283.025,
+     "atmosphere": "standard",
+     "retainedGases": [
+      "H2O",
+      "N2",
+      "O2",
+      "CO2"
+     ],
+     "tidallyLocked": false,
+     "rotationHours": 22.506,
+     "axialTiltDeg": 9.832,
+     "inHabitableZone": true,
+     "habitability": "temperate",
+     "moons": [
+      {
+       "distancePlanetRadii": 27.309,
+       "periodDays": 8.425,
+       "sizeVsLuna": 0.526
+      }
+     ],
+     "plantColour": "green, as on Earth",
+     "calendar": {
+      "solarDayHours": 22.577,
+      "yearLocalDays": 318.58,
+      "baseYearDays": 319,
+      "leapRules": [
+       {
+        "every": 2,
+        "days": -1
+       },
+       {
+        "every": 12,
+        "days": 1
+       },
+       {
+        "every": 324,
+        "days": -1
+       }
+      ],
+      "driftDaysPer10kYears": 0.157,
+      "months": [
+       {
+        "moonIndex": 0,
+        "synodicLocalDays": 9.215
+       },
+       {
+        "moonIndex": 1,
+        "synodicLocalDays": 16.346
+       }
+      ],
+      "monthsPerYear": 34.573,
+      "doubleMoonAlignmentYears": 0.202,
+      "seasons": "mild seasons",
+      "leapRuleText": "319 days; drop a day every 2 years, except every 12 years, except every 324 years"
+     },
+     "localName": "Nemramgiap",
+     "colony": {
+      "kind": "homeworld",
+      "factionId": "F2",
+      "populationMillions": 5759.76,
+      "resources": "Rich",
+      "stability": 78,
+      "governor": {
+       "title": "Market Administrator",
+       "name": "Gevmaiffabr Lupnaskeugrish"
+      }
+     }
+    },
+    {
+     "id": "S5.2.5d",
+     "designation": "Regfih d",
+     "kind": "rocky",
+     "orbitAU": 1.333,
+     "eccentricity": 0.003,
+     "yearEarthDays": 591.716,
+     "massEarth": 0.116,
+     "radiusEarth": 0.559,
+     "gravityG": 0.372,
+     "escapeVelocityKmS": 5.1,
+     "equilibriumK": 199.299,
+     "surfaceK": 232.299,
+     "atmosphere": "standard",
+     "retainedGases": [
+      "N2",
+      "O2",
+      "CO2"
+     ],
+     "tidallyLocked": false,
+     "rotationHours": 12.891,
+     "axialTiltDeg": 20.545,
+     "inHabitableZone": true,
+     "habitability": "marginal",
+     "moons": [
+      {
+       "distancePlanetRadii": 19.289,
+       "periodDays": 6.088,
+       "sizeVsLuna": 0.072
+      }
+     ],
+     "plantColour": "green, as on Earth",
+     "calendar": {
+      "solarDayHours": 12.903,
+      "yearLocalDays": 1100.61,
+      "baseYearDays": 1101,
+      "leapRules": [
+       {
+        "every": 3,
+        "days": -1
+       },
+       {
+        "every": 18,
+        "days": -1
+       },
+       {
+        "every": 648,
+        "days": -1
+       }
+      ],
+      "driftDaysPer10kYears": -0.129,
+      "months": [],
+      "monthsPerYear": null,
+      "doubleMoonAlignmentYears": null,
+      "seasons": "Earth-like seasons",
+      "leapRuleText": "1101 days; drop a day every 3 years, and drop another every 18 years, and drop another every 648 years"
+     },
+     "localName": "Mebpek",
+     "colony": {
+      "kind": "colony",
+      "factionId": "F2",
+      "populationMillions": 176.16,
+      "resources": "Moderate",
+      "stability": 81,
+      "governor": {
+       "title": "Market Administrator",
+       "name": "Ninmebr Keugnemfehrish"
+      }
+     }
+    },
+    {
+     "id": "S5.2.5g",
+     "designation": "Regfih g",
+     "kind": "ice-giant",
+     "orbitAU": 8.282,
+     "eccentricity": 0.004,
+     "yearEarthDays": 9161.483,
+     "massEarth": 12.367,
+     "radiusEarth": 3.545,
+     "gravityG": 0.984,
+     "escapeVelocityKmS": 20.893,
+     "equilibriumK": 80.247,
+     "surfaceK": 80.247,
+     "atmosphere": "hydrogen",
+     "retainedGases": [
+      "H2",
+      "He",
+      "H2O",
+      "N2",
+      "O2",
+      "CO2"
+     ],
+     "tidallyLocked": false,
+     "rotationHours": 12.416,
+     "axialTiltDeg": 43.515,
+     "inHabitableZone": false,
+     "habitability": "hostile",
+     "moons": [
+      {
+       "distancePlanetRadii": 9.149,
+       "periodDays": 3.076,
+       "sizeVsLuna": 0.053
+      }
+     ],
+     "colony": {
+      "kind": "outpost",
+      "factionId": "F2",
+      "populationMillions": 16.52,
+      "resources": "Moderate",
+      "stability": 72,
+      "governor": {
+       "title": "Market Administrator",
+       "name": "Pethpubmatr Nasthielrish"
+      }
+     }
+    },
+    {
+     "id": "S5.2.5b",
+     "designation": "Regfih b",
+     "kind": "dwarf",
+     "orbitAU": 0.283,
+     "eccentricity": 0.031,
+     "yearEarthDays": 57.853,
+     "massEarth": 0.042,
+     "radiusEarth": 0.424,
+     "gravityG": 0.231,
+     "escapeVelocityKmS": 3.502,
+     "equilibriumK": 432.614,
+     "surfaceK": 432.614,
+     "atmosphere": "none",
+     "retainedGases": [],
+     "tidallyLocked": true,
+     "rotationHours": 1388.472,
+     "axialTiltDeg": 2.039,
+     "inHabitableZone": false,
+     "habitability": "hostile",
+     "moons": [
+      {
+       "distancePlanetRadii": 18.665,
+       "periodDays": 6.39,
+       "sizeVsLuna": 0.078
+      }
+     ]
+    }
+   ],
+   "ownerFactionId": "F2"
+  }
+ ],
+ "lanes": [
+  {
+   "id": "L121",
+   "a": "S4.2.0",
+   "b": "S5.2.1",
+   "distanceLy": 5.503,
+   "travelDays": 4,
+   "bridge": true,
+   "chokepoint": true
+  }
+ ],
+ "factions": [
+  {
+   "id": "F0",
+   "name": "Pefsnuv Imperium",
+   "type": "Militaristic Empire",
+   "traits": [
+    "aggressive",
+    "expansionist",
+    "strict hierarchy"
+   ],
+   "capitalSystemId": "S2.0.0",
+   "homeworldId": "S2.0.0c",
+   "systemIds": [
+    "S2.0.0"
+   ],
+   "language": {
+    "id": "F0",
+    "sounds": "english-ish",
+    "vowels": "extra a e i",
+    "structure": "S?CVC",
+    "sample": [
+     "Dosšit",
+     "Veškuz",
+     "Vešthug",
+     "Srěvpif",
+     "Vulpif"
+    ]
+   },
+   "military": {
+    "techLevel": 3,
+    "techLevelName": "Interstellar",
+    "populationMillions": 15364,
+    "ships": {
+     "capital": 3,
+     "cruiser": 8,
+     "frigate": 24,
+     "corvette": 37,
+     "support": 61
+    },
+    "personnel": {
+     "fleet": 156940,
+     "activeGround": 963305454,
+     "reservists": 1813536099,
+     "planetaryDefence": 1446061502,
+     "support": 37246363,
+     "elite": 19266109
+    }
+   }
+  },
+  {
+   "id": "F2",
+   "name": "Pekfus Exchange",
+   "type": "Trade Federation",
+   "traits": [
+    "mercantile",
+    "diplomatic",
+    "free market"
+   ],
+   "capitalSystemId": "S5.2.5",
+   "homeworldId": "S5.2.5c",
+   "systemIds": [
+    "S4.2.0",
+    "S5.2.1",
+    "S5.2.5"
+   ],
+   "language": {
+    "id": "F2",
+    "sounds": "english-ish",
+    "vowels": "standard 5",
+    "structure": "CVV?C",
+    "sample": [
+     "Rirbiem",
+     "Kinpeth",
+     "Lupnemmim",
+     "Fuhpub",
+     "Meivmitbib"
+    ]
+   },
+   "military": {
+    "techLevel": 3,
+    "techLevelName": "Interstellar",
+    "populationMillions": 12733,
+    "ships": {
+     "capital": 1,
+     "cruiser": 4,
+     "frigate": 14,
+     "corvette": 16,
+     "support": 25
+    },
+    "personnel": {
+     "fleet": 60720,
+     "activeGround": 435145411,
+     "reservists": 2059198618,
+     "planetaryDefence": 1084915742,
+     "support": 30946235,
+     "elite": 8702908
+    }
+   }
+  }
+ ],
+ "fleets": [
+  {
+   "id": "F0.FL0",
+   "name": "Home Fleet",
+   "factionId": "F0",
+   "role": "home defence",
+   "stationSystemId": "S2.0.0",
+   "ships": {
+    "capital": 2,
+    "cruiser": 4,
+    "frigate": 12,
+    "corvette": 19,
+    "support": 31
+   },
+   "flagship": "Fatsaz",
+   "commander": {
+    "title": "Fleet Admiral",
+    "name": "Vimpěf It Siršuh"
+   }
+  },
+  {
+   "id": "F2.FL0",
+   "name": "Home Fleet",
+   "factionId": "F2",
+   "role": "home defence",
+   "stationSystemId": "S5.2.5",
+   "ships": {
+    "capital": 1,
+    "cruiser": 3,
+    "frigate": 10,
+    "corvette": 11,
+    "support": 17
+   },
+   "flagship": "Guefmeb",
+   "commander": {
+    "title": "Trade Fleet Admiral",
+    "name": "Mahfihsiute Huigvuprish"
+   }
+  }
+ ],
+ "psionics": {
+  "name": "the Mibstaz",
+  "setting": "sf",
+  "hardness": "hard",
+  "source": "mutation",
+  "energyBalance": "net zero",
+  "whoCanUse": "those born with the trait",
+  "rarity": "common",
+  "acquisition": "born",
+  "learning": "self-teaching, often disastrously",
+  "mechanism": "an implanted focus",
+  "grammar": {
+   "kind": "discrete powers",
+   "powers": [
+    "Telekinesis",
+    "Teleportation",
+    "Biokinesis",
+    "Awareness (self only)",
+    "Clairvoyance"
+   ]
+  },
+  "cannotDo": [
+   "create something from nothing",
+   "touch minds",
+   "affect time"
+  ],
+  "weakness": "the focus can be taken or broken",
+  "cost": {
+   "kind": "fatigue",
+   "concrete": true,
+   "description": "costs a set amount of stamina per working, measured and known"
+  },
+  "backfire": "burnout: overreach can strip the gift",
+  "limits": {},
+  "castingTime": "seconds",
+  "groupCasting": false,
+  "storable": false,
+  "duration": "a fixed span",
+  "reliability": "a matter of skill",
+  "visibility": "leaves traces that can be read later",
+  "socialStatus": "stigmatised",
+  "organisation": "guilds",
+  "economicRole": "niche",
+  "technology": "is studied by it",
+  "militaryRole": "support and scouting",
+  "lifespanEffect": "none",
+  "abilityOverTime": "fixed at birth",
+  "origin": "unknown",
+  "theme": "the cost of power",
+  "balance": [
+   "society keeps them in check (stigmatised)",
+   "what it can do is narrow"
+  ],
+  "spells": [
+   {
+    "name": "Hidden Choir",
+    "effect": "Telekinesis"
+   },
+   {
+    "name": "Burning Mirror",
+    "effect": "Clairvoyance"
+   }
+  ],
+  "traditions": [
+   {
+    "cultureId": "F0",
+    "name": "the Zatveš way",
+    "mechanism": "implants",
+    "socialStatus": "revered",
+    "organisation": "families"
+   },
+   {
+    "cultureId": "F2",
+    "name": "the Reabsih way",
+    "mechanism": "an implanted focus",
+    "socialStatus": "stigmatised",
+    "organisation": "underground cells"
+   }
+  ],
+  "rules": [
+   "Untrained users are a danger to themselves and others (Wrede).",
+   "A hard system needs firm limits: it has things it cannot do and a concrete cost.",
+   "Its limits remove Mind, Telepathy, Soothe emotions, Inflame emotions, Time, Precognition, Glimpse the near future, Slow time locally, Speed time locally, See echoes of the past from what it can work on.",
+   "One magic, practised differently by each culture (Sanderson's third law)."
+  ]
+ },
+ "hooks": [
+  {
+   "kind": "chokepoint",
+   "summary": "The Mouzmouz–Pizchih lane is the only route between two regions (98 and 8 systems). Pekfus Exchange holds both ends.",
+   "entityIds": [
+    "L121",
+    "S4.2.0",
+    "S5.2.1"
+   ]
+  },
+  {
+   "kind": "contested-world",
+   "summary": "Bihgob d is a temperate world no faction holds yet, in a cluster no faction's lanes connect to.",
+   "entityIds": [
+    "S3.1.0",
+    "S3.1.0d"
+   ]
+  },
+  {
+   "kind": "dying-star",
+   "summary": "Mouzmouz is near the end of its main sequence and will swell within a few million years.",
+   "entityIds": [
+    "S4.2.0"
+   ]
+  },
+  {
+   "kind": "double-moon",
+   "summary": "Nemramgiap's two largest moons align every 0.2 local years.",
+   "entityIds": [
+    "S5.2.5c"
+   ]
+  },
+  {
+   "kind": "unguarded-chokepoint",
+   "summary": "Pekfus Exchange holds the Mouzmouz–Pizchih chokepoint but stations no fleet at either end.",
+   "entityIds": [
+    "L121",
+    "F2"
+   ]
+  }
+ ],
+ "stats": {
+  "systems": 5,
+  "lanes": 1,
+  "chokepoints": 1,
+  "temperateWorlds": 4,
+  "fleets": 2,
+  "populationMillions": 28097
+ }
+}
