@@ -731,7 +731,7 @@ FACT_EXTRACTION_PROMPT_TEMPLATE = """Extract structured updates from this scene.
 Scene: {scene_text}
 
 POV: {pov_character_id} | Location: {location_id}
-
+{entity_roster}
 Open Loops: {existing_open_loops}
 
 Return ONLY JSON with these updates:
@@ -786,7 +786,7 @@ Return ONLY JSON with these updates:
 ```
 
 Rules: Use null for no change. Only extract what's clearly shown. For lists, only include NEW items. Use ONLY the exact zero-padded IDs given in context (e.g. C000, L000); never invent new IDs or abbreviate them (e.g. do not shorten C000 to C0).
-{loop_creation_rules}"""
+{loop_creation_rules}{status_change_rules}"""
 
 
 def format_planner_prompt(context: dict) -> str:
@@ -824,6 +824,12 @@ def format_fact_extraction_prompt(context: dict) -> str:
     Returns:
         Formatted prompt string
     """
+    # The roster and the status-change rules came later; callers that predate
+    # them render without (the rules are also "" when coherence.entity_status
+    # is off).
+    context = dict(context)
+    context.setdefault("entity_roster", "")
+    context.setdefault("status_change_rules", "")
     return FACT_EXTRACTION_PROMPT_TEMPLATE.format(**context)
 
 
@@ -870,7 +876,7 @@ Tone: {tone}
 ## Open loops
 {open_loops}
 
-## Recent scenes (most recent last)
+{story_so_far_section}## Recent scenes (most recent last)
 {recent_scenes}
 
 ## Recent tension history
@@ -891,6 +897,7 @@ Each beat must follow these constraints:
 - Favor concrete external actions and observable changes over vague summaries or internal monologue.
 - The "plot_threads" field should list at most 3 concise thread names per beat; pick only the most relevant threads.
 - For "characters_involved" and "location", use ONLY the exact IDs listed in the Characters and Locations sections above (for example C000, L000). Never invent new IDs or abbreviate them; omit the field or use an empty list if no existing entity fits.
+- A character marked (deceased) or (missing) can no longer appear: never list them in "characters_involved". A location marked (destroyed) exists only as ruins or wreckage, and one marked (inaccessible) cannot be entered.
 - For "resolves_loops" and "advances_loops", use ONLY the bare loop IDs from the Open loops section (for example ["OL4"]). Do not append the loop's description or invent new loop IDs.
 - Put a loop ID in "resolves_loops" ONLY if this beat's scene will ANSWER that loop ON THE PAGE: the reader learns the answer, or the matter concludes. If the beat merely moves a loop forward (engages it, raises its stakes, works toward it) without answering it, put its ID in "advances_loops" instead.{thread_rule}
 
@@ -926,6 +933,7 @@ def format_plot_generation_prompt(context: dict) -> str:
     context.setdefault("thread_section", "")
     context.setdefault("thread_schema_example", "")
     context.setdefault("thread_rule", "")
+    context.setdefault("story_so_far_section", "")
     return PLOT_GENERATION_PROMPT_TEMPLATE.format(**context)
 
 

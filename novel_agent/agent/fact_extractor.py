@@ -5,6 +5,7 @@ import logging
 from typing import Dict, Any, List, Optional
 
 from .prompts import format_fact_extraction_prompt, loop_creation_rules
+from .consequences import status_change_rules
 
 logger = logging.getLogger(__name__)
 
@@ -116,10 +117,31 @@ class FactExtractor:
             # Empty string when coherence.loop_scene_local_filter is off, which
             # restores the pre-L2a prompt byte for byte.
             'loop_creation_rules': loop_creation_rules(self.config),
+            # Every character and location with its exact id, so an update
+            # (or a death) of anyone besides the POV need not guess an id.
+            'entity_roster': self._entity_roster(),
+            # Deaths and destruction (agent/consequences.py); "" when
+            # coherence.entity_status is off.
+            'status_change_rules': status_change_rules(self.config),
         }
         
         return format_fact_extraction_prompt(prompt_context)
     
+    def _entity_roster(self) -> str:
+        """Characters and locations with exact ids, or "" (never raises)."""
+        try:
+            from .story_context import cast_roster, location_roster
+            parts = []
+            cast = cast_roster(self.memory)
+            if cast:
+                parts.append("Characters:\n" + cast)
+            places = location_roster(self.memory)
+            if places:
+                parts.append("Locations:\n" + places)
+            return ("\n".join(parts) + "\n") if parts else ""
+        except Exception:
+            return ""
+
     def _format_open_loops(self) -> str:
         """Format existing open loops for context.
         
@@ -168,13 +190,18 @@ class FactExtractor:
             # Validate and normalize structure. "or []" (not a .get default):
             # a key present with an explicit JSON null would otherwise pass
             # None downstream, where len() raises TypeError.
-            return {
+            parsed = {
                 "character_updates": facts.get("character_updates") or [],
                 "location_updates": facts.get("location_updates") or [],
                 "open_loops_created": facts.get("open_loops_created") or [],
                 "open_loops_resolved": facts.get("open_loops_resolved") or [],
                 "relationship_changes": facts.get("relationship_changes") or []
             }
+            # Proposed deaths/destruction (agent/consequences.py). Present only
+            # when claimed, so a scene with none parses exactly as before.
+            if facts.get("status_changes"):
+                parsed["status_changes"] = facts["status_changes"]
+            return parsed
             
         except json.JSONDecodeError as e:
             logger.error(f"JSON parsing error: {e}")

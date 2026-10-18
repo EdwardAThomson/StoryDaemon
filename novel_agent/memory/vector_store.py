@@ -469,6 +469,35 @@ class VectorStore:
             category=lore.category  # Search within same category
         )
 
+    def rank_by_similarity(self, query: str, texts: List[str]) -> List[float]:
+        """Similarity of each text to the query, 0.0-1.0, in input order.
+
+        The batched sibling of compute_semantic_similarity: one temporary
+        collection and one query for the whole list, so ranking a few dozen
+        open loops costs one embedding pass rather than one per loop. Raises
+        on failure; callers fall back to their own ranking.
+        """
+        if not texts:
+            return []
+        name = "temp_rank_calc"
+        try:
+            self.client.delete_collection(name)
+        except Exception:
+            pass
+        collection = self.client.get_or_create_collection(name=name)
+        try:
+            ids = [f"t{i}" for i in range(len(texts))]
+            collection.add(ids=ids, documents=[t or " " for t in texts])
+            results = collection.query(query_texts=[query or " "], n_results=len(texts))
+            scores = {tid: max(0.0, 1.0 - (dist / 2.0))
+                      for tid, dist in zip(results["ids"][0], results["distances"][0])}
+            return [round(scores.get(tid, 0.0), 3) for tid in ids]
+        finally:
+            try:
+                self.client.delete_collection(name)
+            except Exception:
+                pass
+
     def compute_semantic_similarity(self, text_a: str, text_b: str) -> float:
         """Compute semantic similarity between two texts using embeddings.
         

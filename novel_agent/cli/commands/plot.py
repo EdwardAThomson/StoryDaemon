@@ -5,6 +5,7 @@ from typing import Dict, Any, Optional, List
 from ..project import load_project_state
 from ...configs.config import Config
 from ...memory.manager import MemoryManager
+from ...memory.entity_status import status_note
 from ...memory.plot_outline import PlotOutlineManager
 from ...memory.entities import PlotBeat, PlotOutline
 from ...tools.llm_interface import send_prompt_with_retry
@@ -282,13 +283,13 @@ def _build_plot_generation_prompt(
         c = memory.load_character(cid)
         if not c:
             continue
-        char_lines.append(f"{c.id}: {c.name} ({c.role})")
+        char_lines.append(f"{c.id}: {c.name} ({c.role}){status_note(c)}")
     loc_lines = []
     for lid in sorted(memory.list_locations()):
         loc = memory.load_location(lid)
         if not loc:
             continue
-        loc_lines.append(f"{loc.id}: {loc.name}")
+        loc_lines.append(f"{loc.id}: {loc.name}{status_note(loc)}")
 
     # Arc schedule for the beats about to be authored (Phase 3 bridge); "" when
     # arc-pressure or the mandate gate is off. Never a hard failure.
@@ -339,6 +340,7 @@ def _build_plot_generation_prompt(
         "open_loops": "\n".join(open_loop_lines) if open_loop_lines else "None",
         # Chronological (oldest first) so the template's "most recent last" holds.
         "recent_scenes": "\n".join(recent_summaries) if recent_summaries else "None",
+        "story_so_far_section": _story_so_far_section(memory, _project_config(project_dir), 3),
         "tension_history": "\n".join(tension_lines) if tension_lines else "None",
         "recent_beats": "\n".join(recent_beats_lines) if recent_beats_lines else "None",
         "arc_guidance_section": arc_guidance_section,
@@ -365,6 +367,16 @@ def _reconcile_generated_beats(project_dir: Path, beats: List[PlotBeat]) -> None
             print(f"  ⚠️  {warning}")
     except Exception as e:
         print(f"  ⚠️  Beat tension reconciliation skipped: {e}")
+
+
+def _story_so_far_section(memory, config, recent_window: int) -> str:
+    """The running synopsis for the beat prompt (agent/story_context.py), or ""."""
+    try:
+        from ...agent.story_context import story_so_far
+        text = story_so_far(memory, config, recent_window)
+        return f"## Story so far\n{text}\n\n" if text else ""
+    except Exception:
+        return ""
 
 
 def _sanitize_beat_conditions(project_dir: Path, beats: List[PlotBeat]) -> None:
