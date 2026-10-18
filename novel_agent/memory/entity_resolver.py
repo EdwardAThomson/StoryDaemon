@@ -8,6 +8,8 @@ returns ``None`` so callers can drop the phantom rather than persist it.
 
 from typing import List, Optional, Tuple
 
+from .entity_status import is_unavailable
+
 
 class EntityResolver:
     """Map character/location references to canonical IDs against current memory."""
@@ -16,6 +18,7 @@ class EntityResolver:
         self.memory = memory_manager
         self._char_index = None
         self._loc_index = None
+        self._unavailable = set()
 
     def _char_idx(self) -> dict:
         if self._char_index is None:
@@ -24,6 +27,8 @@ class EntityResolver:
                 c = self.memory.load_character(cid)
                 if not c:
                     continue
+                if is_unavailable(c):
+                    self._unavailable.add(cid)
                 tokens = [cid, c.full_name, c.first_name, c.family_name]
                 tokens += list(getattr(c, "nicknames", None) or [])
                 for tok in tokens:
@@ -59,15 +64,19 @@ class EntityResolver:
     def resolve_beat(self, beat) -> Tuple[List[str], Optional[str]]:
         """Rewrite a beat's entity references in place to canonical IDs.
 
-        Drops character references that resolve to nothing and clears an
-        unresolved location. Returns ``(dropped_character_refs, dropped_location)``
+        Drops character references that resolve to nothing, and characters
+        who are dead or missing (memory/entity_status.py): a beat cannot
+        require someone who can no longer appear. Clears an unresolved
+        location. Returns ``(dropped_character_refs, dropped_location)``
         so the caller can log what was discarded.
         """
         resolved: List[str] = []
         dropped: List[str] = []
         for ref in (beat.characters_involved or []):
             cid = self.resolve_character(ref)
-            if cid:
+            if cid and cid in self._unavailable:
+                dropped.append(f"{ref} (dead or missing)")
+            elif cid:
                 if cid not in resolved:
                     resolved.append(cid)
             else:

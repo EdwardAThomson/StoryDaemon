@@ -6,6 +6,7 @@ from datetime import datetime
 
 from ..memory.manager import MemoryManager
 from ..memory.entity_resolver import EntityResolver
+from ..memory.entity_status import status_note
 from ..configs.config import Config
 from .entities import PlotBeat, PlotOutline
 
@@ -291,6 +292,14 @@ class PlotOutlineManager:
         return {"abandoned": abandoned, "generated": [b.id for b in added]}
 
     # ---------- Utilities ----------
+    def _story_so_far_section(self, recent_window: int) -> str:
+        try:
+            from ..agent.story_context import story_so_far
+            text = story_so_far(self.memory, self.config, recent_window)
+            return f"## Story so far\n{text}\n\n" if text else ""
+        except Exception:
+            return ""
+
     def _build_generation_context(self, count: int) -> Dict[str, Any]:
         state = self._load_state()
         novel_name = state.get("novel_name", "Untitled Novel")
@@ -338,7 +347,7 @@ class PlotOutlineManager:
             c = self.memory.load_character(cid)
             if not c:
                 continue
-            char_lines.append(f"{c.id}: {c.name} ({c.role})")
+            char_lines.append(f"{c.id}: {c.name} ({c.role}){status_note(c)}")
         characters_text = "\n".join(char_lines) if char_lines else "None"
 
         # Location roster (real IDs the beat generator must reference)
@@ -347,7 +356,7 @@ class PlotOutlineManager:
             loc = self.memory.load_location(lid)
             if not loc:
                 continue
-            loc_lines.append(f"{loc.id}: {loc.name}")
+            loc_lines.append(f"{loc.id}: {loc.name}{status_note(loc)}")
         locations_text = "\n".join(loc_lines) if loc_lines else "None"
 
         # Arc schedule for the beats about to be authored (Phase 3 bridge). Imported
@@ -394,6 +403,9 @@ class PlotOutlineManager:
             "tone": foundation.get("tone", "unknown"),
             "open_loops": open_loops_text,
             "recent_scenes": recent_text,
+            # Everything older than the three recent scenes, as the running
+            # synopsis (agent/story_context.py); "" before the first arc.
+            "story_so_far_section": self._story_so_far_section(len(recent_ids)),
             "tension_history": tension_text,
             "recent_beats": recent_beats_text,
             "characters": characters_text,

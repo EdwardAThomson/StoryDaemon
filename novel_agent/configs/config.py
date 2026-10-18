@@ -46,6 +46,20 @@ DEFAULT_CONFIG = {
         'full_text_scenes_count': 2,  # Number of recent scenes to include as full text in writer context
         'summary_scenes_count': 3,    # Number of older scenes to include as summaries in writer context
         'include_overall_summary': True,
+        # Story-so-far context (agent/story_context.py, memory/synopsis.py).
+        # recent_scenes_count above also sizes the planner's chronological
+        # recent-scenes section. The synopsis is a running summary folded
+        # every synopsis_arc_size scenes (two extra LLM calls per arc).
+        'story_synopsis': True,
+        'synopsis_arc_size': 8,
+        'synopsis_max_words': 350,
+        'synopsis_max_tokens': 1000,
+        'synopsis_catchup_arcs': 3,
+        # Established canon in the writer prompt: the lore and open loops most
+        # relevant to this scene, plus any confirmed deaths/destruction.
+        'writer_canon': True,
+        'writer_canon_lore': 4,
+        'writer_canon_loops': 4,
         'enable_fact_extraction': True,
         'enable_entity_updates': True,
         'enable_tension_tracking': True,  # Phase 7A.3: Track scene tension levels
@@ -260,6 +274,10 @@ DEFAULT_CONFIG = {
         # would turn one tick into a judge marathon. Claims beyond the cap are
         # ignored with a warning naming them. None or 0 disables the cap.
         'extractor_resolutions_judged_cap': 5,
+        # Judged deaths and destruction (agent/consequences.py): the extractor's
+        # status_changes claims need on-page evidence and a one-claim judge.
+        'entity_status': True,
+        'status_changes_judged_cap': 3,
         # Creation hygiene (Slice 0): dedup new open loops against existing OPEN loops
         # at creation (difflib SequenceMatcher on case-insensitive descriptions,
         # deterministic, no LLM) and cap creations per tick so one scene cannot flood
