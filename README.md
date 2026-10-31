@@ -725,6 +725,7 @@ python tests/manual_tension_test.py
 - [Plot-First Mode Guide](docs/PLOT_FIRST_MODE_GUIDE.md) - User guide for emergent plot-first generation
 - [Phase 5 Implementation Summary](docs/PHASE5_IMPLEMENTATION_SUMMARY.md) - Technical details of plot-first implementation
 - [Masters Block Grammar Study](docs/MASTERS_BLOCK_GRAMMAR_STUDY.md) - Block-ordering statistics measured on 21 classic novels; the data behind scene skeletons
+- [The Block DSL in the Writer Path](docs/DSL_WRITER_PATH.md) - Diagram of how scene skeletons, sectioned writing, selective revision and beat contracts fit into the writer, and which are switched on
 - [Scene Skeleton Results](docs/SLICE4_SCENE_SKELETON_RESULTS.md) - Production A/B results, surface-quality pass, and reading notes for Slice 4
 - [Name Generator Implementation](docs/archive/name_generator_implementation_plan.md) - Syllable-based name generation
 - [Project Safety Improvements](docs/archive/project_safety_improvements.md) - UUID system and scene titles
