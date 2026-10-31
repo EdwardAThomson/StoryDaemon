@@ -240,8 +240,15 @@ class MultiStagePlanner:
                 f.write(f"Tokens (approx): {self.stage_stats['stage1_tokens']}\n")
                 f.write(f"\n{prompt}\n")
         
-        # Call LLM
-        response = self.llm.generate(prompt, max_tokens=150)
+        # Call LLM. The answer is one sentence, but a reasoning model thinks
+        # inside the same budget; an empty answer is retried once at double.
+        budget = int(self.config.get('llm.strategic_max_tokens', 1000) or 1000)
+        response = self.llm.generate(prompt, max_tokens=budget) or ""
+        if not response.strip():
+            logger.warning(f"Strategic intention came back empty at {budget} tokens; retrying at {budget * 2}")
+            response = self.llm.generate(prompt, max_tokens=budget * 2) or ""
+        if not response.strip():
+            raise ValueError("Strategic planning returned an empty intention")
         
         # Save response if requested
         if self.save_prompts and self.prompts_dir:

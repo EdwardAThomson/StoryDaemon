@@ -61,8 +61,22 @@ class PlanExecutor:
         
         # Execute each action - STOP ON FIRST ERROR
         for i, action in enumerate(plan.get("actions", [])):
+            tool_name = action.get("tool")
+            if not self.tools.get_tool(tool_name):
+                # A tool the registry never offered is the planner's invention
+                # (live gpt-5.6-luna plans named "scene.beat" and "none",
+                # 2026-10-31), not a broken tool: skip it rather than halt a
+                # tick whose real actions are fine. Errors from real tools
+                # still stop the plan below.
+                print(f"        ⚠️  Skipping action {i}: no tool named '{tool_name}'")
+                results["errors"].append(f"Skipped unknown tool: {tool_name}")
+                results["actions_executed"].append({
+                    "action_index": i, "tool": tool_name, "args": action.get("args", {}),
+                    "skipped": True, "success": False,
+                    "error": f"Tool not found: {tool_name}",
+                })
+                continue
             try:
-                tool_name = action.get("tool")
                 args = action.get("args", {})
 
                 # Simple placeholder substitution: "<from name.generate>" → last generated full name
