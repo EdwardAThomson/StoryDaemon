@@ -4,6 +4,8 @@
 **Date:** 2025-11-25  
 **Supersedes:** Initial DSL_and_contracts.md ideas
 
+> **Design-era document.** This is the 2025-11 proposal; classes such as `StoryContract` and `BeatContract` were never built in this form. For what shipped and how it fits into the writer, see [DSL_WRITER_PATH.md](DSL_WRITER_PATH.md).
+
 ## Overview
 
 This document formalizes the architecture for structured narrative generation using **contracts** (validation/requirements) and **blocks** (composition/structure). The key insight is that these are orthogonal concerns:
