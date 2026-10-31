@@ -187,10 +187,10 @@ flowchart TD
     subgraph PLAN["Plan"]
         P0["0.5 Construction-pressure detector<br/><i>instrument only</i>"]
         P1{"Plot-first mode?"}
-        P1a["1. Beat selection<br/>regenerate beats if low · next pending beat<br/><i>finale tick: sacred finale beat</i>"]
-        P2["2. Story context<br/>synopsis · recent scenes · rosters with exact IDs<br/>· relationships · beat"]
-        P3["3. Multi-stage planner<br/>intention → semantic search → tactical plan"]
-        P4["4. Validate + execute tools<br/>name / character / location / faction /<br/>memory / language"]
+        P1a["Beat selection<br/>regenerate beats if low · next pending beat<br/><i>finale tick: sacred finale beat</i>"]
+        P2["1. Story context<br/>synopsis · recent scenes · rosters with exact IDs<br/>· relationships · beat"]
+        P3["2. Multi-stage planner<br/>intention → semantic search → tactical plan"]
+        P4["3–4. Validate + execute tools<br/>name / character / location / faction /<br/>memory / language"]
         P0 --> P1
         P1 -- yes --> P1a --> P2
         P1 -- no --> P2
@@ -209,10 +209,11 @@ flowchart TD
     subgraph COMMIT["Commit and extract"]
         C8["8. Commit scene<br/>summary · vector index · tension · new-character detection"]
         C9["9. Fact extractor<br/>facts · open loops · status-change claims"]
-        C10["10. Entity updates + re-index"]
+        C10["10. Entity updates"]
         C105["10.5 Judged deaths and destruction<br/>evidence check → one-claim judge → entity status"]
+        C11["11. Re-index updated entities"]
         C112["11.2 Story synopsis<br/>close arc every N scenes → fold into running synopsis"]
-        C8 --> C9 --> C10 --> C105 --> C112
+        C8 --> C9 --> C10 --> C105 --> C11 --> C112
     end
 
     subgraph VERIFY["Verify and account"]
