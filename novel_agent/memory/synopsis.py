@@ -135,6 +135,48 @@ def _clean(text: str) -> str:
     return text
 
 
+SHORTEN_PROMPT = """The text below is {words} words long. Rewrite it in at most {max_words} words.
+
+{keep_rule}
+
+Keep the most recent events in the most detail. Plain prose, past tense, no headings.
+
+Text:
+{text}
+
+Shortened text:"""
+
+# A fold may run this far over its ceiling before it is sent back once.
+_CAP_SLACK = 1.15
+
+
+def _within_cap(llm, text: str, max_words: int, max_tokens: int) -> str:
+    """Hold a summary to its word ceiling with one shortening re-ask.
+
+    The ceiling used to be stated in the prompt only, and the live test
+    (2026-10-31) saw 175-word arcs return at 219 and 296 and a 350-word
+    synopsis at 480 after one fold. The synopsis is the input to the next
+    fold, so unchecked overshoot compounds. Never trims by cutting text:
+    the tail of a synopsis is its newest material. On a failed or longer
+    re-ask, the original stands.
+    """
+    words = len(text.split())
+    if words <= max_words * _CAP_SLACK:
+        return text
+    try:
+        shorter = _clean(llm.generate(
+            SHORTEN_PROMPT.format(words=words, max_words=max_words,
+                                  keep_rule=_KEEP_RULE, text=text),
+            max_tokens=max_tokens))
+        shorter = shorter.removeprefix("Shortened text:").strip()
+    except Exception as e:
+        logger.warning(f"Synopsis shortening failed, keeping the long version: {e}")
+        return text
+    if shorter and len(shorter.split()) < words:
+        return shorter
+    return text
+
+
 def pending_arc(memory, arc_size: int) -> List[str]:
     """The next ``arc_size`` scene ids past the last recorded arc, or []."""
     data = load_synopsis(memory)
@@ -182,6 +224,7 @@ def update_synopsis(memory, llm, config) -> Dict[str, Any]:
             if not arc_text:
                 logger.warning("Arc summary came back empty; will retry next tick")
                 break
+            arc_text = _within_cap(llm, arc_text, arc_words, max_tokens)
 
             data = load_synopsis(memory)
             previous = data["synopsis"].strip()
@@ -194,6 +237,7 @@ def update_synopsis(memory, llm, config) -> Dict[str, Any]:
                 if not folded:
                     logger.warning("Synopsis fold came back empty; will retry next tick")
                     break
+                folded = _within_cap(llm, folded, max_words, max_tokens)
             else:
                 folded = arc_text
 

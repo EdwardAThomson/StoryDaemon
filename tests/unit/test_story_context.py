@@ -212,3 +212,39 @@ def test_strategic_intention_budget_and_empty_retry(project):
                                              "story_foundation": {}})
     assert intention == "Elil opens the vault."
     assert llm.budgets == [1000, 2000]
+
+
+def test_overlong_summary_is_sent_back_once(project):
+    _, mm = project
+
+    class Verbose:
+        def __init__(self):
+            self.prompts = []
+
+        def generate(self, prompt, max_tokens=None):
+            self.prompts.append(prompt)
+            if prompt.startswith("The text below is"):
+                return "Short arc."
+            return "word " * 400
+
+    cfg = Config()
+    cfg.set("generation.synopsis_max_words", 100)   # arc ceiling 60 words
+    llm = Verbose()
+    assert update_synopsis(mm, llm, cfg)["arcs_closed"] == 1
+    assert load_synopsis(mm)["arcs"][0]["summary"] == "Short arc."
+    assert sum(p.startswith("The text below is") for p in llm.prompts) == 1
+
+
+def test_failed_shortening_keeps_the_original(project):
+    _, mm = project
+
+    class NoShorten:
+        def generate(self, prompt, max_tokens=None):
+            if prompt.startswith("The text below is"):
+                raise RuntimeError("down")
+            return "word " * 400
+
+    cfg = Config()
+    cfg.set("generation.synopsis_max_words", 100)
+    assert update_synopsis(mm, NoShorten(), cfg)["arcs_closed"] == 1
+    assert len(load_synopsis(mm)["arcs"][0]["summary"].split()) == 400
