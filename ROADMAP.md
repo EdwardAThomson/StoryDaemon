@@ -54,6 +54,7 @@ strategic plan is `docs/EMERGENT_COHERENCE_PLAN.md`.
 - [ ] **Death and destruction tracking** (`agent/consequences.py`, `memory/entity_status.py`). The extractor proposes a status change with a quote, Python checks the quote is in the scene, and a one-claim judge confirms it. From then on Python enforces it: rosters tag the entity, beats drop dead or missing characters (at selection time too, after #22), a dead POV falls back, and a destroyed place renders as ruins. Live-tested over 17 ticks: a paraphrased false death was refused and a real one applied
 - [ ] **Live-test fixes (#22).** The status judge can relabel a confirmed loss within its kind (destroyed vs inaccessible). The synopsis update runs after status changes and treats confirmed deaths as ground truth over per-scene notes, which fixed a wrong "bleeds out" reaching the synopsis
 - [ ] **Reasoning-model fixes (#22, the "Luna fixes").** Stage 1's hardcoded `max_tokens=150` is now `llm.strategic_max_tokens` (default 1000), and an empty answer retries once at double the budget. Plan actions naming a tool the registry never offered are skipped with a warning instead of halting the tick
+- [ ] **Synopsis word cap enforced.** The live test asked for 350 words and got 480 after one fold. A synopsis more than 15% over its cap is now sent back once to be shortened
 - [ ] **README diagram** of the tick pipeline
 
 ## Next
@@ -85,7 +86,6 @@ strategic plan is `docs/EMERGENT_COHERENCE_PLAN.md`.
 
 ## Backlog
 
-- [ ] Synopsis and arc word caps are requested in the prompt but not enforced (350 asked, 480 produced after one fold in the #21 live test), so the synopsis will creep with each fold. Fix: re-ask or trim when over the cap
 - [ ] The POV character's goals list is only ever appended to (about 40 goals by tick 16, all sent to the writer)
 - [ ] Beat-driven scene titles read "Execute plot beat PB003: ...", which reaches the recent-scenes list
 
