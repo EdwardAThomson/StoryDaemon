@@ -163,7 +163,7 @@ class SceneWriter:
                     is_last=(i == len(bounds) - 1),
                 )
                 budget = token_budget_for(words, self.config)
-                part, _ = self._generate_segment(prompt, budget)
+                part, finish = self._generate_segment(prompt, budget)
                 part = self._strip_llm_header((part or "").strip())
                 if not part:
                     # One empty section used to abandon the whole sectioned
@@ -172,10 +172,20 @@ class SceneWriter:
                     # the most ordinary transient there is, so it gets the same
                     # retry-once treatment as planning and every other
                     # LLM-dependent step here.
+                    #
+                    # An empty response that stopped on "length" is not a
+                    # transient: a reasoning model (gpt-5.6-luna, live on
+                    # 2026-10-31) spent the whole ceiling thinking and wrote
+                    # nothing, and the same budget reproduces it. The ceiling is
+                    # sized from the section's words with no room for reasoning,
+                    # so the retry doubles it, as the planner's truncation
+                    # retry does.
+                    retry_budget = budget * 2 if finish == "length" else budget
                     logger.warning(
-                        "Empty response for plan blocks %d-%d; retrying once",
-                        first, last)
-                    part, _ = self._generate_segment(prompt, budget)
+                        "Empty response for plan blocks %d-%d (finish=%s); "
+                        "retrying once at %d tokens",
+                        first, last, finish, retry_budget)
+                    part, _ = self._generate_segment(prompt, retry_budget)
                     part = self._strip_llm_header((part or "").strip())
                 if not part:
                     raise ValueError(
