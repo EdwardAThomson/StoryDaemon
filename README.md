@@ -178,21 +178,87 @@ novel tick --llm-backend claude-cli --llm-model claude-sonnet-4-5
 
 ## How It Works
 
-StoryDaemon uses a **story tick loop** where each tick produces one scene passage:
+StoryDaemon uses a **story tick loop** where each tick produces one scene. The layering principle: **Python owns where the story should be, the LLM owns how it gets there.** LLM calls propose; Python validates, judges, and persists.
 
-1. **Check Plot Beats** (if plot-first mode enabled) - Regenerate beats if needed, get next beat to execute
-2. **Summarize State** - Collect context from previous passages and memory
-3. **Plan** - Planner LLM decides which tools to use, scene intention, and optional length guidance
-4. **Execute Tools** - Run character generation, memory search, etc.
-5. **Write** - Writer LLM generates prose in deep POV (flexible length based on scene needs)
-   - In plot-first mode, beat constraints are injected into writer context as hard requirements
-6. **Evaluate** - Check continuity and POV integrity and compute QA metrics (change/milestone, dialogue density, transitions, mode, novelty) that feed back into planning
-7. **Evaluate Tension** - Analyze scene tension (0-10 scale) for pacing awareness
-8. **Commit** - Save scene and update memory
-9. **Verify Beat** (if plot-first mode enabled) - Check if scene accomplished the target beat, mark complete
-10. **Extract Facts** - Update character/location state from scene content
-11. **Extract Lore** - Identify world rules, constraints, and capabilities
-12. **Check Goals** - Promote story goals when conditions are met
+### Architecture
+
+```mermaid
+flowchart TD
+    subgraph PLAN["Plan"]
+        P0["0.5 Construction-pressure detector<br/><i>instrument only</i>"]
+        P1{"Plot-first mode?"}
+        P1a["Beat selection<br/>regenerate beats if low · next pending beat<br/><i>finale tick: sacred finale beat</i>"]
+        P2["1. Story context<br/>synopsis · recent scenes · rosters with exact IDs<br/>· relationships · beat"]
+        P3["2. Multi-stage planner<br/>intention → semantic search → tactical plan"]
+        P4["3–4. Validate + execute tools<br/>name / character / location / faction /<br/>memory / language"]
+        P0 --> P1
+        P1 -- yes --> P1a --> P2
+        P1 -- no --> P2
+        P2 --> P3 --> P4
+    end
+
+    subgraph WRITE["Write"]
+        W6["6. Writer context<br/>beat + postconditions · Established Canon ·<br/>synopsis · scene skeleton (opt.)"]
+        W6b["Scene writer<br/>write until concluded · sectioned writing (opt.)"]
+        W7["7. Scene evaluator<br/>continuity / POV gate"]
+        W75["7.5 Tension scorer (0–10)"]
+        W76["7.6 Tension control<br/>partial paragraph revision ·<br/><i>finale: fresh re-rolls</i>"]
+        W6 --> W6b --> W7 --> W75 --> W76
+    end
+
+    subgraph COMMIT["Commit and extract"]
+        C8["8. Commit scene<br/>summary · vector index · tension · new-character detection"]
+        C9["9. Fact extractor<br/>facts · open loops · status-change claims"]
+        C10["10. Entity updates"]
+        C105["10.5 Judged deaths and destruction<br/>evidence check → one-claim judge → entity status"]
+        C11["11. Re-index updated entities"]
+        C112["11.2 Story synopsis<br/>close arc every N scenes → fold into running synopsis"]
+        C8 --> C9 --> C10 --> C105 --> C11 --> C112
+    end
+
+    subgraph VERIFY["Verify and account"]
+        V115["11.5 Beat verification<br/>planner claim / semantic score / contracts"]
+        V116["11.6 Judged loop closure<br/><i>finale: expire remaining loops</i>"]
+        V118["11.8 Thread registry"]
+        V12["12. Lore extraction + contradiction detection"]
+        V13["13. Goal promotion (ticks 10–15)"]
+        V14["14. Save state + metrics.jsonl"]
+        V115 --> V116 --> V118 --> V12 --> V13 --> V14
+    end
+
+    P4 --> W6
+    W76 --> C8
+    C112 --> V115
+
+    MEM[("Project memory<br/>characters · locations · scenes · lore ·<br/>open loops · threads · synopsis ·<br/>entity status · vector index")]
+    MEM -.-> P2
+    MEM -.-> W6
+    C10 -.-> MEM
+    C105 -.-> MEM
+    C112 -.-> MEM
+    V12 -.-> MEM
+    V14 -. next tick .-> P0
+```
+
+Tick 0 takes a separate two-phase path that creates entities before writing, so the first scene sees real IDs. Every step after the scene is written is wrapped so that a failure in an extractor, judge, or metric never loses the scene.
+
+### The steps
+
+1. **Select a beat** (plot-first mode) - Regenerate beats when few are pending, then take the next one. On the final tick, Python owns the ask and supplies a finale beat.
+2. **Build story context** - The planner sees a running synopsis of the whole story, the most recent scenes in order, character and location rosters with exact IDs (dead, missing, and destroyed entities marked), and relationships.
+3. **Plan** - The multi-stage planner forms a strategic intention, gathers semantic context from the vector index, and writes a tactical plan of tool calls.
+4. **Execute tools** - Names, characters, locations, and factions are minted in Python and selected by the LLM, never invented by it.
+5. **Write** - The writer gets the plan, the beat and its postconditions, an **Established Canon** section (relevant lore, open loops, and every dead or destroyed entity), and optionally a paragraph-level scene skeleton. It writes until the scene reaches a real ending.
+6. **Evaluate** - Check continuity and POV integrity; only concrete issues fail a scene.
+7. **Score and control tension** - Rate tension 0-10 against an anchored rubric, then make one bounded correction toward the arc's target (revising only the tension-carrying paragraphs).
+8. **Commit** - Save the scene, its summary, and its tension, and index it.
+9. **Extract facts** - Update characters and locations, and open or resolve story loops.
+10. **Judge deaths and destruction** - A claimed death, disappearance, or destroyed location must quote evidence from the scene and pass a one-claim judge before it is recorded. After that, the entity leaves rosters and beats, and the writer is told.
+11. **Update the synopsis** - Every few scenes, close an arc summary and fold it into a running synopsis whose length stays flat however long the novel runs.
+12. **Verify the beat** - Check the scene accomplished its beat, by planner claim, semantic similarity, or contract postconditions.
+13. **Close loops and attribute threads** - Each claimed loop resolution is confirmed by a focused judge; the scene joins its thread's trace.
+14. **Extract lore** - Identify world rules and capabilities, and detect contradictions.
+15. **Promote goals and record metrics** - Promote a story goal when conditions are met, save state, and append the tick's coherence metrics.
 
 ### Real-World Example
 
@@ -228,6 +294,8 @@ Each novel maintains its own working directory with:
 - **Characters** - Dynamic character data with goals, relationships, emotional state
 - **Locations** - Evolving location descriptions with sensory details
 - **Scenes** - Scene metadata and summaries
+- **Story Synopsis** - Arc summaries folded into one running synopsis of the story so far
+- **Entity Status** - Judged deaths, disappearances, and destroyed locations, with the evidence that confirmed them
 - **Open Loops** - Unresolved narrative threads with mention tracking
 - **Goal Hierarchy** - Protagonist immediate/arc/story goals with progress tracking
 - **Lore** - World rules, constraints, and capabilities with contradiction detection
@@ -240,21 +308,49 @@ Each novel maintains its own working directory with:
 StoryDaemon/
 ├── novel_agent/          # Python package (code)
 │   ├── agent/           # Agent runtime and orchestration
-│   │   ├── agent.py            # StoryAgent orchestrator
-│   │   ├── context.py          # Context builder
-│   │   ├── writer_context.py   # Writer context builder
-│   │   ├── writer.py           # Scene prose generator
-│   │   ├── scene_skeleton.py   # Masters-grammar paragraph plans (Slice 4)
-│   │   ├── partial_revision.py # Selective revision of tension-carrying paragraphs
-│   │   ├── evaluator.py        # Scene quality evaluator
-│   │   ├── scene_committer.py  # Scene persistence
-│   │   └── prompts.py          # LLM prompt templates
-│   ├── tools/           # LLM interface and tools
-│   │   ├── name_generator.py   # Syllable-based name generation
-│   │   └── ...
+│   │   ├── agent.py              # StoryAgent: the tick loop
+│   │   ├── context.py            # Planner context builder
+│   │   ├── story_context.py      # Story-so-far context for planner and writer
+│   │   ├── multi_stage_planner.py # Three-stage planner (default)
+│   │   ├── plan_manager.py       # Plan/error snapshots
+│   │   ├── schemas.py            # Plan validation schema
+│   │   ├── writer_context.py     # Writer context (beat, canon, synopsis)
+│   │   ├── writer.py             # Scene prose generator
+│   │   ├── segments.py           # Write-until-concluded + sectioned writing
+│   │   ├── scene_skeleton.py     # Masters-grammar paragraph plans (Slice 4)
+│   │   ├── evaluator.py          # Scene quality gate
+│   │   ├── tension_evaluator.py  # 0-10 tension scorer
+│   │   ├── arc_pressure.py       # Target tension curve and arc phases
+│   │   ├── partial_revision.py   # Revise only tension-carrying paragraphs
+│   │   ├── scene_committer.py    # Scene persistence
+│   │   ├── fact_extractor.py     # Facts, open loops, status-change claims
+│   │   ├── entity_updater.py     # Applies facts to characters/locations
+│   │   ├── consequences.py       # Judged deaths and destruction
+│   │   ├── character_detector.py # New named entities in prose
+│   │   ├── loop_closure.py       # Judged open-loop closure
+│   │   ├── loop_aging.py         # Loop-age gauge and horizons
+│   │   ├── lore_extractor.py     # World rules from prose
+│   │   ├── lore_contradiction_detector.py
+│   │   ├── finale.py             # Sacred finale
+│   │   ├── thread_registry.py    # Story-thread registry
+│   │   ├── thread_construction.py # Construction-pressure detector
+│   │   ├── throughline.py        # Goal-relevance judge
+│   │   ├── coherence_metrics.py  # Per-tick metrics.jsonl
+│   │   ├── language_situation.py # Who understands whom in a scene
+│   │   └── prompts.py            # LLM prompt templates
+│   ├── tools/           # Planner tools and LLM backend shims
+│   │   ├── name_generator.py   # Python-minted names (name.generate)
+│   │   ├── language_tools.py   # language.phrase / language.word
+│   │   ├── memory_tools.py     # Entity generation and memory search
+│   │   ├── llm_setup.py        # Backend initialization (llm-backends)
+│   │   └── ...                 # Compatibility shims over llm-backends
 │   ├── memory/          # Memory management
 │   │   ├── manager.py          # MemoryManager
 │   │   ├── entities.py         # Entity dataclasses
+│   │   ├── entity_resolver.py  # Resolves references to canonical IDs
+│   │   ├── entity_status.py    # Dead/missing/destroyed status
+│   │   ├── synopsis.py         # Arc summaries and running synopsis
+│   │   ├── summarizer.py       # Per-scene summaries
 │   │   ├── vector_store.py     # ChromaDB integration
 │   │   └── checkpoint.py       # Checkpoint system
 │   ├── plot/            # Plot management (emergent plotting)
@@ -268,17 +364,12 @@ StoryDaemon/
 │   │   ├── foundation.py       # Story foundation setup
 │   │   ├── protagonist.py      # Mints the protagonist at project creation
 │   │   ├── recent_projects.py  # Recent projects tracker
-│   │   └── commands/           # CLI commands
-│   │       ├── status.py       # Status command
-│   │       ├── goals.py        # Goals command
-│   │       ├── lore.py         # Lore command
-│   │       ├── plot.py         # Plot commands (generate, status, next)
-│   │       ├── list.py         # List commands
-│   │       ├── inspect.py      # Inspect command
-│   │       ├── plan.py         # Plan preview
-│   │       ├── compile.py      # Manuscript compilation
-│   │       └── checkpoint.py   # Checkpoint management
-│   ├── export/          # Manuscript writers (Markdown, HTML, prose, EPUB, PDF)
+│   │   └── commands/           # One module per command (status, goals,
+│   │                           # lore, loops, metrics, threads, plot, list,
+│   │                           # inspect, plan, compile, checkpoint, titles)
+│   ├── export/          # Manuscript writers (EPUB, PDF)
+│   ├── world_import.py  # Seed a project from a worldgen world
+│   ├── languages_import.py # Import a world's constructed languages
 │   ├── configs/         # Configuration
 │   ├── data/            # Static data files
 │   │   ├── names/       # Name generation syllables and titles

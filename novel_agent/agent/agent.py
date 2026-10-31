@@ -338,10 +338,6 @@ class StoryAgent:
             print("   8. Committing scene...")
             scene_id = self.committer.commit_scene(scene_data, tick, plan)
 
-            # Step 8.2: running story synopsis; closes an arc every
-            # generation.synopsis_arc_size scenes. Never breaks the tick.
-            self._update_story_synopsis()
-
             # Step 8.1: Phase 3 sacred finale, end-marker guarantee: the committed
             # finale scene file always ends with an explicit end-marker line
             # (deterministic append; never touches non-finale scenes).
@@ -426,6 +422,12 @@ class StoryAgent:
                 # Step 11: Re-index updated entities (Phase 5)
                 print("   11. Syncing vector database...")
                 self._reindex_updated_entities(facts)
+
+            # Step 11.2: running story synopsis; closes an arc every
+            # generation.synopsis_arc_size scenes. After step 10.5 so a death
+            # or destruction in the arc's last scene is already confirmed:
+            # the arc summary is told which ones are. Never breaks the tick.
+            self._update_story_synopsis()
 
             # Step 11.5: Verify beat execution and mark complete (Phase 5;
             # contract-aware since Phase 3 contracts Slice 1). Runs after fact
@@ -669,7 +671,6 @@ class StoryAgent:
 
             print("   10. Committing scene...")
             scene_id = self.committer.commit_scene(scene_data, tick, plan)
-            self._update_story_synopsis()
 
             if eval_result:
                 try:
@@ -694,6 +695,7 @@ class StoryAgent:
             if facts:
                 update_stats = self.entity_updater.apply_updates(facts, tick, scene_id, writer_context)
                 self._apply_status_changes(facts, tick, scene_id, scene_data["text"])
+            self._update_story_synopsis()
             
             # Step 14: Extract lore (Phase 7A.4)
             print("   13. Extracting lore...")

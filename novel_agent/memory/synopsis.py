@@ -41,7 +41,7 @@ ARC_SUMMARY_PROMPT = """Summarize this stretch of a novel in ONE paragraph of at
 
 Use the characters' names exactly as written. Plain prose, past tense, no headings, no bullet points.
 
-Scenes (in order):
+{ground_truth}Scenes (in order):
 {scenes}
 
 Paragraph:"""
@@ -52,7 +52,7 @@ FOLD_PROMPT = """Below is the synopsis of a novel so far, followed by what happe
 
 Compress the oldest material hardest and give the latest stretch the most detail. Use the characters' names exactly as written. Plain prose, past tense, no headings, no bullet points.
 
-Synopsis so far:
+{ground_truth}Synopsis so far:
 {synopsis}
 
 Latest stretch:
@@ -82,6 +82,49 @@ def _scene_block(scenes: List[Any]) -> str:
         body = " ".join(summary) if summary else "(no summary)"
         lines.append(f"- Tick {getattr(scene, 'tick', '?')}, {getattr(scene, 'title', '') or scene.id}: {body}")
     return "\n".join(lines)
+
+
+def confirmed_changes(memory, scene_ids: List[str]) -> str:
+    """The ground-truth block for a summary covering ``scene_ids`` (and
+    everything before them): every confirmed death, disappearance or loss of
+    a place up to the last of those scenes, from the judged status records.
+
+    Scene summaries are written per scene and can misread an outcome: a live
+    run's S012 summary said a character "bleeds out" when the scene left him
+    alive, and the arc summary carried that into the synopsis for three
+    scenes until he really died in S015. The status records are judged
+    against the page, so they are the authority here. Never raises; "" when
+    nothing is known.
+    """
+    try:
+        from .entity_status import is_unavailable, status_record
+        order = list(memory.list_scenes())
+        last = order.index(scene_ids[-1]) if scene_ids and scene_ids[-1] in order else len(order) - 1
+        covered = set(order[:last + 1])
+        lines = []
+        for list_ids, load in ((memory.list_characters, memory.load_character),
+                               (memory.list_locations, memory.load_location)):
+            for entity_id in sorted(list_ids()):
+                entity = load(entity_id)
+                if entity is None or not is_unavailable(entity):
+                    continue
+                record = status_record(entity)
+                if record.get("scene_id") not in covered:
+                    continue
+                name = getattr(entity, "display_name", None) or getattr(entity, "name", entity_id)
+                lines.append(f"- {name}: {record.get('status')} in {record.get('scene_id')}")
+        if lines:
+            head = ("Confirmed changes (checked against the scenes themselves; trust these over "
+                    "the scene notes below). No other named character died or vanished and no "
+                    "other named place was destroyed in this part of the story:")
+        else:
+            head = ("Confirmed changes: none. No named character has died or vanished and no "
+                    "named place has been destroyed so far; a scene note that says otherwise "
+                    "describes a threat or an injury, not a death.")
+        return head + ("\n" + "\n".join(lines) if lines else "") + "\n\n"
+    except Exception as e:
+        logger.debug(f"Confirmed-change block skipped: {e}")
+        return ""
 
 
 def _clean(text: str) -> str:
@@ -129,8 +172,11 @@ def update_synopsis(memory, llm, config) -> Dict[str, Any]:
             scenes = [s for s in (memory.load_scene(sid) for sid in scene_ids) if s]
             if not scenes:
                 break
+            ground_truth = (confirmed_changes(memory, scene_ids)
+                            if config.get("coherence.entity_status", True) else "")
             arc_text = _clean(llm.generate(
                 ARC_SUMMARY_PROMPT.format(max_words=arc_words, keep_rule=_KEEP_RULE,
+                                          ground_truth=ground_truth,
                                           scenes=_scene_block(scenes)),
                 max_tokens=max_tokens))
             if not arc_text:
@@ -142,6 +188,7 @@ def update_synopsis(memory, llm, config) -> Dict[str, Any]:
             if previous:
                 folded = _clean(llm.generate(
                     FOLD_PROMPT.format(max_words=max_words, keep_rule=_KEEP_RULE,
+                                       ground_truth=ground_truth,
                                        synopsis=previous, arc=arc_text),
                     max_tokens=max_tokens))
                 if not folded:

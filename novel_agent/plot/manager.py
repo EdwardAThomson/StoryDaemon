@@ -6,7 +6,7 @@ from datetime import datetime
 
 from ..memory.manager import MemoryManager
 from ..memory.entity_resolver import EntityResolver
-from ..memory.entity_status import status_note
+from ..memory.entity_status import is_unavailable, status_note
 from ..configs.config import Config
 from .entities import PlotBeat, PlotOutline
 
@@ -252,8 +252,33 @@ class PlotOutlineManager:
         outline = self.load_outline()
         for b in outline.beats:
             if b.status == "pending":
+                self._drop_departed_characters(b)
                 return b
         return None
+
+    def _drop_departed_characters(self, beat: PlotBeat) -> None:
+        """Remove characters who died or vanished after the beat was written.
+
+        resolve_beat already keeps the dead out of beats authored after the
+        death, but a beat authored before it still names them, and the writer
+        was told "must appear" for a character its canon section called
+        deceased (live test, 2026-10-31). Filtered at selection, in memory
+        only: the outline keeps what was authored. Never raises.
+        """
+        try:
+            kept, dropped = [], []
+            for cid in beat.characters_involved or []:
+                try:
+                    entity = self.memory.load_character(cid)
+                except Exception:
+                    entity = None
+                (dropped if is_unavailable(entity) else kept).append(cid)
+            if dropped:
+                beat.characters_involved = kept
+                print(f"        ⚠️  Beat {beat.id}: {', '.join(dropped)} no longer available "
+                      f"(dead or missing); dropped from the cast")
+        except Exception as e:
+            print(f"        ⚠️  Beat cast check skipped: {e}")
 
     # ---------- Rolling horizon (Phase 2) ----------
     def revise_horizon(

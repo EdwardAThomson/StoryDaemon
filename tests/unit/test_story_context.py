@@ -173,3 +173,42 @@ def test_writer_gets_canon_story_so_far_and_search_results(project):
     assert "Who sealed the vault?" in recent    # best-ranked of the rest
     assert "Brann's missing brother" not in recent
     assert "They found the key." in ctx["tool_results_summary"]
+
+
+def test_synopsis_is_told_which_deaths_are_confirmed(project):
+    from novel_agent.memory.entity_status import set_status
+    _, mm = project
+    cfg = Config()
+    llm = FakeLLM()
+    update_synopsis(mm, llm, cfg)
+    assert "Confirmed changes: none" in llm.prompts[0]
+
+    brann = mm.load_character("C001")
+    set_status(brann, "dead", 9, "S009", "Brann did not get out.")
+    mm.save_character(brann)
+    for i in range(12, 16):
+        mm.save_scene(Scene(id=f"S{i:03d}", tick=i, title=f"Scene {i}", summary=[f"Event {i}."]))
+    llm.prompts.clear()
+    update_synopsis(mm, llm, cfg)
+    arc_prompt, fold_prompt = llm.prompts
+    for prompt in (arc_prompt, fold_prompt):
+        assert "- Brann: dead in S009" in prompt
+
+
+def test_strategic_intention_budget_and_empty_retry(project):
+    _, mm = project
+
+    class Thinker:
+        def __init__(self):
+            self.budgets = []
+
+        def generate(self, prompt, max_tokens=None):
+            self.budgets.append(max_tokens)
+            return None if len(self.budgets) == 1 else "Elil opens the vault."
+
+    llm = Thinker()
+    planner = MultiStagePlanner(llm, mm, StubVector(mm), Tools(), Config())
+    intention = planner._strategic_planning({"current_tick": 12, "active_character": "C000",
+                                             "story_foundation": {}})
+    assert intention == "Elil opens the vault."
+    assert llm.budgets == [1000, 2000]

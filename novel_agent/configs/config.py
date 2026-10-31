@@ -18,6 +18,11 @@ DEFAULT_CONFIG = {
                                      # a live tick truncated the plan mid-string at 3.4k
                                      # characters twice running, and the parse failure read
                                      # as "Failed to parse plan JSON", not as a budget.
+        'strategic_max_tokens': 1000,  # Planner stage 1 (one-sentence scene intention).
+                                       # Was hardcoded 150: enough for the sentence, but a
+                                       # reasoning model spends its hidden thinking inside the
+                                       # same budget, and live Luna/Terra runs (2026-10-31)
+                                       # came back cut off or empty (crashing on .strip()).
         'writer_max_tokens': 3000,  # Legacy flat scene ceiling, superseded by the Phase 3
                                     # write-until-concluded loop: the writer now sizes each
                                     # request from generation.scene_word_targets (word target

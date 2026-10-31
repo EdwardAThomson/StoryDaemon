@@ -318,3 +318,24 @@ def test_multi_stage_tactical_prompt_carries_the_language_fact(world):
     assert "the people here speak Cocqor, which shares nothing with Quqo" in prompt
     assert "Request at most one native phrase or word" in prompt
     assert "## Language Situation" not in planner._build_tactical_prompt("x", {}, {**state, "world": {}})
+
+
+def test_unknown_tool_is_skipped_not_fatal(world):
+    from novel_agent.agent.runtime import PlanExecutor
+    from novel_agent.tools.language_tools import language_tools_for
+    from novel_agent.tools.name_generator import NameGenerator
+    from novel_agent.tools.registry import ToolRegistry
+    memory, vector, state = world
+    data_dir = Path(__file__).resolve().parent.parent.parent / "novel_agent" / "data" / "names"
+    gen = NameGenerator(data_dir, languages_file=bank_file_path(memory.project_path))
+    registry = ToolRegistry()
+    for tool in language_tools_for(bank_file_path(memory.project_path), gen):
+        registry.register(tool)
+    plan = _plan(actions=[
+        {"tool": "scene.beat", "args": {}},
+        {"tool": "language.word", "args": {"people": "Quqo", "english": "water"}},
+    ])
+    results = PlanExecutor(registry, memory, vector).execute_plan(plan, tick=1)
+    skipped, ran = results["actions_executed"]
+    assert skipped["skipped"] and not skipped["success"]
+    assert ran["success"] and ran["result"]

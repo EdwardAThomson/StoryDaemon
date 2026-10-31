@@ -132,3 +132,50 @@ def test_extraction_prompt_carries_roster_and_rules(project):
         json.dumps({"status_changes": [{"id": "C001", "status": "dead", "evidence": "x"}]}))
     assert parsed["status_changes"][0]["id"] == "C001"
     assert "status_changes" not in FactExtractor(None, mm, Config())._parse_extraction_response("{}")
+
+
+def test_beat_written_before_a_death_drops_the_dead_when_picked(project):
+    from novel_agent.plot.entities import PlotOutline
+    from novel_agent.plot.manager import PlotOutlineManager
+    d, mm = project
+    manager = PlotOutlineManager(d, None, Config())
+    beat = PlotBeat(id="PB001", description="Elil and Brann search the wreck",
+                    characters_involved=["C000", "C001"])
+    manager.save_outline(PlotOutline(beats=[beat]))
+
+    # While Brann is alive the beat keeps him.
+    assert manager.get_next_beat().characters_involved == ["C000", "C001"]
+
+    apply_status_changes(Judge(), mm, [{"id": "C001", "status": "dead",
+                                        "evidence": "Brann did not get out."}],
+                         7, "S007", SCENE, Config())
+    assert manager.get_next_beat().characters_involved == ["C000"]
+
+
+class RefiningJudge(Judge):
+    def __init__(self, status):
+        super().__init__(True)
+        self.status = status
+        self.prompts = []
+
+    def generate(self, prompt, max_tokens=None):
+        self.prompts.append(prompt)
+        return json.dumps({"confirmed": True, "status": self.status, "reason": "a vented ruin"})
+
+
+def test_judge_picks_destroyed_over_a_claimed_inaccessible(project):
+    _, mm = project
+    judge = RefiningJudge("destroyed")
+    claims = [{"id": "L000", "status": "inaccessible",
+               "evidence": "The Kestrel broke apart over the ridge"}]
+    result = apply_status_changes(judge, mm, claims, 7, "S007", SCENE, Config())
+    assert result["applied"][0]["status"] == "destroyed"
+    assert status_of(mm.load_location("L000")) == "destroyed"
+    assert '"destroyed" (ruined' in judge.prompts[0]
+
+
+def test_judge_cannot_turn_a_loss_into_a_restoration(project):
+    _, mm = project
+    claims = [{"id": "C001", "status": "dead", "evidence": "Brann did not get out."}]
+    apply_status_changes(RefiningJudge("alive"), mm, claims, 7, "S007", SCENE, Config())
+    assert status_of(mm.load_character("C001")) == "dead"
