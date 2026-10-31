@@ -13,7 +13,7 @@ Contracts are the other half of the DSL. They work at the beat level, not the pa
 flowchart TD
     CORPUS[("Masters corpus<br/>21 novels, judged per paragraph")]
     GRAMMAR[("block_grammar_v1.json<br/>openers · second-order kernel · closers ·<br/>tension bands · words per paragraph")]
-    CORPUS -- "scripts/block_grammar_tables.py --json<br/>(offline)" --> GRAMMAR
+    CORPUS -- "built offline by<br/>block_grammar_tables.py" --> GRAMMAR
 
     subgraph CTX["Writer context (agent/writer_context.py)"]
         WT["Word target<br/>segments.word_target_for<br/>(scene_length · scene_length_preset)"]
