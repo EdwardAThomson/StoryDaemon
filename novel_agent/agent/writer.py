@@ -149,6 +149,7 @@ class SceneWriter:
 
             mode_words = mode_word_stats()
             parts, text = [], ""
+            sections_trimmed = 0
             for i, (first, last) in enumerate(bounds):
                 words = section_word_target(skeleton, first, last, mode_words)
                 prompt = format_scene_section_prompt(
@@ -185,14 +186,25 @@ class SceneWriter:
                         "Empty response for plan blocks %d-%d (finish=%s); "
                         "retrying once at %d tokens",
                         first, last, finish, retry_budget)
-                    part, _ = self._generate_segment(prompt, retry_budget)
+                    part, finish = self._generate_segment(prompt, retry_budget)
                     part = self._strip_llm_header((part or "").strip())
                 if not part:
                     raise ValueError(
                         f"empty response for plan blocks {first}-{last} "
                         f"(twice)")
+                # A section cut off by its ceiling stops mid-sentence. Joined
+                # inline, the next section's opening "[n]" marker landed in
+                # the middle of a paragraph, where the line-anchored stripper
+                # cannot see it, and shipped in the prose (15 of 67 Luna
+                # sections, 2026-10-31). Cut the stub back to its last whole
+                # sentence and always start the next section as a new
+                # paragraph: every section opens on its own plan block.
+                if finish == "length" or scene_incomplete(part):
+                    part, cut = trim_to_last_sentence(part)
+                    if cut:
+                        sections_trimmed += 1
                 parts.append(part)
-                text = self._join_segments(text, part) if text else part
+                text = (text.rstrip() + "\n\n" + part) if text else part
                 print(f"        section {i + 1}/{len(bounds)}: plan blocks "
                       f"{first}-{last}, {len(part.split())} words "
                       f"(target {words})")
@@ -202,6 +214,7 @@ class SceneWriter:
                 "section_bounds": [list(b) for b in bounds],
                 "concluded_naturally": True,
                 "trimmed": False,
+                "sections_trimmed": sections_trimmed,
             }
         except Exception as e:
             # Say so where the operator is looking, not only in the log. A

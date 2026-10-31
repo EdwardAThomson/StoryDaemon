@@ -76,8 +76,14 @@ def call(model, prompt, max_tokens=600, system=None):
 
 
 def parse_json(text):
-    m = re.search(r"\{.*\}", text, re.S)
-    return json.loads(m.group(0)) if m else None
+    """First JSON object in the text (a judge sometimes adds a second)."""
+    i = (text or "").find("{")
+    if i < 0:
+        return None
+    try:
+        return json.JSONDecoder().raw_decode(text[i:])[0]
+    except ValueError:
+        return None
 
 
 # --- corpus ---------------------------------------------------------------------------
@@ -160,7 +166,22 @@ def premise_of(proj):
     return (st.get("story_foundation") or st.get("foundation") or {}).get("premise", "")
 
 
-def run_pairwise(exp, arm_a, arm_b):
+PROSE_ONLY_PROMPT = PAIR_PROMPT.replace(
+    ", and how well paragraphing serves the reading", "").replace(
+    "Do not reward length for its own sake.",
+    "Do not reward length for its own sake. Both scenes have been mechanically "
+    "re-paragraphed into equal groups of sentences, so ignore paragraphing entirely.")
+
+
+def reflow(prose, per=4):
+    """Re-paragraph into fixed groups of sentences, so a judge cannot see the
+    original paragraphing (the register control)."""
+    flat = " ".join(paragraphs(prose))
+    sents = re.split(r'(?:(?<=[.!?])|(?<=[.!?][\u201d"\']))\s+(?=[\u201c"A-Z])', flat)
+    return "\n\n".join(" ".join(sents[i:i + per]) for i in range(0, len(sents), per))
+
+
+def run_pairwise(exp, arm_a, arm_b, prose_only=False):
     """arm_a vs arm_b over every matched (writer, premise, tick)."""
     cs = cells()
     out = []
@@ -176,7 +197,11 @@ def run_pairwise(exp, arm_a, arm_b):
         for tick in sorted(set(sa) & set(sb)):
             votes = []
             for first, second, order in ((sa[tick], sb[tick], "ab"), (sb[tick], sa[tick], "ba")):
-                v = parse_json(call(PAIR_MODEL, PAIR_PROMPT.format(premise=premise, a=first, b=second)))
+                if prose_only:
+                    v = parse_json(call(PAIR_MODEL, PROSE_ONLY_PROMPT.format(
+                        premise=premise, a=reflow(first), b=reflow(second))))
+                else:
+                    v = parse_json(call(PAIR_MODEL, PAIR_PROMPT.format(premise=premise, a=first, b=second)))
                 w = (v or {}).get("winner")
                 if order == "ba" and w in ("A", "B"):
                     w = "B" if w == "A" else "A"
@@ -184,7 +209,7 @@ def run_pairwise(exp, arm_a, arm_b):
                               "margin": (v or {}).get("margin"), "reason": (v or {}).get("reason")})
             out.append({"cell": name[: -len(arm_a) - 1], "tick": tick, "votes": votes})
             print(f"pair {name} t{tick}: {[x['winner'] for x in votes]}", flush=True)
-    (OUT / f"pairwise_{exp}.json").write_text(json.dumps(out, indent=1))
+    (OUT / f"pairwise_{exp}{'_prose' if prose_only else ''}.json").write_text(json.dumps(out, indent=1))
 
 
 # --- seams ----------------------------------------------------------------------------
@@ -250,6 +275,8 @@ if __name__ == "__main__":
         elif step == "pairwise":
             run_pairwise("e1", "on", "off")
             run_pairwise("e2", "sect", "single")
-            run_pairwise("e3", "on", "off")
+            # e3 is judged on beats and contracts, not prose preference.
+        elif step == "prose":
+            run_pairwise("e1", "on", "off", prose_only=True)
         elif step == "seams":
             run_seams()
