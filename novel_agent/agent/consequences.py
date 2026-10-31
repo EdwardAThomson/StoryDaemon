@@ -44,8 +44,9 @@ Character statuses: dead, missing, alive (alive only for someone shown alive
 after being thought dead or missing). Location statuses: destroyed,
 inaccessible, intact. Use the exact ids listed above. Leave it out for a
 threat, a fear, a rumor, a plan, a dream, a near miss or an injury: only a
-change that has actually happened by the end of the scene counts. Most scenes
-have none.
+change that has actually happened by the end of the scene counts. A character
+who is wounded or dying but still alive at the end is not dead and not
+missing. Most scenes have none.
 """
 
 # What the judge is asked to confirm, per status.
@@ -65,12 +66,35 @@ The passage offered as evidence: "{evidence}"
 
 Does the scene actually SHOW this happening, as a fact of the story by the end of the scene? Answer no if it is only threatened, feared, rumored, planned, assumed by a character without confirmation, dreamed, remembered from before, or a near miss.
 
-Respond with JSON only: {{"confirmed": true or false, "reason": "<one short sentence>"}}
+{refine}Respond with JSON only: {{"confirmed": true or false, {status_field}"reason": "<one short sentence>"}}
 
 Scene:
 \"\"\"
 {scene_text}
 \"\"\""""
+
+
+# A confirmed loss of one kind may be better described as the other: the
+# extractor picks the label, but the judge reads the whole scene (live test,
+# 2026-10-31: a crawlspace the prose called "destroyed", "a vented ruin" was
+# recorded as inaccessible because that was the label claimed). Restorations
+# (alive, intact) are not refined.
+_REFINEMENTS = {
+    "dead": ("dead", "missing"),
+    "missing": ("dead", "missing"),
+    "destroyed": ("destroyed", "inaccessible"),
+    "inaccessible": ("destroyed", "inaccessible"),
+}
+
+_REFINE_TEXT = {
+    "dead": ("If it is confirmed, also say which word fits the character at the end "
+             "of the scene: \"dead\" (shown dead) or \"missing\" (gone, fate unknown).\n\n"),
+    "destroyed": ("If it is confirmed, also say which word fits the place at the end "
+                  "of the scene: \"destroyed\" (ruined, wrecked, collapsed, gone) or "
+                  "\"inaccessible\" (still standing but sealed, cut off or occupied).\n\n"),
+}
+_REFINE_TEXT["missing"] = _REFINE_TEXT["dead"]
+_REFINE_TEXT["inaccessible"] = _REFINE_TEXT["destroyed"]
 
 
 def status_change_rules(config: Any = None) -> str:
@@ -109,7 +133,11 @@ def _parse_judgment(response: str) -> Dict[str, Any]:
             verdict.strip().lower(), verdict)
     if not isinstance(verdict, bool):
         raise ValueError(f"unusable status verdict {data['confirmed']!r}")
-    return {"confirmed": verdict, "reason": str(data.get("reason", "")).strip()}
+    result = {"confirmed": verdict, "reason": str(data.get("reason", "")).strip()}
+    status = str(data.get("status") or "").strip().lower()
+    if status:
+        result["status"] = status
+    return result
 
 
 def judge_status_change(llm, name: str, status: str, evidence: str,
@@ -119,8 +147,11 @@ def judge_status_change(llm, name: str, status: str, evidence: str,
     if llm is None:
         return None
     chars = config.get('coherence.loop_closure_scene_chars', 12000)
+    choices = _REFINEMENTS.get(status)
     prompt = STATUS_JUDGE_PROMPT.format(
         question=_STATUS_QUESTIONS[status].format(name=name),
+        refine=_REFINE_TEXT.get(status, ""),
+        status_field=(f'"status": "{choices[0]}" or "{choices[1]}", ' if choices else ""),
         evidence=(evidence or "").replace('"', "'"),
         scene_text=(scene_text or "")[:chars])
     max_tokens = config.get('coherence.loop_closure_max_tokens', 200)
@@ -201,6 +232,9 @@ def apply_status_changes(llm, memory, claims: List[Dict[str, Any]], tick: int,
             if not verdict or not verdict.get("confirmed"):
                 refuse("judge: " + ((verdict or {}).get("reason") or "no verdict"))
                 continue
+            refined = verdict.get("status")
+            if refined in _REFINEMENTS.get(status, ()) and refined != status_of(entity):
+                status = refined
             if not set_status(entity, status, tick, scene_id, evidence, verdict.get("reason", "")):
                 refuse("could not record")
                 continue
