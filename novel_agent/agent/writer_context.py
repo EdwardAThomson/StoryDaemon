@@ -8,8 +8,18 @@ from ..tools.name_generator import NameGenerator
 from ..tools.language_tools import native_speech_from_results, native_speech_section
 from .arc_pressure import arc_pressure_guidance_for_writer, beat_target_is_stale
 from .language_situation import language_situation, people_of_character, people_of_location
+from ..memory.entity_status import is_unavailable, status_note, status_record
 
 logger = logging.getLogger(__name__)
+
+
+def _keyword_rank(query: str, items: list, text_of) -> list:
+    """Items ordered by word overlap with the query (the fallback ranking)."""
+    words = set((query or "").lower().split())
+    scored = [(len(words & set(str(text_of(i)).lower().split())), n, i)
+              for n, i in enumerate(items)]
+    scored.sort(key=lambda t: (-t[0], t[1]))
+    return [i for _, _, i in scored]
 
 
 class WriterContextBuilder:
@@ -106,6 +116,15 @@ class WriterContextBuilder:
             full_text_count=full_text_count,
             summary_count=summary_count
         )
+
+        # Story so far + established canon (agent/story_context.py). Both ride
+        # the recent_context slot, ahead of the recent scenes, so every
+        # writing call (single-shot, continuation, sections, revision) carries
+        # them with no new template placeholder. Older-than-window scenes
+        # come from the running synopsis; the canon is the lore, open loops
+        # and departed entities most relevant to this scene.
+        recent_context = self._with_story_and_canon(
+            recent_context, plan, full_text_count + summary_count)
         
         # Format tool results
         tool_results_summary = self._format_tool_results(execution_results)
@@ -376,7 +395,7 @@ class WriterContextBuilder:
                 continue
             self.name_generator.register_used_name(c.full_name)
             marker = " (POV)" if cid == pov_character_id else ""
-            cast_lines.append(f"- {c.display_name} ({c.role}){marker}")
+            cast_lines.append(f"- {c.display_name} ({c.role}){marker}{status_note(c)}")
         existing_characters = "\n".join(cast_lines) if cast_lines else "(none yet)"
 
         genre = (project_state.get("story_foundation") or {}).get("genre") or "scifi"
@@ -490,6 +509,12 @@ class WriterContextBuilder:
         
         if location.features:
             details += f"**Features:** {', '.join(location.features)}\n\n"
+
+        if is_unavailable(location):
+            record = status_record(location)
+            details += (f"**Status:** {record.get('status')} in {record.get('scene_id') or 'an earlier scene'}. "
+                        f"It no longer stands as described: show only what remains "
+                        f"(ruins, wreckage, a sealed way in).\n\n")
         
         return location.name, details.strip()
     
@@ -571,6 +596,138 @@ class WriterContextBuilder:
         
         return "\n".join(context_parts).strip()
     
+    def _with_story_and_canon(self, recent_context: str, plan: Dict[str, Any],
+                              window: int) -> str:
+        """Prefix the story-so-far and canon sections; never raises."""
+        parts = []
+        try:
+            from .story_context import story_so_far
+            so_far = story_so_far(self.memory, self.config, window)
+            if so_far:
+                parts.append("## Story So Far\n\n" + so_far)
+        except Exception as e:
+            logger.warning(f"Story so far unavailable to the writer: {e}")
+        canon = self._canon_section(plan)
+        if canon:
+            parts.append(canon)
+        if not parts:
+            return recent_context
+        return "\n\n".join(parts + [recent_context])
+
+    def _canon_query(self, plan: Dict[str, Any]) -> str:
+        beat = plan.get("plot_beat") or {}
+        return " ".join(str(x) for x in (
+            plan.get("scene_intention"), plan.get("key_change"),
+            beat.get("description") if isinstance(beat, dict) else "") if x)
+
+    def _canon_section(self, plan: Dict[str, Any]) -> str:
+        """The established canon this scene must stay consistent with, or "".
+
+        Lore and open loops used to reach the planner only (by keyword
+        overlap) and never the writer, so the prose could contradict a world
+        rule or silently drop a thread. Selection is by embedding similarity
+        to the scene's intention, key change and beat; loops the beat names
+        come first. Departed characters and lost places are always listed.
+        Gated by generation.writer_canon; never raises.
+        """
+        if not self.config.get('generation.writer_canon', True):
+            return ""
+        try:
+            query = self._canon_query(plan)
+            lines = []
+            lore = self._canon_lore(query)
+            if lore:
+                lines.append("**Facts of the world:**")
+                lines.extend(f"- [{l.lore_type or 'fact'}] {l.content}" for l in lore)
+            loops = self._canon_loops(query, plan)
+            if loops:
+                lines.append("**Unresolved threads this scene may touch** "
+                             "(do not resolve one unless this scene's plan resolves it):")
+                lines.extend(f"- {l.description}" for l in loops)
+            departed = self._departed_entities()
+            if departed:
+                lines.append("**No longer available (never show them as present or intact):**")
+                lines.extend(departed)
+            if not lines:
+                return ""
+            return ("## Established Canon\n\nStay consistent with these. They are "
+                    "background, not a checklist: use only what the scene naturally "
+                    "touches.\n\n" + "\n".join(lines))
+        except Exception as e:
+            logger.warning(f"Canon section unavailable: {e}")
+            return ""
+
+    def _canon_lore(self, query: str) -> list:
+        limit = self.config.get('generation.writer_canon_lore', 4) or 0
+        if limit <= 0:
+            return []
+        try:
+            active = {l.id: l for l in self.memory.load_all_lore()
+                      if getattr(l, "status", "active") != "disputed"}
+        except Exception:
+            return []
+        if not active:
+            return []
+        picked = []
+        try:
+            for hit in self.vector.search_lore(query, n_results=min(len(active), limit * 3)):
+                lore = active.get(hit.get("id"))
+                if lore is not None and lore not in picked:
+                    picked.append(lore)
+                if len(picked) >= limit:
+                    break
+        except Exception as e:
+            logger.debug(f"Lore search failed, using keyword overlap: {e}")
+        if not picked:
+            picked = _keyword_rank(query, list(active.values()),
+                                   lambda l: f"{l.category} {l.content}")[:limit]
+        return picked
+
+    def _canon_loops(self, query: str, plan: Dict[str, Any]) -> list:
+        limit = self.config.get('generation.writer_canon_loops', 4) or 0
+        if limit <= 0:
+            return []
+        try:
+            loops = [l for l in self.memory.load_open_loops()
+                     if getattr(l, "status", "open") == "open"]
+        except Exception:
+            return []
+        if not loops:
+            return []
+        beat = plan.get("plot_beat") or {}
+        named = set((beat.get("resolves_loops") or []) + (beat.get("advances_loops") or [])) \
+            if isinstance(beat, dict) else set()
+        pinned = [l for l in loops if l.id in named]
+        rest = [l for l in loops if l.id not in named]
+        try:
+            scores = self.vector.rank_by_similarity(query, [l.description for l in rest])
+            ranked = [l for _, l in sorted(zip(scores, rest), key=lambda p: p[0], reverse=True)]
+        except Exception as e:
+            logger.debug(f"Loop ranking failed, using keyword overlap: {e}")
+            ranked = _keyword_rank(query, rest, lambda l: f"{l.category} {l.description}")
+        return (pinned + ranked)[:max(limit, len(pinned))]
+
+    def _departed_entities(self) -> List[str]:
+        """"- Name: deceased (S012)" for every dead/missing character and
+        destroyed/inaccessible location."""
+        from ..memory.entity_status import is_unavailable, status_note
+        lines = []
+        for list_ids, load in ((self.memory.list_characters, self.memory.load_character),
+                               (self.memory.list_locations, self.memory.load_location)):
+            try:
+                ids = sorted(list_ids())
+            except Exception:
+                continue
+            for entity_id in ids:
+                try:
+                    entity = load(entity_id)
+                except Exception:
+                    entity = None
+                if entity is not None and is_unavailable(entity):
+                    name = getattr(entity, "display_name", None) or getattr(entity, "name", entity_id)
+                    lines.append(f"- {name}: {status_note(entity).strip(' ()').replace(',', ' in', 1)}")
+        return lines
+
     def _format_tool_results(self, execution_results: Dict[str, Any]) -> str:
         """Format tool execution results into readable summary.
         
@@ -596,9 +753,34 @@ class WriterContextBuilder:
             
             # Format based on tool type
             if tool_name == "memory.search":
+                # The planner asked for these but never saw them (its tools
+                # run after the plan is written), so the writer gets the
+                # findings themselves, not just a count.
                 query = action.get("args", {}).get("query", "")
                 results = result.get("results", [])
-                summary_parts.append(f"- Searched memory for '{query}': Found {len(results)} results")
+                summary_parts.append(f"- Searched memory for '{query}': found {len(results)} result(s)")
+                for hit in results[:5]:
+                    label = hit.get("name") or hit.get("entity_id", "")
+                    summary_parts.append(
+                        f"  - {label} [{hit.get('entity_type', '')} {hit.get('entity_id', '')}]: "
+                        f"{hit.get('snippet', '')}")
+
+            elif tool_name == "relationship.query":
+                rels = result.get("relationships", [])
+                summary_parts.append(f"- Looked up relationships: {len(rels)} found")
+                for rel in rels[:6]:
+                    view = f'; their view: "{rel["your_view"]}"' if rel.get("your_view") else ""
+                    summary_parts.append(
+                        f"  - {rel.get('character_name', rel.get('character_id', ''))}: "
+                        f"{rel.get('relationship_type', '')} ({rel.get('status', '')}){view}")
+
+            elif tool_name == "faction.query":
+                hits = result.get("results", [])
+                summary_parts.append(f"- Looked up factions: {len(hits)} found")
+                for hit in hits[:5]:
+                    summary_parts.append(
+                        f"  - {hit.get('name', '')} ({hit.get('faction_id', '')}): "
+                        f"{hit.get('org_type', '')}, importance {hit.get('importance', '')}")
             
             elif tool_name == "character.generate":
                 char_name = result.get("name", "Unknown")

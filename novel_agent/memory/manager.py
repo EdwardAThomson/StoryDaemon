@@ -34,6 +34,9 @@ class MemoryManager:
         # first save (unlike open_loops.json), so projects that never attribute
         # a scene gain no new file.
         self.threads_file = self.memory_path / "threads.json"
+        # Running story synopsis (memory/synopsis.py). Created lazily on the
+        # first closed arc, so short projects gain no new file.
+        self.synopsis_file = self.memory_path / "synopsis.json"
         self.counters_file = self.memory_path / "counters.json"
         
         self._ensure_directories()
@@ -644,6 +647,16 @@ class MemoryManager:
         """Save story threads to disk (creates threads.json on first save)."""
         data = {"threads": [thread.to_dict() for thread in threads]}
         self._write_json(self.threads_file, data)
+
+    def load_synopsis(self) -> Dict[str, Any]:
+        """Load the running story synopsis ({} when none exists yet)."""
+        if not self.synopsis_file.exists():
+            return {}
+        return self._read_json(self.synopsis_file)
+
+    def save_synopsis(self, data: Dict[str, Any]):
+        """Save the running story synopsis (creates synopsis.json on first save)."""
+        self._write_json(self.synopsis_file, data)
 
     # ========================================================================
     # Relationship Graph Management

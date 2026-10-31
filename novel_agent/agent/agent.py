@@ -281,7 +281,10 @@ class StoryAgent:
                     "characters_involved": current_beat.characters_involved,
                     "location": current_beat.location,
                     "tension_target": current_beat.tension_target,
-                    "plot_threads": current_beat.plot_threads
+                    "plot_threads": current_beat.plot_threads,
+                    # Loops the beat names: pinned first in the writer's canon.
+                    "resolves_loops": list(getattr(current_beat, "resolves_loops", None) or []),
+                    "advances_loops": list(getattr(current_beat, "advances_loops", None) or []),
                 }
                 # Phase 3 contracts Slice 1: show the writer what will be checked
                 # (rendered as plain language in the plot beat section).
@@ -412,10 +415,19 @@ class StoryAgent:
             update_stats = {}
             if facts:  # Only update if extraction succeeded
                 update_stats = self.entity_updater.apply_updates(facts, tick, scene_id, writer_context)
+
+                # Step 10.5: judged deaths and destruction (agent/consequences.py).
+                self._apply_status_changes(facts, tick, scene_id, scene_data["text"])
                 
                 # Step 11: Re-index updated entities (Phase 5)
                 print("   11. Syncing vector database...")
                 self._reindex_updated_entities(facts)
+
+            # Step 11.2: running story synopsis; closes an arc every
+            # generation.synopsis_arc_size scenes. After step 10.5 so a death
+            # or destruction in the arc's last scene is already confirmed:
+            # the arc summary is told which ones are. Never breaks the tick.
+            self._update_story_synopsis()
 
             # Step 11.5: Verify beat execution and mark complete (Phase 5;
             # contract-aware since Phase 3 contracts Slice 1). Runs after fact
@@ -682,6 +694,8 @@ class StoryAgent:
             update_stats = {}
             if facts:
                 update_stats = self.entity_updater.apply_updates(facts, tick, scene_id, writer_context)
+                self._apply_status_changes(facts, tick, scene_id, scene_data["text"])
+            self._update_story_synopsis()
             
             # Step 14: Extract lore (Phase 7A.4)
             print("   13. Extracting lore...")
@@ -831,6 +845,7 @@ class StoryAgent:
             lid = resolver.resolve_location(loc)
             if lid:
                 plan["target_location"] = lid
+        keep_pov_alive(self.memory, getattr(self, "state", None) or {}, plan)
 
     def _update_plan_with_entity_ids(self, plan: Dict, entity_results: Dict):
         """Update plan with real entity IDs after generation.
@@ -960,6 +975,37 @@ class StoryAgent:
             except Exception:
                 return
     
+    def _apply_status_changes(self, facts, tick, scene_id, scene_text):
+        """Judge and apply the extractor's status-change claims (deaths,
+        destruction). Gated by coherence.entity_status; never breaks the tick."""
+        try:
+            from .consequences import apply_status_changes
+            result = apply_status_changes(self.llm, self.memory, (facts or {}).get("status_changes"),
+                                          tick, scene_id, scene_text, self.config)
+            if result:
+                for change in result["applied"]:
+                    print(f"   ⚰️  Status change: {change['id']} is now {change['status']}")
+                for refusal in result["refused"]:
+                    print(f"   ↩️  Status claim refused: {refusal['id']} {refusal['status']} ({refusal['why']})")
+            return result
+        except Exception as e:
+            logging.getLogger(__name__).warning(f"Status changes skipped: {e}")
+            return None
+
+    def _update_story_synopsis(self):
+        """Fold any newly full arc into the running synopsis (memory/synopsis.py).
+
+        Wrapped twice over: update_synopsis already never raises, and a
+        synopsis must never cost the tick that wrote the scene.
+        """
+        try:
+            from ..memory.synopsis import update_synopsis
+            result = update_synopsis(self.memory, self.llm, self.config)
+            if result.get("arcs_closed"):
+                print(f"   📚 Story synopsis updated ({result['arcs_closed']} arc(s) folded)")
+        except Exception as e:
+            logging.getLogger(__name__).warning(f"Story synopsis update skipped: {e}")
+
     def _generate_plan(self, context: dict) -> dict:
         """Generate a plan using the planner LLM.
         
@@ -2227,3 +2273,25 @@ Answer:"""
             
         except Exception as e:
             logger.error(f"Failed to mark beat complete: {e}")
+
+
+def keep_pov_alive(memory, state: Dict, plan: Dict) -> None:
+    """A dead or missing character cannot be the POV (memory/entity_status.py).
+
+    Falls back to the active character when it is still available; when it
+    is not either, the plan is left alone with a warning rather than
+    inventing a narrator. Never raises.
+    """
+    try:
+        from ..memory.entity_status import is_unavailable
+        pov = plan.get("pov_character")
+        if not pov or not is_unavailable(memory.load_character(pov)):
+            return
+        active = state.get("active_character")
+        if active and active != pov and not is_unavailable(memory.load_character(active)):
+            print(f"        ⚠️  POV {pov} is dead or missing; writing from {active} instead")
+            plan["pov_character"] = active
+        else:
+            print(f"        ⚠️  POV {pov} is dead or missing and no living fallback is set")
+    except Exception:
+        pass

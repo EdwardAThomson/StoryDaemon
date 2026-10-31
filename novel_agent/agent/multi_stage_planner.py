@@ -17,6 +17,8 @@ from ..tools.registry import ToolRegistry
 from .arc_pressure import (arc_phase_mandate, arc_pressure_guidance_for_planner,
                            beat_target_is_stale, compute_arc_phase, last_scene_tension)
 from .throughline import primary_goal, throughline_guidance
+from .story_context import (cast_roster, entity_name, location_roster,
+                            recent_scene_summaries, story_so_far)
 
 logger = logging.getLogger(__name__)
 
@@ -238,8 +240,15 @@ class MultiStagePlanner:
                 f.write(f"Tokens (approx): {self.stage_stats['stage1_tokens']}\n")
                 f.write(f"\n{prompt}\n")
         
-        # Call LLM
-        response = self.llm.generate(prompt, max_tokens=150)
+        # Call LLM. The answer is one sentence, but a reasoning model thinks
+        # inside the same budget; an empty answer is retried once at double.
+        budget = int(self.config.get('llm.strategic_max_tokens', 1000) or 1000)
+        response = self.llm.generate(prompt, max_tokens=budget) or ""
+        if not response.strip():
+            logger.warning(f"Strategic intention came back empty at {budget} tokens; retrying at {budget * 2}")
+            response = self.llm.generate(prompt, max_tokens=budget * 2) or ""
+        if not response.strip():
+            raise ValueError("Strategic planning returned an empty intention")
         
         # Save response if requested
         if self.save_prompts and self.prompts_dir:
@@ -530,15 +539,16 @@ Tone: {foundation.get('tone', 'Unknown')}
 Tick: {state.get('current_tick', 0)}
 Story Goal: {goal.get('description', 'Still emerging')}
 Recent Tension: {recent_tension}{arc_line}{throughline_line}
-
+{self._story_sections()}
 ## Protagonist
 """
         
         if protagonist:
             prompt += f"""Name: {protagonist.display_name}
 Role: {protagonist.role}
-Current Goals: {', '.join(protagonist.current_state.goals[:3]) if protagonist.current_state.goals else 'None'}
+Current Goals: {', '.join(protagonist.current_state.goals[-3:]) if protagonist.current_state.goals else 'None'}
 Emotional State: {protagonist.current_state.emotional_state or 'Unknown'}
+Current Location: {entity_name(self.memory, protagonist.current_state.location_id, 'location') or 'Unknown'}
 """
         else:
             prompt += "No protagonist defined yet.\n"
@@ -552,6 +562,8 @@ Consider:
 - Protagonist's current goals and state
 - Recent tension pattern (maintain variety)
 - Story goal progress (if one exists)
+
+The next scene follows on from the most recent scene above: continue from where it left off, and do not contradict anything that has already happened.
 
 Respond with a single sentence describing the scene intention.
 Example: "Protagonist discovers a clue about the signal's origin, raising tension"
@@ -599,7 +611,17 @@ Scene intention:"""
 
 ## Scene Intention
 {scene_intention}
-{arc_section}{language_section}
+{arc_section}{language_section}{self._story_sections()}
+## Who and Where (use these exact IDs)
+
+### Characters
+{cast_roster(self.memory) or "None yet"}
+
+### Locations
+{location_roster(self.memory) or "None yet"}
+
+Protagonist's current location: {entity_name(self.memory, protagonist.current_state.location_id, 'location') if protagonist and protagonist.current_state.location_id else 'Unknown'}
+
 ## Relevant Context
 
 ### Relevant Past Scenes
@@ -640,7 +662,9 @@ Scene intention:"""
         relationships = context.get('relationships', [])
         if relationships:
             for rel in relationships[:5]:
-                prompt += f"- {rel.character_a} ↔ {rel.character_b}: {rel.relationship_type}\n"
+                prompt += (f"- {entity_name(self.memory, rel.character_a, 'character')} ↔ "
+                           f"{entity_name(self.memory, rel.character_b, 'character')}: "
+                           f"{rel.relationship_type} ({rel.status})\n")
         else:
             prompt += "None\n"
         
@@ -689,6 +713,25 @@ Generate your plan now:"""
         
         return prompt
     
+    def _story_sections(self) -> str:
+        """Story so far + recent scenes (oldest first), or "" with no scenes.
+
+        Both planner stages used to plan blind to what had just happened:
+        Stage 1 saw no scenes and Stage 3 only the three a vector search
+        matched to Stage 1's guess. The recent scenes are chronological and
+        the synopsis covers everything older (agent/story_context.py).
+        """
+        count = self.config.get('generation.recent_scenes_count', 3)
+        recent = recent_scene_summaries(self.memory, count)
+        if not recent:
+            return ""
+        parts = []
+        so_far = story_so_far(self.memory, self.config, count)
+        if so_far:
+            parts.append(f"\n## Story So Far\n{so_far}\n")
+        parts.append(f"\n## Recent Scenes (oldest first, most recent last)\n{recent}\n")
+        return "".join(parts)
+
     def _language_situation_line(self, state: dict) -> str:
         """The active character's language situation, or '' (never raises)."""
         try:
