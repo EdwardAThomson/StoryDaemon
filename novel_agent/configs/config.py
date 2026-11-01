@@ -119,6 +119,13 @@ DEFAULT_CONFIG = {
         # sketch's literal per-sub-block mode.
         'subblock_generation': False,
         'subblock_section_blocks': 10,
+        # One cheap planning call per sectioned scene splits the intention
+        # into one job per section, so a middle section advances the scene by
+        # a step instead of re-delivering the whole scene (the 2026-10-31
+        # validation's restart-and-repeat failure). Falls back to position
+        # jobs if the call fails. Off reproduces the pre-fix prompt exactly.
+        'subblock_section_jobs': True,
+        'subblock_jobs_max_tokens': 600,
 
         # Scene skeletons (Slice 4 of the block DSL, experimental). When on, a
         # typed paragraph plan sampled from the masters' block grammar

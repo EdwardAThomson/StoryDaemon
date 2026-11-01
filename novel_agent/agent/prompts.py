@@ -1,6 +1,6 @@
 """Prompt templates for agent LLM interactions."""
 
-from typing import Any
+from typing import Any, List, Optional
 
 PLANNER_PROMPT_TEMPLATE = """You are a creative story planner for an emergent narrative system.
 
@@ -523,7 +523,7 @@ SCENE_SECTION_PROMPT_TEMPLATE = """You are a creative fiction writer writing ONE
 {item_count} items, about {section_words} words in total.
 
 {plan_lines}
-{scene_so_far_section}
+{scene_so_far_section}{job_section}
 ## Your Task
 
 {position_instruction}
@@ -547,13 +547,21 @@ def format_scene_section_prompt(writer_context: dict, plan_lines: str,
                                 item_count: int = 0, section_words: int = 0,
                                 scene_so_far: str = "",
                                 is_first: bool = False,
-                                is_last: bool = False) -> str:
+                                is_last: bool = False,
+                                section_job: str = "",
+                                jobs_done: Optional[List[str]] = None) -> str:
     """Format one section request for sectioned scene writing (DSL Slice 5).
 
     A masters-length chapter is roughly 3,165 words and a single request does
     not reliably produce one, so the scene is written in plan-addressed
     sections. Each call gets the whole brief, the prose so far, and only the
     slice of the plan it owns.
+
+    ``section_job`` is this section's one-sentence job and ``jobs_done`` the
+    jobs of the sections already written (agent/section_plan.py). Without
+    them every section carried the whole scene's intention and key change and
+    tried to deliver the whole scene again, so the prose circled and restarted
+    (docs/DSL_VALIDATION_2026-10-31.md section 5).
     """
     ctx = writer_context or {}
     if is_first:
@@ -576,6 +584,11 @@ def format_scene_section_prompt(writer_context: dict, plan_lines: str,
             "2. If it stops mid-sentence, finish that sentence first.",
             "3. Match the prose style, tense, and deep POV of the text above, "
             "including its narrative distance and sentence rhythm.",
+            "4. The text above has already established the setting and the "
+            "people in it, and everything asked, found, said or decided there "
+            "is settled. Do NOT re-describe the place, re-introduce anyone, "
+            "or have a character ask, announce or discover again what the "
+            "text above already covers.",
         ]
     else:
         continuity += [
@@ -589,10 +602,22 @@ def format_scene_section_prompt(writer_context: dict, plan_lines: str,
               SCENE_SO_FAR_SECTION_TEMPLATE.format(
                   scene_so_far=scene_so_far, prior_last=first - 1))
 
+    job_section = ""
+    if section_job:
+        lines = [f"**This section's job:** {section_job}"]
+        if jobs_done:
+            lines.append("**Already done in the text above:** "
+                         + " ".join(jobs_done))
+        lines.append("Do only this section's job. The scene's intention and "
+                     "key change are reached across all the sections, not "
+                     "inside this one, unless this is the final section.")
+        job_section = "\n## Your Section's Job\n\n" + "\n".join(lines) + "\n"
+
     return SCENE_SECTION_PROMPT_TEMPLATE.format(
         story_context=story_context_section(ctx, task="write"),
         craft_rules=craft_rules(ctx),
         scene_so_far_section=so_far,
+        job_section=job_section,
         first=first,
         last=last,
         plan_lines=plan_lines,

@@ -148,6 +148,7 @@ class SceneWriter:
                 return None          # one section is just single-shot writing
 
             mode_words = mode_word_stats()
+            jobs = self._section_jobs(writer_context, bounds, skeleton)
             parts, text = [], ""
             sections_trimmed = 0
             for i, (first, last) in enumerate(bounds):
@@ -162,6 +163,8 @@ class SceneWriter:
                     scene_so_far=text,
                     is_first=(i == 0),
                     is_last=(i == len(bounds) - 1),
+                    section_job=jobs[i] if jobs else "",
+                    jobs_done=jobs[:i] if jobs else None,
                 )
                 budget = token_budget_for(words, self.config)
                 part, finish = self._generate_segment(prompt, budget)
@@ -215,6 +218,7 @@ class SceneWriter:
                 "concluded_naturally": True,
                 "trimmed": False,
                 "sections_trimmed": sections_trimmed,
+                "section_jobs": jobs,
             }
         except Exception as e:
             # Say so where the operator is looking, not only in the log. A
@@ -227,6 +231,30 @@ class SceneWriter:
             logger.warning(
                 f"Sectioned writing failed; falling back to single-shot: {e}")
             return None
+
+    def _section_jobs(self, writer_context: Dict[str, Any], bounds: list,
+                      skeleton: List[str]) -> Optional[List[str]]:
+        """One job per section, from one planning call; position jobs if it
+        fails; None when the knob is off (the pre-fix prompt, byte for byte).
+
+        Never raises: a planning failure costs the jobs, not the scene.
+        """
+        if not self.config.get('generation.subblock_section_jobs', True):
+            return None
+        from .section_plan import (fallback_jobs, parse_section_jobs,
+                                   section_jobs_prompt)
+        n = len(bounds)
+        try:
+            budget = int(self.config.get('generation.subblock_jobs_max_tokens', 600) or 600)
+            response, _ = self._generate_segment(
+                section_jobs_prompt(writer_context, bounds, skeleton), budget)
+            jobs = parse_section_jobs(response, n)
+            if jobs:
+                return jobs
+            logger.warning("Section jobs unusable; using position jobs")
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"Section jobs failed ({e}); using position jobs")
+        return fallback_jobs(n)
 
     def _generate_segment(self, prompt: str, max_tokens: int) -> Tuple[str, Optional[str]]:
         """One LLM request, with the finish_reason when the backend exposes it.

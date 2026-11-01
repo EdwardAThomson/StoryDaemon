@@ -34,7 +34,7 @@ def _scene_metadata(plan, scene_data):
             scene_data["skeleton_compliance"] = compliance
     for key in ("scene_skeleton", "skeleton_compliance", "sectioned",
                 "section_bounds", "segments_used", "concluded_naturally",
-                "trimmed", "sections_trimmed"):
+                "trimmed", "sections_trimmed", "section_jobs"):
         if key in scene_data and scene_data[key] is not None:
             meta[key] = scene_data[key]
     return meta

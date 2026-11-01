@@ -143,8 +143,12 @@ def _ctx(skeleton):
     }
 
 
+# Section jobs off here: these tests count calls and check the pre-fix prompt,
+# which the knob reproduces exactly. The jobs tests below turn it on.
 ON = {"generation.subblock_generation": True,
-      "generation.subblock_section_blocks": 10}
+      "generation.subblock_section_blocks": 10,
+      "generation.subblock_section_jobs": False}
+JOBS_ON = {**ON, "generation.subblock_section_jobs": True}
 
 
 def test_writer_makes_one_call_per_section():
@@ -253,6 +257,63 @@ def test_a_section_cut_off_mid_sentence_is_trimmed_and_the_next_starts_a_paragra
     assert "reached for the" not in scene["text"]
     assert "She read the chart.\n\nReeve spoke first." in scene["text"]
     assert scene["sections_trimmed"] == 1
+
+
+# ---- section jobs (the restart-and-repeat fix) ---------------------------------
+
+def test_section_jobs_prompt_parse_and_fallback():
+    from novel_agent.agent.section_plan import (fallback_jobs,
+                                                parse_section_jobs,
+                                                section_jobs_prompt)
+    sk = ["SETTING"] + ["DIALOGUE"] * 24
+    p = section_jobs_prompt(_ctx(sk), [(1, 10), (11, 20), (21, 25)], sk)
+    assert "Mira confronts the archivist" in p and "exactly 3 entries" in p
+    assert "1. paragraphs 1 to 10" in p and "9 DIALOGUE" in p
+    good = '{"jobs": ["open", "middle", "close"]}'
+    assert parse_section_jobs(good, 3) == ["open", "middle", "close"]
+    assert parse_section_jobs("Sure:\n```json\n" + good + "\n```", 3) == ["open", "middle", "close"]
+    # one short is padded from the fallback, one long is trimmed, two off fails
+    assert parse_section_jobs('{"jobs": ["a", "b"]}', 3)[:2] == ["a", "b"]
+    assert len(parse_section_jobs('{"jobs": ["a", "b", "c", "d"]}', 3)) == 3
+    assert parse_section_jobs('{"jobs": ["a"]}', 3) is None
+    assert parse_section_jobs("not json", 3) is None
+    assert parse_section_jobs("", 3) is None
+    fb = fallback_jobs(4)
+    assert len(fb) == 4 and fb[-1].startswith("Land the key change")
+
+
+def test_each_section_is_told_its_own_job_and_the_jobs_already_done():
+    sk = ["DIALOGUE"] * 30                       # 30 blocks at 10 -> 3 sections
+    llm = FakeLLM(['{"jobs": ["Mira asks for the ledger.", "The archivist refuses.", "The ledger changes hands."]}',
+                   "[1] One.", "[11] Two.", "[21] Three."])
+    scene = SceneWriter(llm, Cfg(**JOBS_ON)).write_scene(_ctx(sk))
+    assert len(llm.prompts) == 4                 # one planning call + 3 sections
+    assert "planning how ONE SCENE" in llm.prompts[0]
+    assert "**This section's job:** Mira asks for the ledger." in llm.prompts[1]
+    assert "Already done" not in llm.prompts[1]
+    assert "**This section's job:** The archivist refuses." in llm.prompts[2]
+    assert "Already done in the text above:** Mira asks for the ledger." in llm.prompts[2]
+    assert "re-describe the place" in llm.prompts[2]
+    assert "The ledger changes hands." in llm.prompts[3]
+    assert scene["section_jobs"] == ["Mira asks for the ledger.", "The archivist refuses.", "The ledger changes hands."]
+
+
+def test_unusable_jobs_fall_back_to_position_jobs_without_losing_the_scene():
+    sk = ["DIALOGUE"] * 25
+    llm = FakeLLM(["I cannot plan this.", "[1] One.", "[11] Two."])
+    scene = SceneWriter(llm, Cfg(**JOBS_ON)).write_scene(_ctx(sk))
+    assert scene["sectioned"] is True
+    assert scene["section_jobs"][-1].startswith("Land the key change")
+    assert "**This section's job:** Establish the situation" in llm.prompts[1]
+
+
+def test_jobs_off_reproduces_the_pre_fix_prompt():
+    sk = ["DIALOGUE"] * 25
+    llm = FakeLLM(["[1] One.", "[11] Two."])
+    scene = SceneWriter(llm, Cfg(**ON)).write_scene(_ctx(sk))
+    assert len(llm.prompts) == 2
+    assert "Your Section's Job" not in llm.prompts[1]
+    assert scene.get("section_jobs") is None
 
 
 def test_markers_are_stripped_from_the_stitched_scene():
