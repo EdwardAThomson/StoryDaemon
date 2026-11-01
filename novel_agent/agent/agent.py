@@ -148,12 +148,43 @@ class StoryAgent:
             ValueError: If plan validation fails
         """
         tick = self.state["current_tick"]
-        
+
         # Use two-phase execution for first tick only
-        if tick == 0:
-            return self._first_tick()
-        else:
-            return self._normal_tick()
+        try:
+            if tick == 0:
+                result = self._first_tick()
+            else:
+                result = self._normal_tick()
+        except Exception as e:
+            # Version history: the failed tick's partial writes get their own
+            # commit, so the next tick's commit holds only its own work.
+            self._record_history(tick, error=e)
+            raise
+        self._record_history(tick, result=result)
+        return result
+
+    def _record_history(self, tick, result=None, error=None):
+        """Commit this tick to the novel's own git history (novel_agent/history.py).
+
+        A no-op when the novel has no history repository or ``history.git`` is
+        false. Never raises and never replaces the tick's own error."""
+        try:
+            from .. import history
+            if error is not None:
+                outcome = history.commit_failed(self.project_path, tick, error, self.config)
+            else:
+                outcome = history.commit_tick(self.project_path, tick, result or {},
+                                              self.memory, self.config)
+            if outcome is None:
+                return
+            if outcome.get("ok") and outcome.get("commit"):
+                if result is not None:
+                    result["history_commit"] = outcome["commit"]
+                print(f"   🗂️  History: committed {outcome['commit']}")
+            elif not outcome.get("ok"):
+                print(f"   ⚠️  History commit skipped: {outcome.get('reason')}")
+        except Exception as e:
+            logging.getLogger(__name__).warning(f"History commit failed: {e}")
     
     def _normal_tick(self) -> Dict[str, Any]:
         """Execute normal tick (tick 1+).

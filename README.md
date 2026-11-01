@@ -384,6 +384,7 @@ StoryDaemon/
 │   │       ├── plans/       # Plan JSON files
 │   │       ├── plot_outline.json  # Plot beats (if using plot-first mode)
 │   │       ├── checkpoints/ # Project snapshots
+│   │       ├── .git/        # Version history: one commit per tick (novel history)
 │   │       └── errors/      # Error logs
 │   ├── experiments/     # Quick experiments
 │   └── scratch/         # Temporary files
@@ -571,6 +572,10 @@ novel checkpoint create [--message <msg>] [--project <path>]
 novel checkpoint list [--project <path>]
 novel checkpoint restore --id <checkpoint_id> [--project <path>]
 novel checkpoint delete --id <checkpoint_id> [--project <path>]
+
+# Version history: each novel is its own git repository, one commit per tick
+novel history [--limit 10] [--project <path>]   # last commits
+novel history enable [--project <path>]         # turn it on for an existing novel
 
 # Plot-first mode commands
 novel plot generate [--count 5] [--project <path>]
