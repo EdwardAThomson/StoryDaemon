@@ -1,0 +1,194 @@
+[
+ {
+  "cell": "e2-luna-alcyone",
+  "tick": 0,
+  "votes": [
+   {
+    "winner": "single",
+    "margin": "clear",
+    "reason": "Scene B has a clearer dramatic arc, with a routine survey, then the discovery of the mark, the clerk's evasiveness, the locked cabinet and a vague report, and finally Richard carrying the copy away. Its dialogue is crisper and more varied, and its sensory detail serves the story. Scene A circles one idea in repetitive, stilted dialogue ('modest significance'), pads with long room descriptions, and carries stray artifacts such as '[6 [11]', a truncated sentence, and an encyclopedic sentence about surveyors."
+   },
+   {
+    "winner": "single",
+    "margin": "clear",
+    "reason": "Scene A has a clear arc: soundings, the discovery of the mark on an old chart, the clerk's guarded behavior, the locked cabinet, and a closing resolve to bring the copy to Elena. Its dialogue is lively, with real banter and subtext, though several paragraphs sprawl into long blocks with some padding. Scene B is repetitive and static, with stilted dialogue, stray artifacts like \"[6 [11]\" and \"[31]\", and abrupt stray lines, so its characters sound alike and the scene barely changes anything."
+   }
+  ]
+ },
+ {
+  "cell": "e2-luna-alcyone",
+  "tick": 1,
+  "votes": [
+   {
+    "winner": "single",
+    "margin": null,
+    "reason": "Scene B has a clear dramatic arc: Richard arrives with the copied symbol, the date discrepancy (1889 vs 1897) emerges, and the pair settle on a concrete next step. Its dialogue is distinct and carries subtext, and the paragraphing is readable, though it has some inconsistencies (1871 premise vs 1890s dates, odd names). Scene A is repetitive and static: it circles the same measurements and cautions, its characters (Charles, Violante, William) don't match the premise, and the long expository paragraph on surveying practice and the near-identical speeches pad it out."
+   },
+   {
+    "winner": "single",
+    "margin": null,
+    "reason": "Scene A has a clear dramatic movement: Richard brings the copied mark, the two dates are compared, and the 1889/1897 discrepancy forces a new plan, with Elena's voice distinct and witty. Its flaws are an anachronism (1897 in an 1871 story) and some drift, but Scene B is a static, repetitive loop of measuring and caveating, with near-identical dialogue, padded exposition, and no change by its end."
+   }
+  ]
+ },
+ {
+  "cell": "e2-luna-alcyone",
+  "tick": 2,
+  "votes": [
+   {
+    "winner": "single",
+    "margin": "clear",
+    "reason": "Scene B moves through a real discovery (the Ullenby/Ulmabbey discrepancy, the trimmed pages, the crossed-out index card) to a changed plan and a sealed letter, and its characters speak in distinct voices (Octavia's wit, Richard's caution, Henry's dry precision). Its flaws are an inconsistent Yusuf/Henry identity note and some over-explaining, but Scene A is far worse: its dialogue is repetitive and stilted, the same point about unassigned marks and 'evidence not story' recurs, and the paragraphs are bloated with inventory and hedging, so the scene barely changes anything."
+   },
+   {
+    "winner": "single",
+    "margin": "clear",
+    "reason": "Scene A has a clear dramatic movement: the Ullenby/Ulmabbey discrepancy, the trimmed pages, and the crossed-out index card make the search for the record change shape, and the dialogue between Octavia, Richard and Henry has distinct voices and some wit. It has flaws, including the odd Yusuf/Henry aside and some padding, but it still reads as a scene that progresses. Scene B circles one small discovery, a pencil mark copied in the harbor papers, and repeats the same caution about evidence, resemblance and attribution, so it feels padded and static; its dialogue has little subtext and echoes itself, and its paragraphing is uneven."
+   }
+  ]
+ },
+ {
+  "cell": "e2-luna-alcyone",
+  "tick": 3,
+  "votes": [
+   {
+    "winner": "single",
+    "margin": "clear",
+    "reason": "Scene B has a real dramatic arc: Richard presses a reticent Henry over the chart, the sea begins to behave strangely, and the scene ends with a concrete new direction. Its dialogue carries subtext (\"Charts say what men are willing to put down. They do not say what men carried away\"), and its images of the shoal and the compass are fresh, though some expository padding and tidy summarizing weaken it. Scene A repeats the same beat of Charles asking and Gaius deflecting, and it has a garbled line (\"pressing [21]\") plus long expository paragraphs that stall the scene (the Admiralty, harbor-record practice). Its ending leaves almost nothing changed."
+   },
+   {
+    "winner": "single",
+    "margin": "clear",
+    "reason": "Scene A has a clear dramatic arc: Henry's reluctance, the unsettling sea phenomenon, and his parting instruction that turns the search toward documents and a boundary. Its flaws are digressive expository paragraphs, an anachronistic 1890 date, and some padding. Scene B is nearly static, repeating the same cautious comparison of marks; it has a stray editing artifact ('pressing [21]') and long explanatory passages on harbor practice, so the subtext in Gaius's dialogue never produces a real change."
+   }
+  ]
+ },
+ {
+  "cell": "e2-luna-alcyone",
+  "tick": 4,
+  "votes": [
+   {
+    "winner": "single",
+    "margin": "clear",
+    "reason": "Scene B builds a tangible investigation \u2014 the case, the peeled label, the hidden strip with initials \u2014 and ends on a revelation and a sharp line of dialogue that changes the characters' situation. Scene A loops through the same argument about the order and the bell, padded with abstract expository paragraphs and a stray '[11]' artifact, and ends essentially where it began, though Scene B has its own flaws (anachronistic dates, some over-explanation)."
+   },
+   {
+    "winner": "single",
+    "margin": "clear",
+    "reason": "Scene A builds a coherent discovery, with a case, a torn label, a hidden pocket, and the initials A.V.R. It has concrete objects, Henry's guarded subtext, and a closing line that turns the scene. Scene B has a corrupted fragment ('the tracing [11]'), repeats the same negotiation over the launch's approach, and pads with abstract exposition, so little changes before the end."
+   }
+  ]
+ },
+ {
+  "cell": "e2-luna-alcyone",
+  "tick": 5,
+  "votes": [
+   {
+    "winner": "single",
+    "margin": "clear",
+    "reason": "Scene B builds a real arc: a discovery of recent tampering, a shift in the stakes, a threat overhead, and a decision to take the case up the ladder. Its dialogue has some subtext, and its concrete details (the bent tack, the blue paper, the footsteps) carry it despite some over-explaining. Scene A circles one static situation with repetitive, procedural dialogue, glitches such as the stray \"[11]\" and \"[21]\" markers, and expository insertions that stall it, and nothing changes by the end."
+   },
+   {
+    "winner": "single",
+    "margin": null,
+    "reason": "Scene A has a clear dramatic arc: the questioning leads to the discovery of the fresh scrape, the blue paper and the altered mark, then to footsteps overhead and Richard leaving with the evidence. Its dialogue carries real subtext in Henry's guardedness and Richard's overreaching questions. Scene B repeats the same withdrawal logic in near-identical dialogue, has stray artifacts ('Let [11]'), and uses interleaved expository paragraphs that stall it, so nothing changes."
+   }
+  ]
+ },
+ {
+  "cell": "e2-luna-orehauler",
+  "tick": 0,
+  "votes": [
+   {
+    "winner": "single",
+    "margin": "clear",
+    "reason": "Scene B builds a real investigation in which each step produces a finding: the log edit, the missing audit trail, the camera put in service mode, and a discrepancy report filed to the captain. That gives it a clear dramatic movement, distinct voices in the Maxor exchanges, and a concrete setting, though some paragraphs run long and the Maxor dialogue is repetitive. Scene A is padded and circular, with near-identical dialogue between Foxex and Thaneas, a glitch in the text ('This sat [11] \"This sat...'), and a resolution that mostly restates its own non-event."
+   },
+   {
+    "winner": "single",
+    "margin": "clear",
+    "reason": "Scene A builds a real investigative movement: it finds an altered record, traces the camera put into service mode, and ends with Ever filing a report that changes the situation, with Maxor's evasive banter adding subtext. Its prose is sometimes padded and its paragraphs are dense, but it has concrete texture and stakes. Scene B resolves its anomaly with a benign explanation, its dialogue is stiff and nearly interchangeable between characters, it contains a visible text glitch, and it repeats itself with little change."
+   }
+  ]
+ },
+ {
+  "cell": "e2-luna-orehauler",
+  "tick": 1,
+  "votes": [
+   {
+    "winner": "single",
+    "margin": "clear",
+    "reason": "Scene B has a clearer dramatic movement: it finds the timestamp gap, searches the archive for earlier irregularities, and ends with a concrete decision to retain the raw feed. Its banter with Maxor carries some subtext and character, and its paragraphs are readable despite some padding. Scene A loops through the same comparison with stray artifacts ([31], [51]), a garbled \"Then we wait for repetition, Thaneas\" line, voices that are nearly indistinguishable, and walls of text, so little changes."
+   },
+   {
+    "winner": "single",
+    "margin": "clear",
+    "reason": "Scene A has a clear dramatic arc: it finds the timestamp gap, traces it to the camera's internal counter, argues over how to report it, and ends with a decision to keep the raw feed and raise the monitoring. Its dialogue has real subtext between Ever and Maxor, and its physical details (the dusty crescent, the pencil, the sealed reset cover) give it texture despite some padding and an inconsistent sense of the ship's setting. Scene B loops through the same discrepancy over and over, with long, interchangeable procedural speeches from Thaneas and Foxex, an unclear stake, and corrupted text fragments like \"[31]\" and \"[51]\", so it stalls and barely changes anything."
+   }
+  ]
+ },
+ {
+  "cell": "e2-luna-orehauler",
+  "tick": 2,
+  "votes": [
+   {
+    "winner": "single",
+    "margin": "clear",
+    "reason": "Scene B has distinct voices (Maxor's teasing against Ever's precision), a concrete discovery in the receipt-versus-local-record gap, and a clear movement from routine check to a sharpened, unresolved problem, with some fresh imagery. Scene A is relentlessly repetitive, with the same preservation and 'do not reconcile' beats looping, near-identical dialogue lines, confusing speaker attribution (Foxex answering their own question), and padded description, so it has little dramatic movement."
+   },
+   {
+    "winner": "single",
+    "margin": "clear",
+    "reason": "Scene A has a clear dramatic movement (the receipt shows an acknowledgment the local record lacks, and the discrepancy is reframed as an Authority-side operation), with two distinct voices in Ever and Maxor, banter that carries subtext, and a concrete ending. Scene B circles the same preserve-don't-conclude beat in repetitive technical dialogue, with a muddled speaker attribution where Foxex answers their own question. Its long monologues flatten the voices and it moves very little, though it does end on a nice image of the clean seal."
+   }
+  ]
+ },
+ {
+  "cell": "e2-luna-orehauler",
+  "tick": 3,
+  "votes": [
+   {
+    "winner": "single",
+    "margin": null,
+    "reason": "Scene B has a real dramatic movement: a submission returns an acknowledgment logged thirteen minutes before it was sent, Ever and Maxor argue over what that means, and Ever finishes by taking concrete steps (paper copies, a notice to the captain). Maxor and Ever sound distinct, and the timeline gives the scene tension, though both characters over-explain at times and Ever's \"he\" clashes with the earlier neutral pronouns. Scene A is mostly the same registry state restated, with repeated descriptions of the bay and near-identical terminal replies, and the only change is a deferred purge and an observation monitor, so it reads as padded and static."
+   },
+   {
+    "winner": "single",
+    "margin": "clear",
+    "reason": "Scene A has a real dramatic movement: Ever submits a report, the receipt turns out to be timestamped before the submission, and Ever then isolates the terminal, prints paper copies, and sends a notice to the captain. Its dialogue also has distinct voices, with Maxor offering plausible alternative explanations and pushing Ever toward the reactor, though both lines run long and the exposition is heavy. Scene B is mostly a single person talking to a terminal, with repetitive descriptions of the bay and a great deal of procedural padding. Its end state is only an armed monitor and a countdown, so little changes, and the prose is more static and repetitive."
+   }
+  ]
+ },
+ {
+  "cell": "e2-luna-orehauler",
+  "tick": 4,
+  "votes": [
+   {
+    "winner": "single",
+    "margin": "clear",
+    "reason": "Scene B has a real dramatic movement: Ever travels to the captain, tests him with a covered line, and gets a charged distinction ('I did not instruct it') that shifts the stakes. Its dialogue has some subtext and distinct voices, and its setting is vivid, even though the exposition is heavy and the premise drifts from the brief. Scene A is a near-static loop of repetitive procedural commands and echoing terminal replies, with no human conflict or change beyond a repeated target, and its prose is padded and monotonous."
+   },
+   {
+    "winner": "single",
+    "margin": "clear",
+    "reason": "Scene A has a clear dramatic movement: Ever travels to the captain, confronts him with the evidence, and Oras's answer ('I did not instruct it') shifts the situation. It also has distinct voices, some subtext, and a few good lines (paper as 'a shape'), though it is padded with exposition and static description. Scene B is a nearly static loop of near-identical procedural exchanges, where the terminal and Foxex repeat 'preserve, hold, do not classify.' Its voices barely differ, nothing is revealed or changed, and the repetition reads as padding."
+   }
+  ]
+ },
+ {
+  "cell": "e2-luna-orehauler",
+  "tick": 5,
+  "votes": [
+   {
+    "winner": "single",
+    "margin": "clear",
+    "reason": "Scene B has a clear dramatic arc: Ever finds the live handshake, weighs severing it against holding it, gets the captain's authorization, applies the hold, and ends with a changed situation. Its dialogue is differentiated, with Maxor's skepticism against Ever's caution. Scene A circles one abstract idea, that observation alters scheduling, through repetitive technical jargon and near-identical paragraphs, and its dialogue has little voice or subtext. It also contains a garbled fragment ('[21]'), and the target appearing is only a minor shift."
+   },
+   {
+    "winner": "single",
+    "margin": "clear",
+    "reason": "Scene A has a clear arc (the route is discovered, the stakes are debated, the captain authorizes a scoped hold, the handshake is stalled), with distinct voices in Maxor's skeptical banter and Ever's procedural caution, plus concrete sensory detail. Scene B is a repetitive loop of abstract bureaucratic jargon, with a corrupted fragment (\"[21]\"), redundant physical-description paragraphs, and an indistinct dialogue partner, so it advances little and is hard to read."
+   }
+  ]
+ }
+]

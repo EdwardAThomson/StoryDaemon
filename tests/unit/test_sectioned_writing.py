@@ -203,6 +203,58 @@ def test_a_failed_section_falls_back_instead_of_losing_the_scene():
     assert scene["text"]                      # the scene survived
 
 
+def test_an_empty_section_cut_off_by_length_retries_at_double_budget():
+    # A reasoning model can spend a section's whole ceiling thinking and
+    # return nothing with finish_reason "length" (gpt-5.6-luna, 2026-10-31).
+    # Retrying at the same budget reproduced it and fell back to single-shot.
+    class Thinker(FakeLLM):
+        def generate_with_meta(self, prompt, max_tokens=2000, timeout=120):
+            self.prompts.append(prompt)
+            self.budgets.append(max_tokens)
+            if len(self.prompts) == 2:
+                return "", "length"
+            return f"[{1 if len(self.prompts) == 1 else 11}] Part.", "stop"
+
+    llm = Thinker([])
+    scene = SceneWriter(llm, Cfg(**ON)).write_scene(_ctx(["DIALOGUE"] * 25))
+    assert scene["sectioned"] is True
+    assert len(llm.prompts) == 3
+    assert llm.budgets[2] == 2 * llm.budgets[1]
+
+
+def test_an_empty_section_that_stopped_normally_retries_at_the_same_budget():
+    class Dropped(FakeLLM):
+        def generate_with_meta(self, prompt, max_tokens=2000, timeout=120):
+            self.prompts.append(prompt)
+            self.budgets.append(max_tokens)
+            if len(self.prompts) == 2:
+                return "", "stop"
+            return f"[{1 if len(self.prompts) == 1 else 11}] Part.", "stop"
+
+    llm = Dropped([])
+    SceneWriter(llm, Cfg(**ON)).write_scene(_ctx(["DIALOGUE"] * 25))
+    assert llm.budgets[2] == llm.budgets[1]
+
+
+def test_a_section_cut_off_mid_sentence_is_trimmed_and_the_next_starts_a_paragraph():
+    # Live 2026-10-31: a section stopped on its ceiling mid-sentence, the next
+    # section joined inline, and its "[11]" marker shipped in the prose.
+    class Cut(FakeLLM):
+        def generate_with_meta(self, prompt, max_tokens=2000, timeout=120):
+            self.prompts.append(prompt)
+            if len(self.prompts) == 1:
+                return "[1] She read the chart. Then she reached for the", "length"
+            return "[11] Reeve spoke first.", "stop"
+
+    llm = Cut([])
+    scene = SceneWriter(llm, Cfg(**ON)).write_scene(_ctx(["DIALOGUE"] * 25))
+    assert scene["sectioned"] is True
+    assert "[11]" not in scene["text"]
+    assert "reached for the" not in scene["text"]
+    assert "She read the chart.\n\nReeve spoke first." in scene["text"]
+    assert scene["sections_trimmed"] == 1
+
+
 def test_markers_are_stripped_from_the_stitched_scene():
     sk = ["DIALOGUE"] * 25
     llm = FakeLLM(["[1] First.", "[11] Second."])

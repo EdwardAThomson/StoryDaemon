@@ -1,0 +1,1182 @@
+{
+ "e1-luna-alcyone-off": [
+  {
+   "scene": "S000",
+   "tick": 0,
+   "shared": 6,
+   "self": null,
+   "target": 3.0,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S001",
+   "tick": 1,
+   "shared": 4,
+   "self": 5,
+   "target": 3.2,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S002",
+   "tick": 2,
+   "shared": 4,
+   "self": 5,
+   "target": 3.4,
+   "rewritten": true,
+   "pre": 6
+  },
+  {
+   "scene": "S003",
+   "tick": 3,
+   "shared": 5,
+   "self": 7,
+   "target": 3.6,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S004",
+   "tick": 4,
+   "shared": 5,
+   "self": 5,
+   "target": 3.8,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S005",
+   "tick": 5,
+   "shared": 8,
+   "self": 8,
+   "target": 4.0,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S006",
+   "tick": 6,
+   "shared": 5,
+   "self": 5,
+   "target": 4.2,
+   "rewritten": true,
+   "pre": 7
+  },
+  {
+   "scene": "S007",
+   "tick": 7,
+   "shared": 8,
+   "self": 8,
+   "target": 4.4,
+   "rewritten": false,
+   "pre": null
+  }
+ ],
+ "e1-luna-alcyone-on": [
+  {
+   "scene": "S000",
+   "tick": 0,
+   "shared": 4,
+   "self": null,
+   "target": 3.0,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S001",
+   "tick": 1,
+   "shared": 6,
+   "self": 5,
+   "target": 3.2,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S002",
+   "tick": 2,
+   "shared": 4,
+   "self": 4,
+   "target": 3.4,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S003",
+   "tick": 3,
+   "shared": 5,
+   "self": 6,
+   "target": 3.6,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S004",
+   "tick": 4,
+   "shared": 6,
+   "self": 6,
+   "target": 3.8,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S005",
+   "tick": 5,
+   "shared": 7,
+   "self": 7,
+   "target": 4.0,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S006",
+   "tick": 6,
+   "shared": 6,
+   "self": 6,
+   "target": 4.2,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S007",
+   "tick": 7,
+   "shared": 7,
+   "self": 8,
+   "target": 4.4,
+   "rewritten": false,
+   "pre": null
+  }
+ ],
+ "e1-luna-orehauler-off": [
+  {
+   "scene": "S000",
+   "tick": 0,
+   "shared": 5,
+   "self": null,
+   "target": 3.0,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S001",
+   "tick": 1,
+   "shared": 6,
+   "self": 7,
+   "target": 3.2,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S002",
+   "tick": 2,
+   "shared": 4,
+   "self": 4,
+   "target": 3.4,
+   "rewritten": true,
+   "pre": 6
+  },
+  {
+   "scene": "S003",
+   "tick": 3,
+   "shared": 7,
+   "self": 5,
+   "target": 3.6,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S004",
+   "tick": 4,
+   "shared": 7,
+   "self": 7,
+   "target": 3.8,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S005",
+   "tick": 5,
+   "shared": 6,
+   "self": 7,
+   "target": 4.0,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S006",
+   "tick": 6,
+   "shared": 8,
+   "self": 8,
+   "target": 4.2,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S007",
+   "tick": 7,
+   "shared": 6,
+   "self": 5,
+   "target": 4.4,
+   "rewritten": true,
+   "pre": 7
+  }
+ ],
+ "e1-luna-orehauler-on": [
+  {
+   "scene": "S000",
+   "tick": 0,
+   "shared": 5,
+   "self": null,
+   "target": 3.0,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S001",
+   "tick": 1,
+   "shared": 5,
+   "self": 5,
+   "target": 3.2,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S002",
+   "tick": 2,
+   "shared": 6,
+   "self": 6,
+   "target": 3.4,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S003",
+   "tick": 3,
+   "shared": 7,
+   "self": 8,
+   "target": 3.6,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S004",
+   "tick": 4,
+   "shared": 6,
+   "self": 6,
+   "target": 3.8,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S005",
+   "tick": 5,
+   "shared": 7,
+   "self": 6,
+   "target": 4.0,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S006",
+   "tick": 6,
+   "shared": 6,
+   "self": 6,
+   "target": 4.2,
+   "rewritten": true,
+   "pre": 7
+  },
+  {
+   "scene": "S007",
+   "tick": 7,
+   "shared": 7,
+   "self": 8,
+   "target": 4.4,
+   "rewritten": false,
+   "pre": null
+  }
+ ],
+ "e2-luna-alcyone-sect": [
+  {
+   "scene": "S000",
+   "tick": 0,
+   "shared": 4,
+   "self": null,
+   "target": 3.0,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S001",
+   "tick": 1,
+   "shared": 3,
+   "self": 4,
+   "target": 3.2,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S002",
+   "tick": 2,
+   "shared": 5,
+   "self": 5,
+   "target": 3.4,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S003",
+   "tick": 3,
+   "shared": 3,
+   "self": 5,
+   "target": 3.6,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S004",
+   "tick": 4,
+   "shared": 6,
+   "self": 6,
+   "target": 3.8,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S005",
+   "tick": 5,
+   "shared": 5,
+   "self": 6,
+   "target": 4.0,
+   "rewritten": false,
+   "pre": null
+  }
+ ],
+ "e2-luna-alcyone-sectv0": [
+  {
+   "scene": "S000",
+   "tick": 0,
+   "shared": 5,
+   "self": null,
+   "target": 3.0,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S001",
+   "tick": 1,
+   "shared": 4,
+   "self": 4,
+   "target": 3.2,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S002",
+   "tick": 2,
+   "shared": 5,
+   "self": 4,
+   "target": 3.4,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S003",
+   "tick": 3,
+   "shared": 5,
+   "self": 4,
+   "target": 3.6,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S004",
+   "tick": 4,
+   "shared": 5,
+   "self": 6,
+   "target": 3.8,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S005",
+   "tick": 5,
+   "shared": 5,
+   "self": 4,
+   "target": 4.0,
+   "rewritten": false,
+   "pre": null
+  }
+ ],
+ "e2-luna-alcyone-single": [
+  {
+   "scene": "S000",
+   "tick": 0,
+   "shared": 3,
+   "self": null,
+   "target": 3.0,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S001",
+   "tick": 1,
+   "shared": 5,
+   "self": 5,
+   "target": 3.2,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S002",
+   "tick": 2,
+   "shared": 4,
+   "self": 4,
+   "target": 3.4,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S003",
+   "tick": 3,
+   "shared": 5,
+   "self": 7,
+   "target": 3.6,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S004",
+   "tick": 4,
+   "shared": 5,
+   "self": 5,
+   "target": 3.8,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S005",
+   "tick": 5,
+   "shared": 7,
+   "self": 8,
+   "target": 4.0,
+   "rewritten": false,
+   "pre": null
+  }
+ ],
+ "e2-luna-orehauler-sect": [
+  {
+   "scene": "S000",
+   "tick": 0,
+   "shared": 4,
+   "self": null,
+   "target": 3.0,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S001",
+   "tick": 1,
+   "shared": 5,
+   "self": 5,
+   "target": 3.2,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S002",
+   "tick": 2,
+   "shared": 4,
+   "self": 5,
+   "target": 3.4,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S003",
+   "tick": 3,
+   "shared": 5,
+   "self": 5,
+   "target": 3.6,
+   "rewritten": true,
+   "pre": 6
+  },
+  {
+   "scene": "S004",
+   "tick": 4,
+   "shared": 7,
+   "self": 6,
+   "target": 3.8,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S005",
+   "tick": 5,
+   "shared": 4,
+   "self": 7,
+   "target": 4.0,
+   "rewritten": false,
+   "pre": null
+  }
+ ],
+ "e2-luna-orehauler-sectv0": [
+  {
+   "scene": "S000",
+   "tick": 0,
+   "shared": 5,
+   "self": null,
+   "target": 3.0,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S001",
+   "tick": 1,
+   "shared": 6,
+   "self": 5,
+   "target": 3.2,
+   "rewritten": true,
+   "pre": 6
+  },
+  {
+   "scene": "S002",
+   "tick": 2,
+   "shared": 5,
+   "self": 5,
+   "target": 3.4,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S003",
+   "tick": 3,
+   "shared": 6,
+   "self": 7,
+   "target": 3.6,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S004",
+   "tick": 4,
+   "shared": 5,
+   "self": 5,
+   "target": 3.8,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S005",
+   "tick": 5,
+   "shared": 7,
+   "self": 6,
+   "target": 4.0,
+   "rewritten": false,
+   "pre": null
+  }
+ ],
+ "e2-luna-orehauler-single": [
+  {
+   "scene": "S000",
+   "tick": 0,
+   "shared": 4,
+   "self": null,
+   "target": 3.0,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S001",
+   "tick": 1,
+   "shared": 6,
+   "self": 5,
+   "target": 3.2,
+   "rewritten": true,
+   "pre": 6
+  },
+  {
+   "scene": "S002",
+   "tick": 2,
+   "shared": 5,
+   "self": 5,
+   "target": 3.4,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S003",
+   "tick": 3,
+   "shared": 6,
+   "self": 6,
+   "target": 3.6,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S004",
+   "tick": 4,
+   "shared": 7,
+   "self": 6,
+   "target": 3.8,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S005",
+   "tick": 5,
+   "shared": 7,
+   "self": 7,
+   "target": 4.0,
+   "rewritten": false,
+   "pre": null
+  }
+ ],
+ "e3-luna-alcyone-off": [
+  {
+   "scene": "S000",
+   "tick": 0,
+   "shared": 4,
+   "self": null,
+   "target": 3.0,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S001",
+   "tick": 1,
+   "shared": 6,
+   "self": 5,
+   "target": 3.2,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S002",
+   "tick": 2,
+   "shared": 6,
+   "self": 5,
+   "target": 3.4,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S003",
+   "tick": 3,
+   "shared": 5,
+   "self": 7,
+   "target": 3.6,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S004",
+   "tick": 4,
+   "shared": 6,
+   "self": 7,
+   "target": 3.8,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S005",
+   "tick": 5,
+   "shared": 7,
+   "self": 7,
+   "target": 4.0,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S006",
+   "tick": 6,
+   "shared": 5,
+   "self": 5,
+   "target": 4.2,
+   "rewritten": true,
+   "pre": 7
+  },
+  {
+   "scene": "S007",
+   "tick": 7,
+   "shared": 6,
+   "self": 6,
+   "target": 4.4,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S008",
+   "tick": 8,
+   "shared": 6,
+   "self": 6,
+   "target": 4.6,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S009",
+   "tick": 9,
+   "shared": 5,
+   "self": 6,
+   "target": 4.8,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S010",
+   "tick": 10,
+   "shared": 7,
+   "self": 7,
+   "target": 5.0,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S011",
+   "tick": 11,
+   "shared": 6,
+   "self": 7,
+   "target": 5.1,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S012",
+   "tick": 12,
+   "shared": 5,
+   "self": 5,
+   "target": 5.2,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S013",
+   "tick": 13,
+   "shared": 5,
+   "self": 5,
+   "target": 5.3,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S014",
+   "tick": 14,
+   "shared": 5,
+   "self": 6,
+   "target": 5.4,
+   "rewritten": true,
+   "pre": 8
+  }
+ ],
+ "e3-luna-alcyone-on": [
+  {
+   "scene": "S000",
+   "tick": 0,
+   "shared": 6,
+   "self": null,
+   "target": 3.0,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S001",
+   "tick": 1,
+   "shared": 5,
+   "self": 5,
+   "target": 3.2,
+   "rewritten": true,
+   "pre": 6
+  },
+  {
+   "scene": "S002",
+   "tick": 2,
+   "shared": 5,
+   "self": 6,
+   "target": 3.4,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S003",
+   "tick": 3,
+   "shared": 3,
+   "self": 4,
+   "target": 3.6,
+   "rewritten": true,
+   "pre": 6
+  },
+  {
+   "scene": "S004",
+   "tick": 4,
+   "shared": 5,
+   "self": 5,
+   "target": 3.8,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S005",
+   "tick": 5,
+   "shared": 4,
+   "self": 4,
+   "target": 4.0,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S006",
+   "tick": 6,
+   "shared": 6,
+   "self": 6,
+   "target": 4.2,
+   "rewritten": true,
+   "pre": 7
+  },
+  {
+   "scene": "S007",
+   "tick": 7,
+   "shared": 5,
+   "self": 6,
+   "target": 4.4,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S008",
+   "tick": 8,
+   "shared": 6,
+   "self": 8,
+   "target": 4.6,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S009",
+   "tick": 9,
+   "shared": 7,
+   "self": 8,
+   "target": 4.8,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S010",
+   "tick": 10,
+   "shared": 7,
+   "self": 8,
+   "target": 5.0,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S011",
+   "tick": 11,
+   "shared": 5,
+   "self": 5,
+   "target": 5.1,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S012",
+   "tick": 12,
+   "shared": 8,
+   "self": 7,
+   "target": 5.2,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S013",
+   "tick": 13,
+   "shared": 7,
+   "self": 7,
+   "target": 5.3,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S014",
+   "tick": 14,
+   "shared": 6,
+   "self": 7,
+   "target": 5.4,
+   "rewritten": true,
+   "pre": 8
+  }
+ ],
+ "e3-luna-orehauler-off": [
+  {
+   "scene": "S000",
+   "tick": 0,
+   "shared": 6,
+   "self": null,
+   "target": 3.0,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S001",
+   "tick": 1,
+   "shared": 6,
+   "self": 5,
+   "target": 3.2,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S002",
+   "tick": 2,
+   "shared": 7,
+   "self": 7,
+   "target": 3.4,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S003",
+   "tick": 3,
+   "shared": 7,
+   "self": 8,
+   "target": 3.6,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S004",
+   "tick": 4,
+   "shared": 6,
+   "self": 7,
+   "target": 3.8,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S005",
+   "tick": 5,
+   "shared": 7,
+   "self": 8,
+   "target": 4.0,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S006",
+   "tick": 6,
+   "shared": 7,
+   "self": 6,
+   "target": 4.2,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S007",
+   "tick": 7,
+   "shared": 6,
+   "self": 6,
+   "target": 4.4,
+   "rewritten": true,
+   "pre": 7
+  },
+  {
+   "scene": "S008",
+   "tick": 8,
+   "shared": 6,
+   "self": 6,
+   "target": 4.6,
+   "rewritten": true,
+   "pre": 7
+  },
+  {
+   "scene": "S009",
+   "tick": 9,
+   "shared": 6,
+   "self": 5,
+   "target": 4.8,
+   "rewritten": true,
+   "pre": 7
+  },
+  {
+   "scene": "S010",
+   "tick": 10,
+   "shared": 8,
+   "self": 8,
+   "target": 5.0,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S011",
+   "tick": 11,
+   "shared": 7,
+   "self": 6,
+   "target": 5.1,
+   "rewritten": true,
+   "pre": 8
+  },
+  {
+   "scene": "S012",
+   "tick": 12,
+   "shared": 6,
+   "self": 5,
+   "target": 5.2,
+   "rewritten": true,
+   "pre": 8
+  },
+  {
+   "scene": "S013",
+   "tick": 13,
+   "shared": 6,
+   "self": 5,
+   "target": 5.3,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S014",
+   "tick": 14,
+   "shared": 7,
+   "self": 7,
+   "target": 5.4,
+   "rewritten": true,
+   "pre": 8
+  }
+ ],
+ "e3-luna-orehauler-on": [
+  {
+   "scene": "S000",
+   "tick": 0,
+   "shared": 6,
+   "self": null,
+   "target": 3.0,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S001",
+   "tick": 1,
+   "shared": 6,
+   "self": 5,
+   "target": 3.2,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S002",
+   "tick": 2,
+   "shared": 6,
+   "self": 7,
+   "target": 3.4,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S003",
+   "tick": 3,
+   "shared": 6,
+   "self": 6,
+   "target": 3.6,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S004",
+   "tick": 4,
+   "shared": 6,
+   "self": 5,
+   "target": 3.8,
+   "rewritten": true,
+   "pre": 6
+  },
+  {
+   "scene": "S005",
+   "tick": 5,
+   "shared": 7,
+   "self": 8,
+   "target": 4.0,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S006",
+   "tick": 6,
+   "shared": 7,
+   "self": 8,
+   "target": 4.2,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S007",
+   "tick": 7,
+   "shared": 7,
+   "self": 8,
+   "target": 4.4,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S008",
+   "tick": 8,
+   "shared": 5,
+   "self": 6,
+   "target": 4.6,
+   "rewritten": true,
+   "pre": 7
+  },
+  {
+   "scene": "S009",
+   "tick": 9,
+   "shared": 7,
+   "self": 7,
+   "target": 4.8,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S010",
+   "tick": 10,
+   "shared": 7,
+   "self": 8,
+   "target": 5.0,
+   "rewritten": false,
+   "pre": null
+  },
+  {
+   "scene": "S011",
+   "tick": 11,
+   "shared": 5,
+   "self": 5,
+   "target": 5.1,
+   "rewritten": true,
+   "pre": 8
+  },
+  {
+   "scene": "S012",
+   "tick": 12,
+   "shared": 5,
+   "self": 5,
+   "target": 5.2,
+   "rewritten": true,
+   "pre": 8
+  },
+  {
+   "scene": "S013",
+   "tick": 13,
+   "shared": 6,
+   "self": 6,
+   "target": 5.3,
+   "rewritten": true,
+   "pre": 8
+  },
+  {
+   "scene": "S014",
+   "tick": 14,
+   "shared": 6,
+   "self": 7,
+   "target": 5.4,
+   "rewritten": true,
+   "pre": 8
+  }
+ ]
+}
