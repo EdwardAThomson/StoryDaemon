@@ -1,13 +1,13 @@
 # DSL Validation, 2026-10-31: Skeletons, Sectioned Writing, Contracts on gpt-5.6-luna
 
-**Status:** complete for the Luna half of the plan; the Terra half was cancelled on purpose (section 7).
+**Status:** complete for the Luna half of the plan; the Terra half was cancelled on purpose (section 7). Sectioned writing was re-examined and re-run on 2026-11-01 (section 5b).
 **Code:** branch `claude/project-thread-oqxwxt`, from PR #22's branch (the Luna fixes). Harness in `experiments/dsl_validation/`, raw judge outputs in `experiments/dsl_validation/results/`. The novels themselves are under the gitignored `work/dsl/`.
-**Cost:** $2.25 of writing, $2.35 on the first judge, $0.75 on the second. About $5.35 in all.
+**Cost:** $2.25 of writing, $2.35 on the first judge, $0.75 on the second. About $5.35 in all. The 2026-11-01 sectioned work added about $3.40 (two writing runs and their judging).
 **Plan:** the Claude Doc "StoryDaemon DSL validation plan" (project thread), which also holds the judge v2 rubric.
 
 ## 1. The one-paragraph version
 
-The scene skeleton does what it claims. Judged against the register it is meant to produce, skeleton scenes score 3.0 to 3.4 out of 5 where unguided Luna scores 2.0 on every scene and corpus chapters score 4.25. Craft scores barely move between arms. The remaining gap is a single prompt rule, one speaker per DIALOGUE item, holding on one premise (98%) and not the other (77%). Sectioned writing reaches chapter length but loses every blind comparison and leaks seams; leave it off. Contracts ran 58 checks and failed none, so they constrained nothing. And the first judge we used was asked the wrong question: with no target it rated by modern taste and preferred unguided 29 to 3, a number that says nothing about the DSL. The second judge, which knows the target, reverses it.
+The scene skeleton does what it claims. Judged against the register it is meant to produce, skeleton scenes score 3.0 to 3.4 out of 5 where unguided Luna scores 2.0 on every scene and corpus chapters score 4.25. Craft scores barely move between arms. The remaining gap is a single prompt rule, one speaker per DIALOGUE item, holding on one premise (98%) and not the other (77%). Sectioned writing, after a diagnosis and three fixes on 2026-11-01 (section 5b), writes clean joins, carries a chain of events, matches single-shot on register fit and economy, and lands on the masters' paragraph-length distribution where single-shot runs short and fragmented; it is still behind on subtext and pace, so it stays off by default. Contracts ran 58 checks and failed none, so they constrained nothing. And the first judge we used was asked the wrong question: with no target it rated by modern taste and preferred unguided 29 to 3, a number that says nothing about the DSL. The second judge, which knows the target, reverses it.
 
 ## 2. Setup
 
@@ -85,6 +85,42 @@ The whole-scene rewrite fired on 4 of 16 unguided scenes and moved the shared-ju
 
 It reaches the masters' chapter length (3,165 median) where single-shot lands 15% short, at twice the cost. Judge v1 preferred single-shot 24 to 0, and the seam judge (300 words either side of each join, versus windows with no join from the single-shot arm) detected a join 7 times in 52 against 1 in 50, with continuity 3.37 against 3.75. The sectioned scenes also carried stray `[11]`-style plan markers in the prose until the fix in section 6. Register fit was not re-scored for this experiment. Verdict: leave it off. The chapter-length case it was built for is real, but this is not yet the way to get there.
 
+## 5b. Sectioned writing, second pass (2026-11-01)
+
+Ed asked that the loss be diagnosed rather than filed. Reading the judge's reasons, the plans and the scenes, and measuring repetition directly (no spend), the fault was neither seams nor literal repetition: the sectioned chapters performed one event five times. Section 1 landed the whole intention by paragraph ten and sections 2 to 5 re-measured and re-explained it. Three causes, each fixed on the branch:
+
+1. **The planner never named a key change.** The multi-stage tactical plan had no `key_change` field, so every plan in every arm, single-shot included, handed the writer a blank "KEY CHANGE" line. The plan now asks for one and says what counts (something done, decided, lost, refused or acted on; a question left hanging is not one).
+2. **Section jobs were procedural steps.** Given no key change, the per-section planning call split the intention into align, establish, reconstruct, compare. Jobs are now events, the first job is barred from the intention's reveal, and the planner is told to invent a complication rather than stretch one event across sections (`agent/section_plan.py`).
+3. **Every section saw the whole intention.** Early sections now see only their own job and the jobs done; the final section sees everything and is told to land the key change (`generation.subblock_hide_ending`, default on, only when the jobs were planned).
+
+Re-run: same settings, 6 chapters per premise, Luna, $0.91 including judging. Judge v2, mean of 6:
+
+| | single-shot | sectioned, old jobs | sectioned, fixed |
+|---|---|---|---|
+| Register fit (Alcyone / ore hauler) | 3.33 / 3.00 | 2.83 / 3.17 | 3.33 / 3.00 |
+| Movement | 4.00 / 3.50 | 3.17 / 3.00 | 3.17 / 3.17 |
+| Voices | 2.33 / 2.17 | 2.00 / 2.00 | 2.00 / 2.00 |
+| Subtext | 2.83 / 2.33 | 2.33 / 1.33 | 2.17 / 1.50 |
+| Economy | 2.00 / 2.00 | 1.67 / 1.50 | 2.00 / 1.83 |
+| Grounding | 3.83 / 3.17 | 3.67 / 3.17 | 3.83 / 2.83 |
+| Seams detected | 1/24, 0/23 (controls) | 1/22, 1/29 | 3/22, 0/23 |
+
+The judge's reasons no longer mention circling; every new chapter is credited with a chain of events ("escalates from a read-only trace to a dormant relay, then a load shed, then packets showing demands"). Register fit and economy are level with single-shot. Movement and subtext remain behind by 0.3 to 0.8; with six chapters per arm, gaps under about 0.3 are noise. Voices (2.0 everywhere) and restatement within a passage are faults of both arms, so they are the writer model's habits, not sectioning's.
+
+**What sectioning is for.** The code's 2026-09-11 comments say chapter length. The actual purpose is control over story structure and paragraphs at least as long and as good as the masterworks without uncontrolled overshoot. Measured against the four fetched masters chapters:
+
+| | masters | single-shot | sectioned, fixed | sectioned, old |
+|---|---|---|---|---|
+| Median paragraph, words | 29 | 21 / 14 | 37 / 35 | 37 / 39 |
+| Mean paragraph, words | 57 | 49 / 39 | 57 / 59 | 64 / 58 |
+| Paragraphs under 15 words | 25% | 40% / 51% | 24% / 20% | 20% / 22% |
+| Paragraphs over 120 words | 13% | 13% / 8% | 14% / 15% | 18% / 12% |
+| Paragraphs over 200 words | 4.0% | 1.9% / 1.2% | 3.4% / 1.9% | 6.0% / 3.9% |
+
+Sectioned with the fixes lands on the masters' distribution; single-shot runs short and fragmented; the old sectioned run overshot on the longest paragraphs and the fixes brought it back. Unguided writing had a median paragraph of 8 words.
+
+Verdict: sectioned now does the structural job it was built for. Its cost is some subtext and pace. It stays off by default until those are worked on. Caveat: the single-shot arm was written before the planner named a key change, so it had the weaker plan; a fair comparison needs that arm re-run on one premise (about 30 cents).
+
 ## 6. Two bugs fixed on the way
 
 Both in `writer.py:_write_in_sections`, both found by the fallback printing to the console as designed:
@@ -113,6 +149,6 @@ The plan had a Terra arm (about $13). It was cancelled when the v1 results came 
 
 1. Make the one-turn rule hold. It is honoured 98% on one premise and 77% on the other with the same prompt, so the fix is likely structural rather than wording: enforce it in code the way marker compliance is enforced (split a DIALOGUE paragraph at a speaker change, or reject and re-ask for that item), since prompt rules proved unreliable here exactly as they did for the markers in Gate B.
 2. Standalone exposition is the other named lapse (6 of 16). The plan carries LORE items; check whether the lapses sit on them.
-3. Re-run judge v2 on the sectioned scenes before deciding whether their seam problem survives the fixes in section 6 (the fixed cells were written but not register-scored).
+3. Sectioned writing (section 5b): subtext and pace in the sectioned chapters, then restatement and voice, which both arms share and which need their own gauges first. Re-run the single-shot arm with the new planner for a fair comparison.
 4. Adopt judge v2 as the DSL's gauge going forward, and retire pairwise-preference judging without a stated target for any register question.
 5. Terra, when the budget allows.
