@@ -307,6 +307,25 @@ def test_unusable_jobs_fall_back_to_position_jobs_without_losing_the_scene():
     assert "**This section's job:** Establish the situation" in llm.prompts[1]
 
 
+def test_jobs_cut_off_at_the_ceiling_retry_at_double_budget():
+    # Live 2026-11-01: Luna spent ~500 of a 600-token cap reasoning and the
+    # JSON was cut off on 10 of 12 scenes, all of which fell back silently.
+    class Thinker(FakeLLM):
+        def generate_with_meta(self, prompt, max_tokens=2000, timeout=120):
+            self.prompts.append(prompt)
+            self.budgets.append(max_tokens)
+            if len(self.prompts) == 1:
+                return '{"jobs": ["cut off', "length"
+            if len(self.prompts) == 2:
+                return '{"jobs": ["First.", "Second."]}', "stop"
+            return f"[{1 if len(self.prompts) == 3 else 11}] Part.", "stop"
+
+    llm = Thinker([])
+    scene = SceneWriter(llm, Cfg(**JOBS_ON)).write_scene(_ctx(["DIALOGUE"] * 25))
+    assert llm.budgets[1] == 2 * llm.budgets[0]
+    assert scene["section_jobs"] == ["First.", "Second."]
+
+
 def test_jobs_off_reproduces_the_pre_fix_prompt():
     sk = ["DIALOGUE"] * 25
     llm = FakeLLM(["[1] One.", "[11] Two."])

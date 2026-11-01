@@ -125,7 +125,8 @@ DEFAULT_CONFIG = {
         # validation's restart-and-repeat failure). Falls back to position
         # jobs if the call fails. Off reproduces the pre-fix prompt exactly.
         'subblock_section_jobs': True,
-        'subblock_jobs_max_tokens': 600,
+        # 1500, not 600: a reasoning model spends ~500 tokens thinking first.
+        'subblock_jobs_max_tokens': 1500,
 
         # Scene skeletons (Slice 4 of the block DSL, experimental). When on, a
         # typed paragraph plan sampled from the masters' block grammar
