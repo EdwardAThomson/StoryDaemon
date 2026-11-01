@@ -80,8 +80,8 @@ flowchart TD
 
 | Piece | Config switch | Default | Evidence |
 |---|---|---|---|
-| Scene skeletons (Slice 4) | `generation.enable_scene_skeleton` | off | July A/B on gpt-5.5: every well-measured block statistic moved toward the masters, 16/16 marker compliance. The September sizing changes have not been re-validated. |
-| Sectioned writing (Slice 5) | `generation.subblock_generation` | off | Built and run live. The quality A/B (seams, voice, cost) is still owed. |
-| Selective tension revision | `coherence.tension_rewrite` (on) | on, but only acts on skeleton scenes | Live 2026-09-13 |
-| Beat contracts (Slice 1) | `generation.use_contracts` | off | Smoke-run live 2026-07-10, where a failing contract wedged a beat. No quality A/B. |
+| Scene skeletons (Slice 4) | `generation.enable_scene_skeleton` | off | July A/B on gpt-5.5: every well-measured block statistic moved toward the masters, 16/16 marker compliance. Re-validated 2026-10-31 on gpt-5.6-luna against the target register: register fit 3.0 to 3.4 against 2.0 unguided and 4.25 for corpus chapters, craft scores unchanged; the one-turn dialogue rule holds on one premise (98%) and not the other (77%). `DSL_VALIDATION_2026-10-31.md`. |
+| Sectioned writing (Slice 5) | `generation.subblock_generation` | off | A/B 2026-10-31 on Luna: reaches chapter length (3,100 against 2,650 words) at twice the cost, but lost every blind comparison and seams were detected 7 times in 52 against 1 in 50 for unjoined windows. Two bugs fixed (empty section on a reasoning model; markers leaking at joins). Leave off. |
+| Selective tension revision | `coherence.tension_rewrite` (on) | on, but only acts on skeleton scenes | Live 2026-09-13. Fired once in 16 skeleton scenes on 2026-10-31 and moved tension by 1; too few events to judge. |
+| Beat contracts (Slice 1) | `generation.use_contracts` | off | Smoke-run live 2026-07-10, where a failing contract wedged a beat. A/B 2026-10-31 on Luna: 58 postconditions checked, 0 failed, no wedge, identical beat completion with and without. The authored checks are too easy to constrain anything. |
 | Contract Slices 2–3 (precondition pressure, repair) | — | not built | — |

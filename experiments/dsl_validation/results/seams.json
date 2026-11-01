@@ -1,0 +1,808 @@
+[
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S000",
+  "kind": "seam",
+  "boundary": 11,
+  "true_join_after": 6
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S000",
+  "kind": "control",
+  "boundary": 11,
+  "true_join_after": null,
+  "continuity": 4,
+  "join_detected": false,
+  "after_paragraph": null,
+  "evidence": "Setting, characters, tone and the dialogue about stakes, soundings and wet boots flow consistently from start to end, with no contradictions in detail or shifts in voice or tense."
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S000",
+  "kind": "seam",
+  "boundary": 21,
+  "true_join_after": 3
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S000",
+  "kind": "control",
+  "boundary": 21,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S000",
+  "kind": "seam",
+  "boundary": 31,
+  "true_join_after": 3
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S000",
+  "kind": "control",
+  "boundary": 31,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S000",
+  "kind": "seam",
+  "boundary": 41,
+  "true_join_after": 7
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S000",
+  "kind": "control",
+  "boundary": 41,
+  "true_join_after": null,
+  "continuity": 3,
+  "join_detected": true,
+  "after_paragraph": 4,
+  "evidence": "Paragraph 5 restarts with a fresh scene-setting description of the workroom as though newly introduced, even though paragraphs 1-4 already had the clerk, surveyor, lamp, and rain in it, and it repeats the rain-on-window motif; the surveyor is also re-described in paragraph 7 as if first met, though he has been speaking and working since paragraph 1."
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S001",
+  "kind": "seam",
+  "boundary": 11,
+  "true_join_after": 6,
+  "continuity": 4,
+  "join_detected": false,
+  "after_paragraph": null,
+  "evidence": "The passage keeps the same characters, setting, tone, and procedure throughout (ruler, slip, notebook, three signs, lamp, chart, the 'third uncertain' note), with no contradictions or resets in voice or knowledge."
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S001",
+  "kind": "control",
+  "boundary": 11,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S001",
+  "kind": "seam",
+  "boundary": 21,
+  "true_join_after": 3,
+  "continuity": 4,
+  "join_detected": false,
+  "after_paragraph": null,
+  "evidence": "The passage keeps one voice, tense, and close-third focus on Charles throughout, and its details (fresh slip, three signs, tide correction, pencil-width margins, the lead line and casts above deck, Violante's permission, William's notebook) carry across paragraphs without contradiction, so any apparent reset is only the shift from narration to dialogue and back."
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S001",
+  "kind": "control",
+  "boundary": 21,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S001",
+  "kind": "seam",
+  "boundary": 31,
+  "true_join_after": 5,
+  "continuity": 2,
+  "join_detected": true,
+  "after_paragraph": 3,
+  "evidence": "Paragraph 3 ends with Charles silently placing a cross and leaving the pencil, then paragraph 4 restarts with him announcing the same findings and asking Violante to witness. Paragraphs 5-6 repeat the request in near-identical form, and she has not been established as present until then, which reads like parallel re-drafts rather than a continuation."
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S001",
+  "kind": "control",
+  "boundary": 31,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S001",
+  "kind": "seam",
+  "boundary": 41,
+  "true_join_after": 7
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S001",
+  "kind": "control",
+  "boundary": 41,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S001",
+  "kind": "seam",
+  "boundary": 51,
+  "true_join_after": 10
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S001",
+  "kind": "control",
+  "boundary": 51,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S002",
+  "kind": "seam",
+  "boundary": 11,
+  "true_join_after": 3
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S002",
+  "kind": "control",
+  "boundary": 11,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S002",
+  "kind": "seam",
+  "boundary": 21,
+  "true_join_after": 7,
+  "continuity": 2,
+  "join_detected": true,
+  "after_paragraph": 8,
+  "evidence": "Paragraph 9 skips Humphrey's answer to Charles's question about launch crews and shifts to a long, procedural, over-detailed narration (new sheets, brass weight, signed slips, the temporary folder, the drawer) that fits poorly with the terse, dialogue-driven exchange before it, and the 'signed slips' and 'harbor papers exposed' details don't match what was established earlier."
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S002",
+  "kind": "control",
+  "boundary": 21,
+  "true_join_after": null,
+  "continuity": 4,
+  "join_detected": false,
+  "after_paragraph": null,
+  "evidence": "The passage keeps one consistent voice, tense, and set of characters, and the details carry through (1889 survey, 1897 notebook, Ulmabbey/Ullenby, the request wording), with no repeated or contradicted facts and no reset in rhythm."
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S002",
+  "kind": "seam",
+  "boundary": 31,
+  "true_join_after": 6
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S002",
+  "kind": "control",
+  "boundary": 31,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S002",
+  "kind": "seam",
+  "boundary": 41,
+  "true_join_after": 10
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S002",
+  "kind": "control",
+  "boundary": 41,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S003",
+  "kind": "seam",
+  "boundary": 11,
+  "true_join_after": 4,
+  "continuity": 2,
+  "join_detected": true,
+  "after_paragraph": 4,
+  "evidence": "Paragraphs 1-4 are a plain, abstract interior continuation in which Gaius has just stepped inside, but paragraph 5 restarts with scene-setting (\"The office seemed smaller with the launchman beside the table\", ship, rain, lamp), and paragraphs 6-7 re-introduce the casualty line and Charles's observation of Gaius as if for the first time. Paragraph 1 also treats Gaius's hesitation as past and William's notebook as one he has just set aside, while paragraph 7 repeats that Charles keeps the notebook closed and starts a fresh examination of the sheets."
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S003",
+  "kind": "control",
+  "boundary": 11,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S003",
+  "kind": "seam",
+  "boundary": 21,
+  "true_join_after": 7
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S003",
+  "kind": "control",
+  "boundary": 21,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S003",
+  "kind": "seam",
+  "boundary": 31,
+  "true_join_after": 6
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S003",
+  "kind": "control",
+  "boundary": 31,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S004",
+  "kind": "seam",
+  "boundary": 11,
+  "true_join_after": 5
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S004",
+  "kind": "control",
+  "boundary": 11,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S004",
+  "kind": "seam",
+  "boundary": 21,
+  "true_join_after": 4
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S004",
+  "kind": "control",
+  "boundary": 21,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S004",
+  "kind": "seam",
+  "boundary": 31,
+  "true_join_after": 12
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S004",
+  "kind": "control",
+  "boundary": 31,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S004",
+  "kind": "seam",
+  "boundary": 41,
+  "true_join_after": 7,
+  "continuity": 4,
+  "join_detected": false,
+  "after_paragraph": null,
+  "evidence": "The dialogue holds one consistent register and situation throughout (the launch, the west bell, the set, the sounding, the old mark), and each reply answers the one before it, with no changes in voice, tense, or what the characters know."
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S004",
+  "kind": "control",
+  "boundary": 41,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S004",
+  "kind": "seam",
+  "boundary": 51,
+  "true_join_after": 9,
+  "continuity": 4,
+  "join_detected": false,
+  "after_paragraph": null,
+  "evidence": "The dialogue flows through a consistent exchange between Humphrey and Charles about the launch, bell, bearing, and sheet, and paragraphs 10 and 11 continue Charles's reflection on the same themes (bell, bearing, soundings, conditions) in a consistent register without contradictions."
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S005",
+  "kind": "seam",
+  "boundary": 11,
+  "true_join_after": 9
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S005",
+  "kind": "control",
+  "boundary": 11,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S005",
+  "kind": "seam",
+  "boundary": 21,
+  "true_join_after": 7
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S005",
+  "kind": "control",
+  "boundary": 21,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S005",
+  "kind": "seam",
+  "boundary": 31,
+  "true_join_after": 4,
+  "continuity": 3,
+  "join_detected": true,
+  "after_paragraph": 5,
+  "evidence": "Paragraphs 1-5 hold a consistent close-third voice with Charles's introspective caution, but in paragraph 6 Charles again says 'Hold her there... water has changed ahead,' repeating the water change and hand-raise already enacted in paragraph 5, and paragraph 9 shifts into a generic expository 'harbor instructions' register that ends by stressing the sounding is mandatory, a mild reset from the preceding scene."
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S005",
+  "kind": "control",
+  "boundary": 31,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S005",
+  "kind": "seam",
+  "boundary": 41,
+  "true_join_after": 3
+ },
+ {
+  "cell": "e2-luna-alcyone-sect",
+  "scene": "S005",
+  "kind": "control",
+  "boundary": 41,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S000",
+  "kind": "seam",
+  "boundary": 11,
+  "true_join_after": 8,
+  "continuity": 2,
+  "join_detected": true,
+  "after_paragraph": 10,
+  "evidence": "Paragraph 2 contains a broken, restarted line (\"This sat [11] \u201cThis sat somewhere...\"), and Thaneas speaks through the bay speaker in paragraphs 3\u201310 and agrees to check the buffer after shift change, yet in paragraph 11 he \"arrives a few minutes later\" in person and talks as if the trace-comparison plan is new, which suggests a separate drafting."
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S000",
+  "kind": "control",
+  "boundary": 11,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S000",
+  "kind": "seam",
+  "boundary": 21,
+  "true_join_after": 5
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S000",
+  "kind": "control",
+  "boundary": 21,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S000",
+  "kind": "seam",
+  "boundary": 31,
+  "true_join_after": 3
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S000",
+  "kind": "control",
+  "boundary": 31,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S000",
+  "kind": "seam",
+  "boundary": 41,
+  "true_join_after": 3
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S000",
+  "kind": "control",
+  "boundary": 41,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S001",
+  "kind": "seam",
+  "boundary": 11,
+  "true_join_after": 5
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S001",
+  "kind": "control",
+  "boundary": 11,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S001",
+  "kind": "seam",
+  "boundary": 21,
+  "true_join_after": 10
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S001",
+  "kind": "control",
+  "boundary": 21,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S001",
+  "kind": "seam",
+  "boundary": 31,
+  "true_join_after": 5
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S001",
+  "kind": "control",
+  "boundary": 31,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S001",
+  "kind": "seam",
+  "boundary": 41,
+  "true_join_after": 5
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S001",
+  "kind": "control",
+  "boundary": 41,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S001",
+  "kind": "seam",
+  "boundary": 51,
+  "true_join_after": 10,
+  "continuity": 2,
+  "join_detected": true,
+  "after_paragraph": 8,
+  "evidence": "Paragraph 8 breaks mid-sentence into a stray '[51]' marker and a restarted clause ('remains open through the next request,' Foxex said), which suggests a splice, and the later paragraphs repeat the 'next request' and 'close only the observation window' ideas."
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S001",
+  "kind": "control",
+  "boundary": 51,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S002",
+  "kind": "seam",
+  "boundary": 11,
+  "true_join_after": 6
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S002",
+  "kind": "control",
+  "boundary": 11,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S002",
+  "kind": "seam",
+  "boundary": 21,
+  "true_join_after": 4,
+  "continuity": 4,
+  "join_detected": false,
+  "after_paragraph": null,
+  "evidence": "Voice, tense, setting, and the thread about the branch history, package record, and captain's compartment run consistently through every paragraph, with dialogue and requests building naturally and no contradictions or restarts."
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S002",
+  "kind": "control",
+  "boundary": 21,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S002",
+  "kind": "seam",
+  "boundary": 31,
+  "true_join_after": 5
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S002",
+  "kind": "control",
+  "boundary": 31,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S002",
+  "kind": "seam",
+  "boundary": 41,
+  "true_join_after": 7,
+  "continuity": 3,
+  "join_detected": true,
+  "after_paragraph": 6,
+  "evidence": "Paragraph 6 already has the technician routing the discrepancy and Foxex accepting it in paragraph 7, but paragraph 8 restates the routing as new, repeating the same attachments and distinctions, and the dialogue then loops again with repeated 'comparison flag remains active' and 'keep distinction' lines, which suggests a restart rather than a continuation."
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S002",
+  "kind": "control",
+  "boundary": 41,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S002",
+  "kind": "seam",
+  "boundary": 51,
+  "true_join_after": 10
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S002",
+  "kind": "control",
+  "boundary": 51,
+  "true_join_after": null,
+  "continuity": 4,
+  "join_detected": false,
+  "after_paragraph": null,
+  "evidence": "The passage holds one voice, tense, and close POV throughout, and details such as the twenty-eight-day interval, the token fragment, the receipt, the corridor camera, and Ever's plan to preserve the evidence recur consistently with no contradictions or resets."
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S003",
+  "kind": "seam",
+  "boundary": 11,
+  "true_join_after": 4
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S003",
+  "kind": "control",
+  "boundary": 11,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S003",
+  "kind": "seam",
+  "boundary": 21,
+  "true_join_after": 8
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S003",
+  "kind": "control",
+  "boundary": 21,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S003",
+  "kind": "seam",
+  "boundary": 31,
+  "true_join_after": 8,
+  "continuity": 4,
+  "join_detected": false,
+  "after_paragraph": null,
+  "evidence": "The passage keeps the same terminal-dialogue voice, past tense, close-third viewpoint on Foxex, and consistent details (deferred purge, observation-only, the routine's missing fields, the sealed compartment) throughout, with no contradictions or restarts."
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S003",
+  "kind": "control",
+  "boundary": 31,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S003",
+  "kind": "seam",
+  "boundary": 41,
+  "true_join_after": 3,
+  "continuity": 4,
+  "join_detected": false,
+  "after_paragraph": null,
+  "evidence": "The passage keeps the same close third-person past tense, the same abstract diction (credential, bus, residue, observation, purge deferred), and the same setting details (sealed captain's compartment, monitor countdown), and each paragraph follows from the one before, so no reset or contradiction is visible."
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S003",
+  "kind": "control",
+  "boundary": 41,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S004",
+  "kind": "seam",
+  "boundary": 11,
+  "true_join_after": 7,
+  "continuity": 4,
+  "join_detected": false,
+  "after_paragraph": null,
+  "evidence": "The passage keeps one consistent register, with the same technical vocabulary, the same controlled-investigation procedure, and a steady pattern of Foxex's orders answered by system replies; details such as purge deferred, the read-only image, and the blank route map carry through without contradiction."
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S004",
+  "kind": "control",
+  "boundary": 11,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S004",
+  "kind": "seam",
+  "boundary": 21,
+  "true_join_after": 6,
+  "continuity": 4,
+  "join_detected": false,
+  "after_paragraph": null,
+  "evidence": "The passage keeps the same terminal-dialogue register, the same procedural vocabulary (isolation, invocation, target, route field, authorization discrepancy), and a consistent state (task held, cleanup deferred, then invocation disabled) across all sixteen paragraphs, with no contradictions or restarts."
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S004",
+  "kind": "control",
+  "boundary": 21,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S004",
+  "kind": "seam",
+  "boundary": 31,
+  "true_join_after": 7
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S004",
+  "kind": "control",
+  "boundary": 31,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S004",
+  "kind": "seam",
+  "boundary": 41,
+  "true_join_after": 6,
+  "continuity": 4,
+  "join_detected": false,
+  "after_paragraph": null,
+  "evidence": "The passage keeps the same technical vocabulary, close third-person past tense, and procedural-hold thread throughout, with no contradictions or resets; the descriptive paragraph 9 fits as a pause inside the dialogue sequence."
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S004",
+  "kind": "control",
+  "boundary": 41,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S004",
+  "kind": "seam",
+  "boundary": 51,
+  "true_join_after": 8
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S005",
+  "kind": "seam",
+  "boundary": 11,
+  "true_join_after": 8
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S005",
+  "kind": "control",
+  "boundary": 11,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S005",
+  "kind": "seam",
+  "boundary": 21,
+  "true_join_after": 7
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S005",
+  "kind": "control",
+  "boundary": 21,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S005",
+  "kind": "seam",
+  "boundary": 31,
+  "true_join_after": 6,
+  "continuity": 4,
+  "join_detected": false,
+  "after_paragraph": null,
+  "evidence": "The passage holds one consistent register, tense, and technical vocabulary throughout (monitor wake, held queue, empty target field, isolation barrier), and the dialogue-and-narration structure builds logically to the provisional designation appearing, with no contradicted details or restarts."
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S005",
+  "kind": "control",
+  "boundary": 31,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S005",
+  "kind": "seam",
+  "boundary": 41,
+  "true_join_after": 4,
+  "continuity": 4,
+  "join_detected": false,
+  "after_paragraph": null,
+  "evidence": "The passage keeps the same close-third voice, technical vocabulary (envelope, provisional designation, context capture, inherited scope), tense, and state of the task throughout, with no contradictions or restarts, so it reads as a single sitting."
+ },
+ {
+  "cell": "e2-luna-orehauler-sect",
+  "scene": "S005",
+  "kind": "control",
+  "boundary": 41,
+  "true_join_after": null
+ }
+]

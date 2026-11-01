@@ -1,0 +1,639 @@
+{
+ "cells": {
+  "e1-luna-alcyone-off": {
+   "scenes": 8,
+   "cost": 0.1141,
+   "cost_per_scene": 0.0143,
+   "calls": 62,
+   "length_cutoffs": 0,
+   "words_mean": 1880.62,
+   "paragraphs_mean": 135.62,
+   "words_per_para": 13.9,
+   "skeleton_scenes": 0,
+   "compliant": 0,
+   "sectioned": 0,
+   "trimmed": 0,
+   "segments_mean": 1,
+   "tension_self_mean": 6.14,
+   "tension_shared_mean": 5.62,
+   "tension_target_mean": 3.7,
+   "tension_shared_dist": 1.92,
+   "rewrites": 2,
+   "rewrite_ticks": [
+    {
+     "tick": 2,
+     "pre": 6,
+     "post": 5,
+     "target": 3.4
+    },
+    {
+     "tick": 6,
+     "pre": 7,
+     "post": 5,
+     "target": 4.2
+    }
+   ],
+   "premise_event": {
+    "happened": false,
+    "first_scene": null,
+    "evidence": "No scene mentions a Meridian expedition; the crew finds only an erased bearing note, an uncharted outcrop, a faint second station mark, and mud on a spare lead, none of which is tied to a lost expedition."
+   }
+  },
+  "e1-luna-alcyone-on": {
+   "scenes": 8,
+   "cost": 0.0969,
+   "cost_per_scene": 0.0121,
+   "calls": 70,
+   "length_cutoffs": 0,
+   "words_mean": 1512.38,
+   "paragraphs_mean": 26.75,
+   "words_per_para": 56.5,
+   "skeleton_scenes": 8,
+   "compliant": 6,
+   "sectioned": 0,
+   "trimmed": 0,
+   "segments_mean": 1,
+   "tension_self_mean": 6,
+   "tension_shared_mean": 5.62,
+   "tension_target_mean": 3.7,
+   "tension_shared_dist": 1.92,
+   "rewrites": 0,
+   "rewrite_ticks": [],
+   "premise_event": null
+  },
+  "e1-luna-orehauler-off": {
+   "scenes": 8,
+   "cost": 0.1092,
+   "cost_per_scene": 0.0136,
+   "calls": 64,
+   "length_cutoffs": 0,
+   "words_mean": 1757.38,
+   "paragraphs_mean": 136.25,
+   "words_per_para": 12.9,
+   "skeleton_scenes": 0,
+   "compliant": 0,
+   "sectioned": 0,
+   "trimmed": 0,
+   "segments_mean": 1,
+   "tension_self_mean": 6.14,
+   "tension_shared_mean": 6.12,
+   "tension_target_mean": 3.7,
+   "tension_shared_dist": 2.42,
+   "rewrites": 2,
+   "rewrite_ticks": [
+    {
+     "tick": 2,
+     "pre": 6,
+     "post": 4,
+     "target": 3.4
+    },
+    {
+     "tick": 7,
+     "pre": 7,
+     "post": 5,
+     "target": 4.4
+    }
+   ],
+   "premise_event": {
+    "happened": false,
+    "first_scene": null,
+    "evidence": "The scenes only describe repeated access attempts on the engineering locker and contact with the sealed command habitation, which stays closed with no physical entry recorded; no scene shows the captain being found, let alone murdered."
+   }
+  },
+  "e1-luna-orehauler-on": {
+   "scenes": 8,
+   "cost": 0.0972,
+   "cost_per_scene": 0.0122,
+   "calls": 61,
+   "length_cutoffs": 1,
+   "words_mean": 1222.88,
+   "paragraphs_mean": 25.12,
+   "words_per_para": 48.7,
+   "skeleton_scenes": 8,
+   "compliant": 6,
+   "sectioned": 0,
+   "trimmed": 0,
+   "segments_mean": 1,
+   "tension_self_mean": 6.43,
+   "tension_shared_mean": 6.12,
+   "tension_target_mean": 3.7,
+   "tension_shared_dist": 2.42,
+   "rewrites": 1,
+   "rewrite_ticks": [
+    {
+     "tick": 6,
+     "pre": 7,
+     "post": 6,
+     "target": 4.2
+    }
+   ],
+   "premise_event": {
+    "happened": false,
+    "first_scene": null,
+    "evidence": "None of the scenes mentions a captain or a murder; they cover only a reactor inspection, an unexplained recalibration, credential traces, and a missing calibration kit."
+   }
+  },
+  "e2-luna-alcyone-sect": {
+   "scenes": 6,
+   "cost": 0.1861,
+   "cost_per_scene": 0.031,
+   "calls": 73,
+   "length_cutoffs": 8,
+   "words_mean": 3204.67,
+   "paragraphs_mean": 49.83,
+   "words_per_para": 64.3,
+   "skeleton_scenes": 6,
+   "compliant": 2,
+   "sectioned": 6,
+   "trimmed": 0,
+   "segments_mean": 5.17,
+   "tension_self_mean": 5.2,
+   "tension_shared_mean": 4.33,
+   "tension_target_mean": 3.5,
+   "tension_shared_dist": 1.1,
+   "rewrites": 0,
+   "rewrite_ticks": [],
+   "premise_event": {
+    "happened": false,
+    "first_scene": null,
+    "evidence": "The scenes cover soundings, an ambiguous mark on charts and harbor papers, and a casualty report of a lost boat, but none shows the crew finding wreckage, remains, a camp, a record or a survivor of the Meridian expedition, and the disturbed water is explicitly left unresolved."
+   }
+  },
+  "e2-luna-alcyone-sectv0": {
+   "scenes": 6,
+   "cost": 0.1881,
+   "cost_per_scene": 0.0313,
+   "calls": 74,
+   "length_cutoffs": 4,
+   "words_mean": 3245.33,
+   "paragraphs_mean": 55.33,
+   "words_per_para": 58.7,
+   "skeleton_scenes": 6,
+   "compliant": 2,
+   "sectioned": 6,
+   "trimmed": 0,
+   "segments_mean": 5.5,
+   "tension_self_mean": 4.4,
+   "tension_shared_mean": 4.83,
+   "tension_target_mean": 3.5,
+   "tension_shared_dist": 1.33,
+   "rewrites": 0,
+   "rewrite_ticks": [],
+   "premise_event": null
+  },
+  "e2-luna-alcyone-single": {
+   "scenes": 6,
+   "cost": 0.0929,
+   "cost_per_scene": 0.0155,
+   "calls": 44,
+   "length_cutoffs": 0,
+   "words_mean": 2626.33,
+   "paragraphs_mean": 53.67,
+   "words_per_para": 48.9,
+   "skeleton_scenes": 6,
+   "compliant": 4,
+   "sectioned": 0,
+   "trimmed": 0,
+   "segments_mean": 1,
+   "tension_self_mean": 5.8,
+   "tension_shared_mean": 4.83,
+   "tension_target_mean": 3.5,
+   "tension_shared_dist": 1.33,
+   "rewrites": 0,
+   "rewrite_ticks": [],
+   "premise_event": {
+    "happened": false,
+    "first_scene": null,
+    "evidence": "No scene mentions a Meridian expedition; the crew finds only Ullenby survey records, equipment, and a hidden note, none identified as wreckage, remains, a camp, a record, or a survivor of a lost Meridian expedition."
+   }
+  },
+  "e2-luna-orehauler-sect": {
+   "scenes": 6,
+   "cost": 0.1891,
+   "cost_per_scene": 0.0315,
+   "calls": 76,
+   "length_cutoffs": 8,
+   "words_mean": 2971,
+   "paragraphs_mean": 51.5,
+   "words_per_para": 57.7,
+   "skeleton_scenes": 6,
+   "compliant": 2,
+   "sectioned": 6,
+   "trimmed": 0,
+   "segments_mean": 5.5,
+   "tension_self_mean": 5.6,
+   "tension_shared_mean": 4.83,
+   "tension_target_mean": 3.5,
+   "tension_shared_dist": 1.33,
+   "rewrites": 1,
+   "rewrite_ticks": [
+    {
+     "tick": 3,
+     "pre": 6,
+     "post": 5,
+     "target": 3.6
+    }
+   ],
+   "premise_event": {
+    "happened": false,
+    "first_scene": null,
+    "evidence": "The captain's compartment is only ever described as sealed with unresolved registry and credential discrepancies, and no scene shows the captain being found, let alone murdered."
+   }
+  },
+  "e2-luna-orehauler-sectv0": {
+   "scenes": 6,
+   "cost": 0.1798,
+   "cost_per_scene": 0.03,
+   "calls": 78,
+   "length_cutoffs": 5,
+   "words_mean": 2838.83,
+   "paragraphs_mean": 53.67,
+   "words_per_para": 52.9,
+   "skeleton_scenes": 6,
+   "compliant": 4,
+   "sectioned": 5,
+   "trimmed": 0,
+   "segments_mean": 4.83,
+   "tension_self_mean": 5.6,
+   "tension_shared_mean": 5.67,
+   "tension_target_mean": 3.5,
+   "tension_shared_dist": 2.17,
+   "rewrites": 1,
+   "rewrite_ticks": [
+    {
+     "tick": 1,
+     "pre": 6,
+     "post": 5,
+     "target": 3.2
+    }
+   ],
+   "premise_event": {
+    "happened": false,
+    "first_scene": null,
+    "evidence": "The captain's murder is only referenced as the background of an ongoing station investigation, and none of the scenes shows the captain being found dead."
+   }
+  },
+  "e2-luna-orehauler-single": {
+   "scenes": 6,
+   "cost": 0.1063,
+   "cost_per_scene": 0.0177,
+   "calls": 49,
+   "length_cutoffs": 3,
+   "words_mean": 2713.5,
+   "paragraphs_mean": 69.67,
+   "words_per_para": 38.9,
+   "skeleton_scenes": 6,
+   "compliant": 4,
+   "sectioned": 0,
+   "trimmed": 0,
+   "segments_mean": 1,
+   "tension_self_mean": 5.8,
+   "tension_shared_mean": 5.83,
+   "tension_target_mean": 3.5,
+   "tension_shared_dist": 2.33,
+   "rewrites": 1,
+   "rewrite_ticks": [
+    {
+     "tick": 1,
+     "pre": 6,
+     "post": 5,
+     "target": 3.2
+    }
+   ],
+   "premise_event": {
+    "happened": false,
+    "first_scene": null,
+    "evidence": "Captain Oras is alive and speaks with Ever at Outpost Arrax in Scene 4 and is consulted again in Scene 5, and no scene shows anyone murdered."
+   }
+  },
+  "e3-luna-alcyone-off": {
+   "scenes": 15,
+   "cost": 0.2007,
+   "cost_per_scene": 0.0134,
+   "calls": 109,
+   "length_cutoffs": 0,
+   "words_mean": 1834.27,
+   "paragraphs_mean": 132.2,
+   "words_per_para": 13.9,
+   "skeleton_scenes": 0,
+   "compliant": 0,
+   "sectioned": 0,
+   "trimmed": 0,
+   "segments_mean": 1,
+   "tension_self_mean": 6,
+   "tension_shared_mean": 5.6,
+   "tension_target_mean": 4.33,
+   "tension_shared_dist": 1.39,
+   "rewrites": 2,
+   "rewrite_ticks": [
+    {
+     "tick": 6,
+     "pre": 7,
+     "post": 5,
+     "target": 4.2
+    },
+    {
+     "tick": 14,
+     "pre": 8,
+     "post": 6,
+     "target": 5.4
+    }
+   ],
+   "beats": {
+    "beats": 14,
+    "status": {
+     "completed": 13,
+     "pending": 1
+    },
+    "methods": {
+     "trusted_planner": 13
+    },
+    "postconditions_checked": 0,
+    "postconditions_failed": 0,
+    "per_checker": {},
+    "tick_contract_checked": 0,
+    "tick_contract_failed": 0
+   },
+   "premise_event": null
+  },
+  "e3-luna-alcyone-on": {
+   "scenes": 15,
+   "cost": 0.2263,
+   "cost_per_scene": 0.0151,
+   "calls": 112,
+   "length_cutoffs": 4,
+   "words_mean": 1874.87,
+   "paragraphs_mean": 129,
+   "words_per_para": 14.5,
+   "skeleton_scenes": 0,
+   "compliant": 0,
+   "sectioned": 0,
+   "trimmed": 0,
+   "segments_mean": 1,
+   "tension_self_mean": 6.14,
+   "tension_shared_mean": 5.67,
+   "tension_target_mean": 4.33,
+   "tension_shared_dist": 1.43,
+   "rewrites": 4,
+   "rewrite_ticks": [
+    {
+     "tick": 1,
+     "pre": 6,
+     "post": 5,
+     "target": 3.2
+    },
+    {
+     "tick": 3,
+     "pre": 6,
+     "post": 4,
+     "target": 3.6
+    },
+    {
+     "tick": 6,
+     "pre": 7,
+     "post": 6,
+     "target": 4.2
+    },
+    {
+     "tick": 14,
+     "pre": 8,
+     "post": 7,
+     "target": 5.4
+    }
+   ],
+   "beats": {
+    "beats": 14,
+    "status": {
+     "completed": 13,
+     "pending": 1
+    },
+    "methods": {
+     "contract": 13
+    },
+    "postconditions_checked": 0,
+    "postconditions_failed": 0,
+    "per_checker": {},
+    "tick_contract_checked": 32,
+    "tick_contract_failed": 0
+   },
+   "premise_event": {
+    "happened": true,
+    "first_scene": 10,
+    "evidence": "In scene 10, Edward and Miles uncover a hidden compartment containing a tin with a weathered signal cloth bearing the Meridian expedition's circle-and-line emblem."
+   }
+  },
+  "e3-luna-orehauler-off": {
+   "scenes": 15,
+   "cost": 0.2245,
+   "cost_per_scene": 0.015,
+   "calls": 126,
+   "length_cutoffs": 1,
+   "words_mean": 1560.4,
+   "paragraphs_mean": 97,
+   "words_per_para": 16.1,
+   "skeleton_scenes": 0,
+   "compliant": 0,
+   "sectioned": 0,
+   "trimmed": 0,
+   "segments_mean": 1,
+   "tension_self_mean": 6.36,
+   "tension_shared_mean": 6.53,
+   "tension_target_mean": 4.33,
+   "tension_shared_dist": 2.2,
+   "rewrites": 6,
+   "rewrite_ticks": [
+    {
+     "tick": 7,
+     "pre": 7,
+     "post": 6,
+     "target": 4.4
+    },
+    {
+     "tick": 8,
+     "pre": 7,
+     "post": 6,
+     "target": 4.6
+    },
+    {
+     "tick": 9,
+     "pre": 7,
+     "post": 5,
+     "target": 4.8
+    },
+    {
+     "tick": 11,
+     "pre": 8,
+     "post": 6,
+     "target": 5.1
+    },
+    {
+     "tick": 12,
+     "pre": 8,
+     "post": 5,
+     "target": 5.2
+    },
+    {
+     "tick": 14,
+     "pre": 8,
+     "post": 7,
+     "target": 5.4
+    }
+   ],
+   "beats": {
+    "beats": 18,
+    "status": {
+     "completed": 13,
+     "pending": 5
+    },
+    "methods": {
+     "trusted_planner": 13
+    },
+    "postconditions_checked": 0,
+    "postconditions_failed": 0,
+    "per_checker": {},
+    "tick_contract_checked": 0,
+    "tick_contract_failed": 0
+   },
+   "premise_event": {
+    "happened": false,
+    "first_scene": null,
+    "evidence": "Across all scenes the captain's compartment stays sealed and Halol only investigates an unidentified captain-level credential, power draws, and reactor deviations; no captain's body is found and no murder is shown."
+   }
+  },
+  "e3-luna-orehauler-on": {
+   "scenes": 15,
+   "cost": 0.2367,
+   "cost_per_scene": 0.0158,
+   "calls": 121,
+   "length_cutoffs": 3,
+   "words_mean": 1560.67,
+   "paragraphs_mean": 124.87,
+   "words_per_para": 12.5,
+   "skeleton_scenes": 0,
+   "compliant": 0,
+   "sectioned": 0,
+   "trimmed": 0,
+   "segments_mean": 1,
+   "tension_self_mean": 6.5,
+   "tension_shared_mean": 6.13,
+   "tension_target_mean": 4.33,
+   "tension_shared_dist": 1.84,
+   "rewrites": 6,
+   "rewrite_ticks": [
+    {
+     "tick": 4,
+     "pre": 6,
+     "post": 5,
+     "target": 3.8
+    },
+    {
+     "tick": 8,
+     "pre": 7,
+     "post": 6,
+     "target": 4.6
+    },
+    {
+     "tick": 11,
+     "pre": 8,
+     "post": 5,
+     "target": 5.1
+    },
+    {
+     "tick": 12,
+     "pre": 8,
+     "post": 5,
+     "target": 5.2
+    },
+    {
+     "tick": 13,
+     "pre": 8,
+     "post": 6,
+     "target": 5.3
+    },
+    {
+     "tick": 14,
+     "pre": 8,
+     "post": 7,
+     "target": 5.4
+    }
+   ],
+   "beats": {
+    "beats": 17,
+    "status": {
+     "completed": 13,
+     "pending": 4
+    },
+    "methods": {
+     "contract": 13
+    },
+    "postconditions_checked": 0,
+    "postconditions_failed": 0,
+    "per_checker": {},
+    "tick_contract_checked": 26,
+    "tick_contract_failed": 0
+   },
+   "premise_event": {
+    "happened": false,
+    "first_scene": null,
+    "evidence": "None of the scene summaries mention a captain or a murder; the story concerns a missing ignition driver, unauthorized cabinet access, and an isolated reactor junction."
+   }
+  }
+ },
+ "pairwise": {
+  "e1": {
+   "e1-luna-alcyone": {
+    "off": 16
+   },
+   "ALL": {
+    "off": 29,
+    "on": 3
+   },
+   "luna": {
+    "off": 29,
+    "on": 3
+   },
+   "consistent_pairs": {
+    "yes": 15,
+    "no": 1
+   },
+   "e1-luna-orehauler": {
+    "off": 13,
+    "on": 3
+   }
+  },
+  "e2": {
+   "e2-luna-alcyone": {
+    "single": 12
+   },
+   "ALL": {
+    "single": 24
+   },
+   "luna": {
+    "single": 24
+   },
+   "consistent_pairs": {
+    "yes": 12
+   },
+   "e2-luna-orehauler": {
+    "single": 12
+   }
+  }
+ },
+ "seams": {
+  "seam": {
+   "n": 52,
+   "continuity_mean": 3.37,
+   "join_detected": 7,
+   "join_located": 1
+  },
+  "control": {
+   "n": 50,
+   "continuity_mean": 3.75,
+   "join_detected": 1,
+   "join_located": 0
+  },
+  "fallback_scenes": 0
+ },
+ "writer_cost": 2.248,
+ "judge_cost": 2.055
+}
