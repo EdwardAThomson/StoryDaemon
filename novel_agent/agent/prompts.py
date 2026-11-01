@@ -549,7 +549,8 @@ def format_scene_section_prompt(writer_context: dict, plan_lines: str,
                                 is_first: bool = False,
                                 is_last: bool = False,
                                 section_job: str = "",
-                                jobs_done: Optional[List[str]] = None) -> str:
+                                jobs_done: Optional[List[str]] = None,
+                                hide_ending: bool = False) -> str:
     """Format one section request for sectioned scene writing (DSL Slice 5).
 
     A masters-length chapter is roughly 3,165 words and a single request does
@@ -562,8 +563,22 @@ def format_scene_section_prompt(writer_context: dict, plan_lines: str,
     them every section carried the whole scene's intention and key change and
     tried to deliver the whole scene again, so the prose circled and restarted
     (docs/DSL_VALIDATION_2026-10-31.md section 5).
+
+    ``hide_ending`` withholds the scene's intention, key change and plot beat
+    from every section but the last. Shown the whole intention, the first
+    section landed the reveal in its first ten paragraphs and the rest of the
+    chapter re-performed it (2026-11-01 re-run); an early section now knows
+    only its own job and what is already done. The final section sees
+    everything, so the ending is still landed against the brief.
     """
-    ctx = writer_context or {}
+    ctx = dict(writer_context or {})
+    hidden = bool(hide_ending and section_job and not is_last)
+    if hidden:
+        withheld = ("(withheld: this section's job, below, is all this section "
+                    "is for; the scene's ending belongs to the final section)")
+        ctx["scene_intention"] = withheld
+        ctx["key_change"] = withheld
+        ctx["plot_beat_section"] = ""
     if is_first:
         position = ("This is the OPENING of the scene. Establish it and carry it "
                     "to the end of your section. Do NOT bring the scene to a close.")
@@ -608,9 +623,17 @@ def format_scene_section_prompt(writer_context: dict, plan_lines: str,
         if jobs_done:
             lines.append("**Already done in the text above:** "
                          + " ".join(jobs_done))
-        lines.append("Do only this section's job. The scene's intention and "
-                     "key change are reached across all the sections, not "
-                     "inside this one, unless this is the final section.")
+        if is_last:
+            lines.append("Do this section's job and land the scene's key "
+                         "change on your last paragraph.")
+        elif hidden:
+            lines.append("Do only this section's job. It is one event, not "
+                         "the whole scene: do not resolve, reveal or conclude "
+                         "anything beyond it. The ending is not yours.")
+        else:
+            lines.append("Do only this section's job. The scene's intention and "
+                         "key change are reached across all the sections, not "
+                         "inside this one, unless this is the final section.")
         job_section = "\n## Your Section's Job\n\n" + "\n".join(lines) + "\n"
 
     return SCENE_SECTION_PROMPT_TEMPLATE.format(

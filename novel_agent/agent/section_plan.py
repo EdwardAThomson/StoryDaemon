@@ -18,6 +18,14 @@ text above has covered. If the planning call fails or returns something
 unusable, position-based jobs stand in (open, carry, close), so the feature
 can never cost a scene.
 
+The 2026-11-01 re-run fixed the seams but the chapters still circled: with
+no key change from the planner, the jobs came out as procedural steps (align,
+establish, reconstruct, compare) and the first section, which saw the whole
+intention, landed the reveal in its first ten paragraphs. So a job is now an
+event, the first job is barred from the intention's outcome, and the writer
+of an early section is shown its job but not the scene's ending
+(generation.subblock_hide_ending).
+
 Pure logic: no LLM calls, no I/O, no state.
 """
 
@@ -38,11 +46,12 @@ SECTION_JOBS_PROMPT_TEMPLATE = """You are planning how ONE SCENE of a novel will
 
 ## Your task
 
-Give each section ONE job: a single sentence saying what happens in it and nothing else. Together the {n} jobs must deliver the intention above exactly once, in order, with no overlap:
-- Section 1 establishes the situation and starts the movement. It does not resolve anything.
-- Each middle section advances the movement by one step that the sections before it have not taken.
+Give each section ONE job: a single sentence naming the one thing that HAPPENS in it. A job is an event the reader did not have before it: an arrival, a discovery, a refusal, an interruption, an admission, a decision, a loss. Together the {n} jobs must deliver the intention above exactly once, in order, as a chain of events, with no overlap:
+- Section 1 establishes the situation and starts the movement with its first event. It must NOT reach the intention's discovery, reveal or outcome; that belongs to the end.
+- Each middle section contains one new event that moves the scene a step further than the sections before it. Preparing, examining, comparing, checking or discussing something is NOT an event unless it produces something new; do not write jobs like "they continue to compare the records".
 - Only the last section lands the key change and ends the scene.
 - Something asked, found, said or decided in one job is settled and must not be asked, found, said or decided again in a later one.
+- If the intention and key change together hold fewer events than there are sections, invent the missing ones: a complication, an interruption, a cost, a second character's reaction. Do not stretch one event across several sections.
 
 Reply with JSON only: {{"jobs": ["<job of section 1>", "<job of section 2>", ...]}} with exactly {n} entries."""
 

@@ -682,6 +682,7 @@ Create a detailed plan for executing the scene intention. Consider:
 2. What information do you need to write this scene effectively?
 3. Should new characters or locations be introduced?
 4. How should relationships evolve?
+5. What is concretely different when the scene ends? Name one event: something done, decided, lost, refused, or discovered and acted on. A question left hanging is not a key change; a scene that only notices something has none.
 
 ## Output Format
 
@@ -691,6 +692,7 @@ Respond with a JSON object following this structure:
 {{
   "rationale": "Brief explanation of your planning decisions",
   "scene_intention": "{scene_intention}",
+  "key_change": "One sentence: the one thing that is concretely different when this scene ends",
   "pov_character": "{protagonist_id if protagonist else 'C0'}",
   "target_location": "Location ID where scene takes place (or null for new location)",
   "actions": [
@@ -900,6 +902,7 @@ Generate your plan now:"""
         return {
             'rationale': _EMPTY_PLAN_RATIONALE,
             'scene_intention': 'Continue the story',
+            'key_change': '',
             'pov_character': self.memory.get_active_character(),
             'target_location': None,
             'actions': [],

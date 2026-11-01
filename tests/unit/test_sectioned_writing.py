@@ -451,3 +451,76 @@ def test_a_planned_scene_takes_the_selective_revision_path():
     assert "whole_scene" not in calls          # the destructive path never ran
     assert calls["indices"]                    # selective revision was asked for
     assert out is planned and t is tension     # stub returned nothing, so unchanged
+
+
+# ---- 2026-11-01: jobs are events, and early sections do not see the ending --
+
+def test_jobs_prompt_asks_for_events_and_keeps_the_reveal_out_of_section_one():
+    from novel_agent.agent.section_plan import section_jobs_prompt
+    sk = ["DIALOGUE"] * 30
+    p = section_jobs_prompt(_ctx(sk), [(1, 10), (11, 20), (21, 30)], sk)
+    assert "the one thing that HAPPENS in it" in p
+    assert "must NOT reach the intention's discovery, reveal or outcome" in p
+    assert "is NOT an event unless it produces something new" in p
+    assert "Do not stretch one event across several sections" in p
+
+
+def test_early_sections_see_their_job_but_not_the_scenes_ending():
+    sk = ["DIALOGUE"] * 30
+    llm = FakeLLM(['{"jobs": ["Mira asks for the ledger.", "The archivist refuses.", "The ledger changes hands."]}',
+                   "[1] One.", "[11] Two.", "[21] Three."])
+    scene = SceneWriter(llm, Cfg(**JOBS_ON)).write_scene(_ctx(sk))
+    # the planning call still sees the whole brief
+    assert "Mira confronts the archivist" in llm.prompts[0]
+    assert "the ledger changes hands" in llm.prompts[0]
+    # sections 1 and 2 know only their own job and what is done
+    for p in llm.prompts[1:3]:
+        assert "Mira confronts the archivist" not in p
+        assert "the ledger changes hands" not in p
+        assert "**Intention:** (withheld" in p
+        assert "The ending is not yours." in p
+    # the final section sees everything and is told to land the key change
+    assert "Mira confronts the archivist" in llm.prompts[3]
+    assert "the ledger changes hands" in llm.prompts[3]
+    assert "land the scene's key change on your last paragraph" in llm.prompts[3]
+    assert scene["section_ending_hidden"] is True
+
+
+def test_the_plot_beat_is_withheld_from_early_sections_too():
+    sk = ["DIALOGUE"] * 25
+    ctx = {**_ctx(sk), "plot_beat_section": "## Plot Beat\nThe ledger is handed over.\n"}
+    llm = FakeLLM(['{"jobs": ["Mira asks.", "The ledger is handed over."]}', "[1] One.", "[11] Two."])
+    SceneWriter(llm, Cfg(**JOBS_ON)).write_scene(ctx)
+    assert "The ledger is handed over." not in llm.prompts[1]
+    assert "## Plot Beat" in llm.prompts[2]
+
+
+def test_position_jobs_leave_the_brief_visible():
+    # Without planned jobs an early section has no other idea what the scene
+    # is, so hiding the ending would leave it blind.
+    sk = ["DIALOGUE"] * 25
+    llm = FakeLLM(["not a plan", "[1] One.", "[11] Two."])
+    scene = SceneWriter(llm, Cfg(**JOBS_ON)).write_scene(_ctx(sk))
+    assert "Mira confronts the archivist" in llm.prompts[1]
+    assert scene["section_ending_hidden"] is False
+
+
+def test_hide_ending_off_shows_every_section_the_whole_brief():
+    sk = ["DIALOGUE"] * 25
+    llm = FakeLLM(['{"jobs": ["Mira asks.", "The ledger changes hands."]}', "[1] One.", "[11] Two."])
+    cfg = Cfg(**JOBS_ON, **{"generation.subblock_hide_ending": False})
+    scene = SceneWriter(llm, cfg).write_scene(_ctx(sk))
+    assert "Mira confronts the archivist" in llm.prompts[1]
+    assert "reached across all the sections" in llm.prompts[1]
+    assert scene["section_ending_hidden"] is False
+
+
+def test_tactical_plan_asks_the_planner_for_a_key_change():
+    # Every plan of the 2026-10-31 and 11-01 runs had an empty key change: the
+    # tactical schema never asked for one, so the writer's "KEY CHANGE" line
+    # and the section-jobs planner's key change were always blank.
+    from novel_agent.agent.multi_stage_planner import MultiStagePlanner
+    import inspect
+    src = inspect.getsource(MultiStagePlanner._build_tactical_prompt)
+    assert '"key_change":' in src
+    assert "A question left hanging is not a key change" in src

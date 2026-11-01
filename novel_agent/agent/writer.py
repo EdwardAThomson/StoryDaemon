@@ -148,7 +148,12 @@ class SceneWriter:
                 return None          # one section is just single-shot writing
 
             mode_words = mode_word_stats()
-            jobs = self._section_jobs(writer_context, bounds, skeleton)
+            jobs, planned = self._section_jobs(writer_context, bounds, skeleton)
+            # Hide the ending only when the jobs were planned: position jobs
+            # ("advance by one step") say nothing about this scene, and a
+            # writer with neither would be blind.
+            hide_ending = bool(planned and self.config.get(
+                'generation.subblock_hide_ending', True))
             parts, text = [], ""
             sections_trimmed = 0
             for i, (first, last) in enumerate(bounds):
@@ -165,6 +170,7 @@ class SceneWriter:
                     is_last=(i == len(bounds) - 1),
                     section_job=jobs[i] if jobs else "",
                     jobs_done=jobs[:i] if jobs else None,
+                    hide_ending=hide_ending,
                 )
                 budget = token_budget_for(words, self.config)
                 part, finish = self._generate_segment(prompt, budget)
@@ -219,6 +225,7 @@ class SceneWriter:
                 "trimmed": False,
                 "sections_trimmed": sections_trimmed,
                 "section_jobs": jobs,
+                "section_ending_hidden": hide_ending,
             }
         except Exception as e:
             # Say so where the operator is looking, not only in the log. A
@@ -233,14 +240,15 @@ class SceneWriter:
             return None
 
     def _section_jobs(self, writer_context: Dict[str, Any], bounds: list,
-                      skeleton: List[str]) -> Optional[List[str]]:
-        """One job per section, from one planning call; position jobs if it
-        fails; None when the knob is off (the pre-fix prompt, byte for byte).
+                      skeleton: List[str]) -> Tuple[Optional[List[str]], bool]:
+        """(jobs, planned): one job per section from one planning call, with
+        planned True; position jobs with planned False if it fails; (None,
+        False) when the knob is off (the pre-fix prompt, byte for byte).
 
         Never raises: a planning failure costs the jobs, not the scene.
         """
         if not self.config.get('generation.subblock_section_jobs', True):
-            return None
+            return None, False
         from .section_plan import (fallback_jobs, parse_section_jobs,
                                    section_jobs_prompt)
         n = len(bounds)
@@ -259,14 +267,14 @@ class SceneWriter:
                 response, finish = self._generate_segment(prompt, budget * 2)
                 jobs = parse_section_jobs(response, n)
             if jobs:
-                return jobs
+                return jobs, True
             print(f"        ⚠️  Section jobs unusable (finish={finish}); "
                   f"using position jobs")
             logger.warning("Section jobs unusable; using position jobs")
         except Exception as e:  # noqa: BLE001
             print(f"        ⚠️  Section jobs failed ({e}); using position jobs")
             logger.warning(f"Section jobs failed ({e}); using position jobs")
-        return fallback_jobs(n)
+        return fallback_jobs(n), False
 
     def _generate_segment(self, prompt: str, max_tokens: int) -> Tuple[str, Optional[str]]:
         """One LLM request, with the finish_reason when the backend exposes it.
