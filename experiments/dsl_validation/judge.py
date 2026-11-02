@@ -91,7 +91,7 @@ def parse_json(text):
 def cells():
     """{cell_name: project_dir} for every campaign project."""
     out = {}
-    for p in sorted(WORK.glob("e[123]-*_*")):
+    for p in sorted(list(WORK.glob("e[123]-*_*")) + list(WORK.glob("m[0-9]-*_*"))):
         if (p / "state.json").exists():
             out[p.name.rsplit("_", 1)[0]] = p
     return out
