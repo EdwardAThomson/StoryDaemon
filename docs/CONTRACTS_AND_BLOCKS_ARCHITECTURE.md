@@ -49,25 +49,32 @@ All entities (characters, locations, items) must:
 
 ### Hierarchical Structure
 
+```mermaid
+flowchart TD
+    SC["Story Contract<br/>No duplicates, consistency, etc."]
+    BC1["Beat Contract 1<br/>Pre/Postconditions"]
+    BC2["Beat Contract 2<br/>Pre/Postconditions"]
+    BA["Block A"]
+    BB["Block B"]
+    BCc["Block C"]
+    BD["Block D"]
+    SA["SubBlock"]
+    SB["SubBlock"]
+    SCc["SubBlock"]
+    SD["SubBlock"]
+    SC --> BC1
+    SC --> BC2
+    BC1 --> BA
+    BC1 --> BB
+    BC1 --> BCc
+    BC2 --> BD
+    BA --> SA
+    BB --> SB
+    BCc --> SCc
+    BD --> SD
 ```
-┌─────────────────────────────────────────┐
-│         Story Contract                  │  ← Global constraints
-│  (No duplicates, consistency, etc.)     │
-└─────────────────────────────────────────┘
-                    │
-                    ├─────────────────────────────┐
-                    ▼                             ▼
-        ┌───────────────────────┐    ┌───────────────────────┐
-        │   Beat Contract 1     │    │   Beat Contract 2     │  ← Scene requirements
-        │   (Pre/Postconditions)│    │   (Pre/Postconditions)│
-        └───────────────────────┘    └───────────────────────┘
-                    │                             │
-        ┌───────────┼───────────┐                │
-        ▼           ▼           ▼                ▼
-    [Block A]   [Block B]   [Block C]       [Block D]          ← Narrative structure
-        │           │           │                │
-    [SubBlock]  [SubBlock]  [SubBlock]      [SubBlock]         ← Atomic units
-```
+
+Levels, top to bottom: global constraints (story contract), scene requirements (beat contracts), narrative structure (blocks), atomic units (sub-blocks).
 
 **Two Orthogonal Dimensions:**
 - **Vertical (Contracts):** Requirements flow down (story → beat → sub-beat)
