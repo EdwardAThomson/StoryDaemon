@@ -482,7 +482,7 @@ def test_early_sections_see_their_job_but_not_the_scenes_ending():
     # the final section sees everything and is told to land the key change
     assert "Mira confronts the archivist" in llm.prompts[3]
     assert "the ledger changes hands" in llm.prompts[3]
-    assert "land the scene's key change on your last paragraph" in llm.prompts[3]
+    assert "land the scene's key change by your last paragraph" in llm.prompts[3]
     assert scene["section_ending_hidden"] is True
 
 
@@ -524,3 +524,24 @@ def test_tactical_plan_asks_the_planner_for_a_key_change():
     src = inspect.getsource(MultiStagePlanner._build_tactical_prompt)
     assert '"key_change":' in src
     assert "A question left hanging is not a key change" in src
+
+
+def test_planned_sections_are_told_how_to_deliver_their_event():
+    sk = ["DIALOGUE"] * 25
+    llm = FakeLLM(['{"jobs": ["Mira asks.", "The ledger changes hands."]}', "[1] One.", "[11] Two."])
+    SceneWriter(llm, Cfg(**JOBS_ON)).write_scene(_ctx(sk))
+    for p in llm.prompts[1:]:
+        assert "Nobody announces it" in p
+        assert "Reach the event early in the section" in p
+        assert "Say each thing once" in p
+    assert "never as a summary of what has been decided" in llm.prompts[2]
+
+
+def test_event_rules_off_and_position_jobs_omit_them():
+    sk = ["DIALOGUE"] * 25
+    llm = FakeLLM(['{"jobs": ["Mira asks.", "The ledger changes hands."]}', "[1] One.", "[11] Two."])
+    SceneWriter(llm, Cfg(**JOBS_ON, **{"generation.subblock_event_rules": False})).write_scene(_ctx(sk))
+    assert "Nobody announces it" not in llm.prompts[1]
+    llm = FakeLLM(["not a plan", "[1] One.", "[11] Two."])
+    SceneWriter(llm, Cfg(**JOBS_ON)).write_scene(_ctx(sk))
+    assert "Nobody announces it" not in llm.prompts[1]
