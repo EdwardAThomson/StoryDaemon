@@ -121,6 +121,8 @@ Sectioned with the fixes lands on the masters' distribution; single-shot runs sh
 
 Verdict: sectioned now does the structural job it was built for. Its cost is some subtext and pace. It stays off by default until those are worked on. Caveat: the single-shot arm was written before the planner named a key change, so it had the weaker plan; a fair comparison needs that arm re-run on one premise (about 30 cents).
 
+**Fix 1 check (2026-11-02, PR #30, `generation.subblock_event_rules`).** Each planned section was also told how to deliver its event (through action and speech, early, each thing said once). Alcyone, 6 chapters, 36 cents with judging: register fit 3.33 (unchanged), movement 3.17 (unchanged), subtext 2.0 (was 2.17), economy 2.0 (unchanged), voices 2.0. The judge's reasons still say "restated many times" and name duplicated lines. Seams 6 of 26 against 1 of 25 for the control, worse than the 3 of 22 before. Paragraph shape still on the masters' distribution (median 33, 20% under 15 words). One of the six chapters fell back to position jobs. A negative result: three more prompt rules moved nothing the judge can see, which matches what the fork experiment found for tension. Restatement and subtext need a gauge and a code-side fix, not wording.
+
 ## 6. Two bugs fixed on the way
 
 Both in `writer.py:_write_in_sections`, both found by the fallback printing to the console as designed:
