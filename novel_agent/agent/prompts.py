@@ -535,6 +535,19 @@ SCENE_SECTION_PROMPT_TEMPLATE = """You are a creative fiction writer writing ONE
 Write paragraphs {first} to {last} now:"""
 
 
+# How a section delivers its one event. Added after the 2026-11-01 retest,
+# where the sectioned chapters matched single-shot on register and economy
+# but trailed on subtext ("everything is stated outright") and pace ("gets
+# there slowly"): a writer handed one event as its job tends to announce it,
+# approach it for most of the section, then have the narration repeat what
+# the dialogue just said. Section-only, so the single-shot prompt is
+# unchanged and the two can still be compared.
+SECTION_EVENT_RULES = """How to deliver it:
+- Let the event happen through what people do and say. Nobody announces it, and the narration does not explain what it means or how anyone feels about it; the reader is left to see that.
+- Reach the event early in the section and spend the rest on its consequences, not on approaching it.
+- Say each thing once. Narration never restates what the dialogue just said, no caveat or worry is voiced twice, and no paragraph summarises the one before it."""
+
+
 SCENE_SO_FAR_SECTION_TEMPLATE = """
 ## The Scene So Far (complete text, paragraphs 1 to {prior_last})
 
@@ -550,7 +563,8 @@ def format_scene_section_prompt(writer_context: dict, plan_lines: str,
                                 is_last: bool = False,
                                 section_job: str = "",
                                 jobs_done: Optional[List[str]] = None,
-                                hide_ending: bool = False) -> str:
+                                hide_ending: bool = False,
+                                event_rules: bool = False) -> str:
     """Format one section request for sectioned scene writing (DSL Slice 5).
 
     A masters-length chapter is roughly 3,165 words and a single request does
@@ -625,7 +639,8 @@ def format_scene_section_prompt(writer_context: dict, plan_lines: str,
                          + " ".join(jobs_done))
         if is_last:
             lines.append("Do this section's job and land the scene's key "
-                         "change on your last paragraph.")
+                         "change by your last paragraph, as something done or "
+                         "said, never as a summary of what has been decided.")
         elif hidden:
             lines.append("Do only this section's job. It is one event, not "
                          "the whole scene: do not resolve, reveal or conclude "
@@ -634,6 +649,8 @@ def format_scene_section_prompt(writer_context: dict, plan_lines: str,
             lines.append("Do only this section's job. The scene's intention and "
                          "key change are reached across all the sections, not "
                          "inside this one, unless this is the final section.")
+        if event_rules:
+            lines.append(SECTION_EVENT_RULES)
         job_section = "\n## Your Section's Job\n\n" + "\n".join(lines) + "\n"
 
     return SCENE_SECTION_PROMPT_TEMPLATE.format(

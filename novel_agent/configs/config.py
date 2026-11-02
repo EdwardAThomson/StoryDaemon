@@ -133,6 +133,11 @@ DEFAULT_CONFIG = {
         # (2026-11-01). The final section always sees everything. Only applies
         # when the jobs were planned (position jobs leave the brief visible).
         'subblock_hide_ending': True,
+        # With a planned job, each section is also told how to deliver its
+        # event: through action and speech, early in the section, each thing
+        # said once. Aimed at the subtext and pace gap of the 2026-11-01
+        # retest. Section-only; the single-shot prompt is untouched.
+        'subblock_event_rules': True,
 
         # Scene skeletons (Slice 4 of the block DSL, experimental). When on, a
         # typed paragraph plan sampled from the masters' block grammar

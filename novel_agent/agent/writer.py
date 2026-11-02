@@ -171,6 +171,8 @@ class SceneWriter:
                     section_job=jobs[i] if jobs else "",
                     jobs_done=jobs[:i] if jobs else None,
                     hide_ending=hide_ending,
+                    event_rules=bool(planned and self.config.get(
+                        'generation.subblock_event_rules', True)),
                 )
                 budget = token_budget_for(words, self.config)
                 part, finish = self._generate_segment(prompt, budget)
