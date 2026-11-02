@@ -405,6 +405,13 @@ DEFAULT_CONFIG = {
         # how many everyday words of each people's language the writer sees.
         'language_words': 12,
     },
+    'history': {
+        # Version history (novel_agent/history.py): each novel made with
+        # `novel new` is its own git repository and every tick ends with a
+        # commit. Existing novels opt in with `novel history enable`. False
+        # stops committing; the repository is left as it is.
+        'git': True,
+    },
     'export': {
         # Book export settings for `novel compile --format epub|pdf`
         # (docs/EPUB_PDF_EXPORT_PLAN.md).

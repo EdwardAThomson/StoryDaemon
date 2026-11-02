@@ -593,7 +593,15 @@ def new(
                     f"{counts['words']} words, {counts['phrases']} phrases, "
                     f"{counts['names']} names in "
                     f"{Path(lang_created['bank_file']).relative_to(project_dir)}")
-        
+
+        from .. import history as novel_history
+        if novel_history.has_repo(project_dir):
+            if world_entities is not None:
+                novel_history.commit(project_dir, f"world imported from {Path(world).name}")
+            typer.echo("🗂️  Version history on: every tick is committed (git log in the novel folder)")
+        elif Config().get('history.git', True):
+            typer.echo("   Version history off: git is not on the PATH")
+
         if name_banks and name_banks.get("person_bank"):
             typer.echo(f"   Character names: {name_banks['person_bank']} bank")
 
@@ -1827,6 +1835,49 @@ def checkpoint(
         raise typer.Exit(1)
     except IOError as e:
         typer.echo(f"❌ Error: {e}", err=True)
+        raise typer.Exit(1)
+
+
+@app.command()
+def history(
+    action: str = typer.Argument(
+        "show",
+        help="Action: show (default) or enable"
+    ),
+    project: Optional[str] = typer.Option(
+        None,
+        "--project",
+        "-p",
+        help="Path to novel project"
+    ),
+    limit: int = typer.Option(
+        10,
+        "--limit",
+        "-n",
+        help="How many commits to show"
+    ),
+):
+    """Show or enable the novel's version history (one git commit per tick).
+
+    Examples:
+        novel history            # last 10 commits
+        novel history enable     # turn history on for an existing novel
+    """
+    from .commands.history import enable_history_cmd, show_history_cmd
+
+    try:
+        project_dir = Path(find_project_dir(project))
+    except ValueError as e:
+        typer.echo(f"❌ Error: {e}", err=True)
+        raise typer.Exit(1)
+    if action == "show":
+        show_history_cmd(project_dir, limit)
+    elif action == "enable":
+        if not enable_history_cmd(project_dir):
+            raise typer.Exit(1)
+    else:
+        typer.echo(f"❌ Unknown action: {action}", err=True)
+        typer.echo("Valid actions: show, enable", err=True)
         raise typer.Exit(1)
 
 
