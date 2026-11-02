@@ -238,6 +238,27 @@ class CharacterGenerateTool(Tool):
                         "existing_role": existing_role
                     }
         
+        # Hold the LLM-authored description to the roster. The planner reads
+        # the premise and writes "Yusuf is an experienced quartermaster" for a
+        # character the generator is about to call Richard Huntington; the
+        # record then carries the premise name and so does the prose
+        # (2026-11-02 diagnosis). The subject of the description becomes the
+        # minted name; any other unminted name is reported, never guessed at.
+        foreign_names_left: List[str] = []
+        try:
+            from novel_agent.agent.name_hygiene import clean_description
+            roster = []
+            for cid in existing_chars:
+                existing = self.memory_manager.load_character(cid)
+                if existing:
+                    roster.append(existing.full_name)
+            description, foreign_names_left = clean_description(
+                description, first_name, family_name, roster)
+            if foreign_names_left:
+                metadata["unminted_names_in_description"] = foreign_names_left
+        except Exception:
+            pass  # hygiene must never cost a character
+
         # Generate ID for new character
         character_id = self.memory_manager.generate_id("character")
         
@@ -264,11 +285,17 @@ class CharacterGenerateTool(Tool):
         if self.memory_manager.get_active_character() is None:
             self.memory_manager.set_active_character(character_id)
         
-        return {
+        result = {
             "success": True,
             "character_id": character_id,
             "name": character.full_name
         }
+        if foreign_names_left:
+            result["note"] = (
+                "The description names people who do not exist in this story: "
+                + ", ".join(foreign_names_left)
+                + ". Only generated names exist; refer to characters by their ids.")
+        return result
 
 
 class LocationGenerateTool(Tool):

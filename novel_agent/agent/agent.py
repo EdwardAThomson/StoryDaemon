@@ -396,6 +396,17 @@ class StoryAgent:
 
 
             # Step 8.6: Detect new characters (Phase 6)
+            # Names gauge (instrument only, 2026-11-02): which names the prose
+            # uses that the generator never minted, and how many of them came
+            # in through the foundation text. Recorded in metrics, read by
+            # nothing. Never breaks the tick.
+            names_gauge = self._names_gauge(scene_data.get("text", ""))
+            if names_gauge:
+                scene_data["names_gauge"] = names_gauge
+                if names_gauge.get("foundation_names_in_prose"):
+                    print(f"        ⚠️  Unminted names from the foundation in this scene: "
+                          f"{', '.join(names_gauge['foundation_names_in_prose'])} "
+                          f"({names_gauge['foundation_name_mentions']} mentions)")
             if self.config.get('generation.auto_detect_characters', True):
                 print("   8.6. Detecting new characters...")
                 new_characters = self.character_detector.find_new_characters(scene_data["text"])
@@ -1783,9 +1794,25 @@ class StoryAgent:
                 thread_result=thread_result,
                 construction_result=construction_result,
                 loop_ids_shown=loop_ids_shown,
+                names_gauge=scene_data.get("names_gauge"),
             )
         except Exception as e:
             logging.getLogger(__name__).warning(f"Coherence metrics failed (tick {tick}): {e}")
+            return None
+
+    def _names_gauge(self, scene_text):
+        """Per-scene names gauge (step 8.6), or None. Thin wrapped hook over the
+        pure ``name_hygiene.prose_gauge``; a failure costs the gauge, not the tick."""
+        try:
+            from .name_hygiene import prose_gauge
+            roster = []
+            for cid in self.memory.list_characters():
+                c = self.memory.load_character(cid)
+                if c:
+                    roster.append(c.full_name)
+            return prose_gauge(scene_text or "", roster, self.state.get("story_foundation") or {})
+        except Exception as e:
+            logging.getLogger(__name__).debug("Names gauge skipped: %s", e)
             return None
 
     def _loop_ids_shown(self):

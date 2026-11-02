@@ -25,6 +25,8 @@ the field was being filled wrongly and the code quietly covered for it.
 import logging
 from typing import Optional, Tuple
 
+from novel_agent.agent.name_hygiene import name_shaped_head, strip_name_head
+
 logger = logging.getLogger(__name__)
 
 
@@ -77,14 +79,26 @@ def create_protagonist(memory, foundation, name_generator=None):
 
     from novel_agent.memory.entities import Character
 
+    # The record describes a role, never a second name. An archetype that
+    # opens with a name ("Elena Marsh, a determined naturalist") used to be
+    # copied whole, so the minted protagonist carried that name into every
+    # writer prompt and the prose used it (2026-11-02 diagnosis). The author's
+    # own protagonist_name is kept: that is the name the record already has.
+    description, dropped = archetype, ""
+    if not given:
+        description, dropped = strip_name_head(archetype)
+    metadata = {"source": "project_creation", "minted": source}
+    if dropped:
+        metadata["archetype_name_dropped"] = dropped
+
     char_id = memory.generate_id("character")
     character = Character(
         id=char_id,
         first_name=first,
         family_name=family,
         role="protagonist",
-        description=archetype or f"{first} {family}".strip(),
-        metadata={"source": "project_creation", "minted": source},
+        description=description or f"{first} {family}".strip(),
+        metadata=metadata,
     )
     memory.save_character(character)
     if name_generator is not None:
@@ -101,11 +115,11 @@ def _warn_if_archetype_looks_like_a_name(archetype: str, minted: str) -> None:
     saying which field to fill, instead of a regex deciding on the author's
     behalf.
     """
-    head = (archetype or "").split(",")[0].strip()
-    words = head.split()
-    if 1 <= len(words) <= 4 and all(w[:1].isupper() for w in words if w):
+    head = name_shaped_head(archetype)
+    if head:
         logger.warning(
             "The protagonist archetype starts with %r, which reads like a "
-            "name, but protagonist_name was empty so %r was generated instead. "
+            "name, but protagonist_name was empty so %r was generated instead "
+            "and %r was dropped from the character's description. "
             "Set protagonist_name in the story foundation if a specific name "
-            "was intended.", head, minted)
+            "was intended.", head, minted, head)

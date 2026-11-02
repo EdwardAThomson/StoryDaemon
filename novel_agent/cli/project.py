@@ -122,6 +122,7 @@ def create_novel_project(
         # and the writer now raises rather than substituting a phantom. With no
         # foundation to read a name from, one is minted.
         _create_protagonist(project_dir, foundation, initial_state, names_config)
+        _warn_about_names_in_foundation(project_dir, foundation)
 
         write_json(os.path.join(project_dir, 'state.json'), initial_state)
         
@@ -241,6 +242,46 @@ def _create_protagonist(project_dir, foundation, initial_state,
     ) if data_dir.exists() else None
     char_id = create_protagonist(memory, foundation, generator)
     initial_state['active_character'] = char_id
+
+
+def _warn_about_names_in_foundation(project_dir, foundation) -> None:
+    """Say so when the premise, archetype or setting names people.
+
+    Names in a novel come from the generator. A name written into the
+    foundation's prose reaches the planner and the writer verbatim and ends up
+    in the prose beside the minted cast (one run used a premise's "Yusuf" 128
+    times for a character the generator had called Richard Huntington). This
+    only warns: the foundation is the author's text and is never rewritten.
+    Never raises.
+    """
+    import logging
+    try:
+        from ..agent.name_hygiene import foreign_names
+        from ..memory.manager import MemoryManager
+        from pathlib import Path
+        if foundation is None:
+            return
+        text = " ".join(
+            (getattr(foundation, k, "") or "")
+            for k in ("premise", "protagonist_archetype", "setting"))
+        memory = MemoryManager(Path(project_dir))
+        known = [getattr(foundation, "protagonist_name", "") or ""]
+        for cid in memory.list_characters():
+            c = memory.load_character(cid)
+            if c:
+                known.append(c.full_name)
+        names = foreign_names(text, known)
+        if names:
+            msg = (
+                "The story foundation names people the generator did not mint: "
+                + ", ".join(names)
+                + ". Names come from the generator; describe people by role in the "
+                "premise, archetype and setting, or set protagonist_name for the "
+                "protagonist. These names will otherwise reach the prose.")
+            logging.getLogger(__name__).warning(msg)
+            print(f"⚠️  {msg}")
+    except Exception as e:  # a hygiene warning must never stop project creation
+        logging.getLogger(__name__).debug("Foundation name check skipped: %s", e)
 
 
 def find_project_dir(start_dir: Optional[str] = None) -> str:
