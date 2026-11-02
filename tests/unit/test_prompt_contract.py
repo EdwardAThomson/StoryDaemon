@@ -73,7 +73,7 @@ def test_single_shot_write_carries_every_contract_field():
 
 def test_sectioned_write_carries_every_contract_field():
     llm = CapturingLLM()
-    cfg = Cfg(**{"generation.subblock_generation": True,
+    cfg = Cfg(**{"generation.subblock_generation": True, "generation.subblock_section_jobs": False,
                  "generation.subblock_section_blocks": 10})
     SceneWriter(llm, cfg).write_scene(_ctx(scene_skeleton=["DIALOGUE"] * 25))
     assert llm.prompts, "sectioned writing made no call"
@@ -110,7 +110,7 @@ def test_every_section_call_carries_the_craft_rules():
     # Sections had NO craft guidance at all: no POV discipline, no naming
     # rule, no show-don't-tell. Only the whole-scene prompt ever had them.
     llm = CapturingLLM()
-    cfg = Cfg(**{"generation.subblock_generation": True,
+    cfg = Cfg(**{"generation.subblock_generation": True, "generation.subblock_section_jobs": False,
                  "generation.subblock_section_blocks": 10})
     SceneWriter(llm, cfg).write_scene(_ctx(scene_skeleton=["DIALOGUE"] * 25))
     for i, prompt in enumerate(llm.prompts):
@@ -129,7 +129,7 @@ def test_sections_do_not_get_whole_scene_shape_requirements():
     """A middle section must not be told to open, turn and resolve on its own:
     those describe the arc of a whole scene."""
     llm = CapturingLLM()
-    cfg = Cfg(**{"generation.subblock_generation": True,
+    cfg = Cfg(**{"generation.subblock_generation": True, "generation.subblock_section_jobs": False,
                  "generation.subblock_section_blocks": 10})
     SceneWriter(llm, cfg).write_scene(_ctx(scene_skeleton=["DIALOGUE"] * 25))
     for prompt in llm.prompts:
@@ -157,7 +157,7 @@ def test_section_calls_share_a_long_identical_prefix():
     call onward.
     """
     llm = CapturingLLM()
-    cfg = Cfg(**{"generation.subblock_generation": True,
+    cfg = Cfg(**{"generation.subblock_generation": True, "generation.subblock_section_jobs": False,
                  "generation.subblock_section_blocks": 10})
     SceneWriter(llm, cfg).write_scene(_ctx(scene_skeleton=["DIALOGUE"] * 40))
     assert len(llm.prompts) >= 3, "need several sections to compare"
@@ -215,7 +215,7 @@ def test_an_empty_section_is_retried_before_the_whole_write_is_abandoned():
     class Cfg:
         def get(self, key, default=None):
             return {
-                'generation.subblock_generation': True,
+                'generation.subblock_generation': True, 'generation.subblock_section_jobs': False,
                 'generation.subblock_section_blocks': 10,
             }.get(key, default)
 
@@ -256,7 +256,7 @@ def test_two_empty_responses_for_one_section_still_fall_back():
     class Cfg:
         def get(self, key, default=None):
             return {
-                'generation.subblock_generation': True,
+                'generation.subblock_generation': True, 'generation.subblock_section_jobs': False,
                 'generation.subblock_section_blocks': 10,
             }.get(key, default)
 

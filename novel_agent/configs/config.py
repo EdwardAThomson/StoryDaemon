@@ -119,6 +119,20 @@ DEFAULT_CONFIG = {
         # sketch's literal per-sub-block mode.
         'subblock_generation': False,
         'subblock_section_blocks': 10,
+        # One cheap planning call per sectioned scene splits the intention
+        # into one job per section, so a middle section advances the scene by
+        # a step instead of re-delivering the whole scene (the 2026-10-31
+        # validation's restart-and-repeat failure). Falls back to position
+        # jobs if the call fails. Off reproduces the pre-fix prompt exactly.
+        'subblock_section_jobs': True,
+        # 1500, not 600: a reasoning model spends ~500 tokens thinking first.
+        'subblock_jobs_max_tokens': 1500,
+        # Early sections see their own job and the jobs done, not the scene's
+        # intention, key change or beat: shown the whole intention, section 1
+        # landed the reveal and the rest of the chapter re-performed it
+        # (2026-11-01). The final section always sees everything. Only applies
+        # when the jobs were planned (position jobs leave the brief visible).
+        'subblock_hide_ending': True,
 
         # Scene skeletons (Slice 4 of the block DSL, experimental). When on, a
         # typed paragraph plan sampled from the masters' block grammar

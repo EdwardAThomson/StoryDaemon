@@ -203,11 +203,11 @@ with exactly {n} entries."""
 
 # --- items ----------------------------------------------------------------------------
 
-def items():
+def items(prefixes=("e1-",)):
     """[(item_id, kind, text, skeleton or None)]."""
     out = []
     for name, proj in cells().items():
-        if not name.startswith("e1-"):
+        if not name.startswith(tuple(prefixes)):
             continue
         for sid, prose, meta in scenes(proj):
             out.append((f"{name}/{sid}", name, prose,
@@ -276,12 +276,14 @@ def main():
     ap.add_argument("--fake", action="store_true")
     ap.add_argument("--only", help="substring filter on item id")
     ap.add_argument("--parts", default="register,craft,plan")
+    ap.add_argument("--cells", default="e1-", help="comma-separated cell-name prefixes")
     args = ap.parse_args()
     OUT.mkdir(parents=True, exist_ok=True)
     budget = Budget(args.max_usd, args.max_calls)
     parts = args.parts.split(",")
     done = done_set()
-    todo = [(iid, k, t, sk) for iid, k, t, sk in items() if not args.only or args.only in iid]
+    todo = [(iid, k, t, sk) for iid, k, t, sk in items(args.cells.split(","))
+            if not args.only or args.only in iid]
     print(f"[judge] {len(todo)} items, {len(done)} (item,part) rows already done", flush=True)
     try:
         for iid, kind, text, skeleton in todo:

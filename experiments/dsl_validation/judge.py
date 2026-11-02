@@ -245,9 +245,10 @@ def run_seams():
     out = []
     rng = random.Random(7)
     for name, proj in cs.items():
-        if not (name.startswith("e2-") and name.endswith("-sect")):
+        m = re.match(r"(e2-.*-)(sect\w*)$", name)
+        if not m:
             continue
-        control = cs.get(name[: -len("sect")] + "single")
+        control = cs.get(m.group(1) + "single")
         ctrl_scenes = {m["tick"]: paragraphs(p) for _, p, m in scenes(control)} if control else {}
         for sid, prose, meta in scenes(proj):
             md = meta.get("metadata", {})
@@ -275,6 +276,7 @@ if __name__ == "__main__":
         elif step == "pairwise":
             run_pairwise("e1", "on", "off")
             run_pairwise("e2", "sect", "single")
+            run_pairwise("e2", "sectjobs", "single")
             # e3 is judged on beats and contracts, not prose preference.
         elif step == "prose":
             run_pairwise("e1", "on", "off", prose_only=True)

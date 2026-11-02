@@ -143,8 +143,12 @@ def _ctx(skeleton):
     }
 
 
+# Section jobs off here: these tests count calls and check the pre-fix prompt,
+# which the knob reproduces exactly. The jobs tests below turn it on.
 ON = {"generation.subblock_generation": True,
-      "generation.subblock_section_blocks": 10}
+      "generation.subblock_section_blocks": 10,
+      "generation.subblock_section_jobs": False}
+JOBS_ON = {**ON, "generation.subblock_section_jobs": True}
 
 
 def test_writer_makes_one_call_per_section():
@@ -253,6 +257,82 @@ def test_a_section_cut_off_mid_sentence_is_trimmed_and_the_next_starts_a_paragra
     assert "reached for the" not in scene["text"]
     assert "She read the chart.\n\nReeve spoke first." in scene["text"]
     assert scene["sections_trimmed"] == 1
+
+
+# ---- section jobs (the restart-and-repeat fix) ---------------------------------
+
+def test_section_jobs_prompt_parse_and_fallback():
+    from novel_agent.agent.section_plan import (fallback_jobs,
+                                                parse_section_jobs,
+                                                section_jobs_prompt)
+    sk = ["SETTING"] + ["DIALOGUE"] * 24
+    p = section_jobs_prompt(_ctx(sk), [(1, 10), (11, 20), (21, 25)], sk)
+    assert "Mira confronts the archivist" in p and "exactly 3 entries" in p
+    assert "1. paragraphs 1 to 10" in p and "9 DIALOGUE" in p
+    good = '{"jobs": ["open", "middle", "close"]}'
+    assert parse_section_jobs(good, 3) == ["open", "middle", "close"]
+    assert parse_section_jobs("Sure:\n```json\n" + good + "\n```", 3) == ["open", "middle", "close"]
+    # one short is padded from the fallback, one long is trimmed, two off fails
+    assert parse_section_jobs('{"jobs": ["a", "b"]}', 3)[:2] == ["a", "b"]
+    assert len(parse_section_jobs('{"jobs": ["a", "b", "c", "d"]}', 3)) == 3
+    assert parse_section_jobs('{"jobs": ["a"]}', 3) is None
+    assert parse_section_jobs("not json", 3) is None
+    assert parse_section_jobs("", 3) is None
+    fb = fallback_jobs(4)
+    assert len(fb) == 4 and fb[-1].startswith("Land the key change")
+
+
+def test_each_section_is_told_its_own_job_and_the_jobs_already_done():
+    sk = ["DIALOGUE"] * 30                       # 30 blocks at 10 -> 3 sections
+    llm = FakeLLM(['{"jobs": ["Mira asks for the ledger.", "The archivist refuses.", "The ledger changes hands."]}',
+                   "[1] One.", "[11] Two.", "[21] Three."])
+    scene = SceneWriter(llm, Cfg(**JOBS_ON)).write_scene(_ctx(sk))
+    assert len(llm.prompts) == 4                 # one planning call + 3 sections
+    assert "planning how ONE SCENE" in llm.prompts[0]
+    assert "**This section's job:** Mira asks for the ledger." in llm.prompts[1]
+    assert "Already done" not in llm.prompts[1]
+    assert "**This section's job:** The archivist refuses." in llm.prompts[2]
+    assert "Already done in the text above:** Mira asks for the ledger." in llm.prompts[2]
+    assert "re-describe the place" in llm.prompts[2]
+    assert "The ledger changes hands." in llm.prompts[3]
+    assert scene["section_jobs"] == ["Mira asks for the ledger.", "The archivist refuses.", "The ledger changes hands."]
+
+
+def test_unusable_jobs_fall_back_to_position_jobs_without_losing_the_scene():
+    sk = ["DIALOGUE"] * 25
+    llm = FakeLLM(["I cannot plan this.", "[1] One.", "[11] Two."])
+    scene = SceneWriter(llm, Cfg(**JOBS_ON)).write_scene(_ctx(sk))
+    assert scene["sectioned"] is True
+    assert scene["section_jobs"][-1].startswith("Land the key change")
+    assert "**This section's job:** Establish the situation" in llm.prompts[1]
+
+
+def test_jobs_cut_off_at_the_ceiling_retry_at_double_budget():
+    # Live 2026-11-01: Luna spent ~500 of a 600-token cap reasoning and the
+    # JSON was cut off on 10 of 12 scenes, all of which fell back silently.
+    class Thinker(FakeLLM):
+        def generate_with_meta(self, prompt, max_tokens=2000, timeout=120):
+            self.prompts.append(prompt)
+            self.budgets.append(max_tokens)
+            if len(self.prompts) == 1:
+                return '{"jobs": ["cut off', "length"
+            if len(self.prompts) == 2:
+                return '{"jobs": ["First.", "Second."]}', "stop"
+            return f"[{1 if len(self.prompts) == 3 else 11}] Part.", "stop"
+
+    llm = Thinker([])
+    scene = SceneWriter(llm, Cfg(**JOBS_ON)).write_scene(_ctx(["DIALOGUE"] * 25))
+    assert llm.budgets[1] == 2 * llm.budgets[0]
+    assert scene["section_jobs"] == ["First.", "Second."]
+
+
+def test_jobs_off_reproduces_the_pre_fix_prompt():
+    sk = ["DIALOGUE"] * 25
+    llm = FakeLLM(["[1] One.", "[11] Two."])
+    scene = SceneWriter(llm, Cfg(**ON)).write_scene(_ctx(sk))
+    assert len(llm.prompts) == 2
+    assert "Your Section's Job" not in llm.prompts[1]
+    assert scene.get("section_jobs") is None
 
 
 def test_markers_are_stripped_from_the_stitched_scene():
@@ -371,3 +451,76 @@ def test_a_planned_scene_takes_the_selective_revision_path():
     assert "whole_scene" not in calls          # the destructive path never ran
     assert calls["indices"]                    # selective revision was asked for
     assert out is planned and t is tension     # stub returned nothing, so unchanged
+
+
+# ---- 2026-11-01: jobs are events, and early sections do not see the ending --
+
+def test_jobs_prompt_asks_for_events_and_keeps_the_reveal_out_of_section_one():
+    from novel_agent.agent.section_plan import section_jobs_prompt
+    sk = ["DIALOGUE"] * 30
+    p = section_jobs_prompt(_ctx(sk), [(1, 10), (11, 20), (21, 30)], sk)
+    assert "the one thing that HAPPENS in it" in p
+    assert "must NOT reach the intention's discovery, reveal or outcome" in p
+    assert "is NOT an event unless it produces something new" in p
+    assert "Do not stretch one event across several sections" in p
+
+
+def test_early_sections_see_their_job_but_not_the_scenes_ending():
+    sk = ["DIALOGUE"] * 30
+    llm = FakeLLM(['{"jobs": ["Mira asks for the ledger.", "The archivist refuses.", "The ledger changes hands."]}',
+                   "[1] One.", "[11] Two.", "[21] Three."])
+    scene = SceneWriter(llm, Cfg(**JOBS_ON)).write_scene(_ctx(sk))
+    # the planning call still sees the whole brief
+    assert "Mira confronts the archivist" in llm.prompts[0]
+    assert "the ledger changes hands" in llm.prompts[0]
+    # sections 1 and 2 know only their own job and what is done
+    for p in llm.prompts[1:3]:
+        assert "Mira confronts the archivist" not in p
+        assert "the ledger changes hands" not in p
+        assert "**Intention:** (withheld" in p
+        assert "The ending is not yours." in p
+    # the final section sees everything and is told to land the key change
+    assert "Mira confronts the archivist" in llm.prompts[3]
+    assert "the ledger changes hands" in llm.prompts[3]
+    assert "land the scene's key change on your last paragraph" in llm.prompts[3]
+    assert scene["section_ending_hidden"] is True
+
+
+def test_the_plot_beat_is_withheld_from_early_sections_too():
+    sk = ["DIALOGUE"] * 25
+    ctx = {**_ctx(sk), "plot_beat_section": "## Plot Beat\nThe ledger is handed over.\n"}
+    llm = FakeLLM(['{"jobs": ["Mira asks.", "The ledger is handed over."]}', "[1] One.", "[11] Two."])
+    SceneWriter(llm, Cfg(**JOBS_ON)).write_scene(ctx)
+    assert "The ledger is handed over." not in llm.prompts[1]
+    assert "## Plot Beat" in llm.prompts[2]
+
+
+def test_position_jobs_leave_the_brief_visible():
+    # Without planned jobs an early section has no other idea what the scene
+    # is, so hiding the ending would leave it blind.
+    sk = ["DIALOGUE"] * 25
+    llm = FakeLLM(["not a plan", "[1] One.", "[11] Two."])
+    scene = SceneWriter(llm, Cfg(**JOBS_ON)).write_scene(_ctx(sk))
+    assert "Mira confronts the archivist" in llm.prompts[1]
+    assert scene["section_ending_hidden"] is False
+
+
+def test_hide_ending_off_shows_every_section_the_whole_brief():
+    sk = ["DIALOGUE"] * 25
+    llm = FakeLLM(['{"jobs": ["Mira asks.", "The ledger changes hands."]}', "[1] One.", "[11] Two."])
+    cfg = Cfg(**JOBS_ON, **{"generation.subblock_hide_ending": False})
+    scene = SceneWriter(llm, cfg).write_scene(_ctx(sk))
+    assert "Mira confronts the archivist" in llm.prompts[1]
+    assert "reached across all the sections" in llm.prompts[1]
+    assert scene["section_ending_hidden"] is False
+
+
+def test_tactical_plan_asks_the_planner_for_a_key_change():
+    # Every plan of the 2026-10-31 and 11-01 runs had an empty key change: the
+    # tactical schema never asked for one, so the writer's "KEY CHANGE" line
+    # and the section-jobs planner's key change were always blank.
+    from novel_agent.agent.multi_stage_planner import MultiStagePlanner
+    import inspect
+    src = inspect.getsource(MultiStagePlanner._build_tactical_prompt)
+    assert '"key_change":' in src
+    assert "A question left hanging is not a key change" in src
