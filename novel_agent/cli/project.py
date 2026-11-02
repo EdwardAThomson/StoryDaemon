@@ -202,7 +202,13 @@ Created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
             'open_loop': 0,
             'relationship': 0
         })
-        
+
+        # Version history: the novel is its own git repository from the start
+        # (history.git, default True). Never fails project creation.
+        if config.get('history.git', True):
+            from .. import history
+            history.init(project_dir, message="novel created")
+
         return project_dir
     
     except Exception as e:

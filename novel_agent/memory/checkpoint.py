@@ -152,7 +152,12 @@ def create_checkpoint(project_dir: Path, tick: int, created_by: str = "manual") 
         manifest_path = checkpoint_path / "manifest.json"
         with open(manifest_path, 'w', encoding='utf-8') as f:
             json.dump(manifest.to_dict(), f, indent=2)
-        
+
+        # Version history: tag the commit this checkpoint copies, under the
+        # checkpoint's own id. A no-op without a history repository.
+        from .. import history
+        history.tag(project_dir, checkpoint_id)
+
         return checkpoint_path
         
     except Exception as e:
@@ -266,9 +271,14 @@ def restore_checkpoint(project_dir: Path, checkpoint_id: str, backup_current: bo
             
             if src.exists():
                 shutil.copy2(src, dst)
-        
+
     except Exception as e:
         raise IOError(f"Error restoring checkpoint: {e}")
+
+    # Version history: record the restore as its own commit, so the next
+    # tick's commit holds only that tick's work. A no-op without history.
+    from .. import history
+    history.commit(project_dir, f"restored {checkpoint_id}")
 
 
 def delete_checkpoint(project_dir: Path, checkpoint_id: str) -> None:
