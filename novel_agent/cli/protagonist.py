@@ -23,10 +23,10 @@ the field was being filled wrongly and the code quietly covered for it.
 """
 
 import logging
-import random
 from typing import Optional, Tuple
 
-from novel_agent.agent.name_hygiene import gender_from_text, name_shaped_head, strip_name_head
+from novel_agent.agent.name_hygiene import (name_shaped_head, require_consistent,
+                                            require_gender, strip_name_head)
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +46,7 @@ def split_name(full_name: str) -> Tuple[str, str]:
     return words[0], " ".join(words[1:])
 
 
-def create_protagonist(memory, foundation, name_generator=None):
+def create_protagonist(memory, foundation, name_generator=None, gender=None):
     """Create and persist the protagonist. Returns the new character id.
 
     The name is taken from foundation.protagonist_name when the author gave
@@ -61,25 +61,24 @@ def create_protagonist(memory, foundation, name_generator=None):
         genre = (getattr(foundation, "genre", "") or "").strip()
         given = (getattr(foundation, "protagonist_name", "") or "").strip()
 
-    # The gender is minted with the name and recorded beside it. The
-    # generator's default is male, and this call used to pass nothing, so
-    # every minted protagonist was a man while foundations said "her": the
-    # writer then called Hugh "she" (2026-11-04). When the archetype's own
-    # pronouns state a gender, that is the author's fact and the name is
-    # drawn to match it; otherwise it is an even draw, as for every other
-    # character.
-    stated = gender_from_text(archetype)
-    gender = ""
+    # The gender is a fact recorded with the name. It must be stated, in the
+    # foundation's protagonist_gender or the explicit argument; it is never
+    # read off the archetype's pronouns, never defaulted (the generator's old
+    # default made every protagonist male) and never drawn at random. A
+    # missing gender, or an archetype that states the other one, raises.
+    who = "the protagonist"
+    if gender is None and foundation is not None:
+        gender = getattr(foundation, "protagonist_gender", None)
+    gender = require_gender(gender, who)
+    require_consistent(archetype, gender, "The protagonist", "archetype")
+
     if given:
         first, family = split_name(given)
         source = "foundation"
-        gender = stated
     elif name_generator is not None:
-        gender = stated or random.choice(["male", "female"])
         minted = name_generator.generate_name(gender=gender, genre=genre or "scifi")
         first = minted.get("first_name", "")
         family = minted.get("last_name", "") or minted.get("family_name", "")
-        gender = minted.get("gender", gender) or gender
         source = "generated"
         _warn_if_archetype_looks_like_a_name(archetype, f"{first} {family}".strip())
     else:
@@ -117,8 +116,7 @@ def create_protagonist(memory, foundation, name_generator=None):
     memory.save_character(character)
     if name_generator is not None:
         name_generator.register_used_name(f"{first} {family}".strip())
-    logger.info("Created protagonist %s (%s %s, %s, %s)", char_id, first, family,
-                gender or "gender not recorded", source)
+    logger.info("Created protagonist %s (%s %s, %s, %s)", char_id, first, family, gender, source)
     return char_id
 
 

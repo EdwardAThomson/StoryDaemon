@@ -567,7 +567,7 @@ class NameGenerator:
 
     def generate_name(
         self,
-        gender: str = "male",
+        gender: str,
         genre: str = "scifi",
         title: Optional[str] = None,
         register: Optional[str] = None,
@@ -581,6 +581,12 @@ class NameGenerator:
         world's languages), the name comes from that people's own tongue and
         the result also carries ``meaning``, ``people`` and ``language``.
         """
+        # Gender is required and explicit: it is recorded with the name as a
+        # fact. There is no default (it used to be "male", which made every
+        # minted protagonist a man) and no random draw.
+        from novel_agent.agent.name_hygiene import require_gender
+        gender = require_gender(gender, "the name being generated")
+
         # Validate and correct gender-specific titles, then hold the result to
         # the story's roster.
         if title:
@@ -980,6 +986,8 @@ class NameGeneratorTool(Tool):
                 "settled from config, so the argument is ignored.", genre,
             )
             self._warned_about_genre = True
+        from novel_agent.agent.name_hygiene import require_gender
+        gender = require_gender(gender, "name.generate")  # raises: halts the tick
         try:
             result = self.generator.generate_name(gender, self.genre, title, register,
                                                   affiliation=affiliation)

@@ -94,8 +94,7 @@ class CharacterGenerateTool(Tool):
                 "gender": {
                     "type": "string",
                     "enum": ["male", "female"],
-                    "description": "Hint for name generation (defaults to random 50/50 if not specified)",
-                    "optional": True
+                    "description": "REQUIRED. The character's gender, recorded with the generated name. Never omitted; a call without it fails."
                 },
                 "title": {
                     "type": "string",
@@ -176,18 +175,14 @@ class CharacterGenerateTool(Tool):
         if affiliation:
             metadata["affiliation"] = affiliation
 
-        # The gender is recorded with the name (2026-11-04). An explicit hint
-        # wins; else the description's own pronouns, so a description that
-        # says "she" never gets a man's name; else an even draw.
-        char_gender = (gender or "").lower()
-        if char_gender not in ("male", "female"):
-            try:
-                from novel_agent.agent.name_hygiene import gender_from_text
-                char_gender = gender_from_text(description)
-            except Exception:
-                char_gender = ""
+        # The gender is a fact recorded with the name (2026-11-04). It must be
+        # given; it is never guessed from the description or drawn at random,
+        # and a description that states the other gender is refused. Both
+        # raise, which halts the tick: ambiguity here is not acceptable.
+        from novel_agent.agent.name_hygiene import require_consistent, require_gender
+        char_gender = require_gender(gender, "character.generate")
+        require_consistent(description, char_gender, "The new character", "description")
         if self.name_generator:
-            char_gender = char_gender or random.choice(["male", "female"])
             # Passed only when given, so a generator without the keyword
             # (an older fake, a custom one) keeps working.
             extra = {"affiliation": affiliation} if affiliation else {}

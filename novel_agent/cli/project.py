@@ -22,6 +22,7 @@ def create_novel_project(
     llm_model: Optional[str] = None,
     plot_config: Optional[Dict[str, Any]] = None,
     name_banks: Optional[Dict[str, Any]] = None,
+    protagonist_gender: Optional[str] = None,
 ) -> str:
     """Create a new novel project directory structure.
     
@@ -33,6 +34,10 @@ def create_novel_project(
         llm_model: Optional LLM model override to store in project config
         plot_config: Optional plot-first mode configuration
         name_banks: Optional names.* overrides (e.g. from --name-bank)
+        protagonist_gender: The protagonist's gender (male | female) when the
+            foundation does not carry one (e.g. from --protagonist-gender).
+            Required one way or the other: creation fails before anything is
+            written when neither states it, or when they disagree.
         
     Returns:
         Path to created project directory
@@ -41,6 +46,19 @@ def create_novel_project(
         ValueError: If project already exists
         IOError: If directories cannot be created
     """
+    # The protagonist's gender is settled before anything touches the disk:
+    # a project that cannot mint its protagonist must fail whole, not leave a
+    # half-created directory behind.
+    from ..agent.name_hygiene import require_gender
+    stated = getattr(foundation, "protagonist_gender", None) if foundation is not None else None
+    if protagonist_gender and stated and protagonist_gender.strip().lower() != stated:
+        raise ValueError(
+            f"The protagonist's gender is given twice and disagrees: "
+            f"{protagonist_gender!r} on the command line, {stated!r} in the foundation.")
+    protagonist_gender = require_gender(protagonist_gender or stated, "the protagonist")
+    if foundation is not None:
+        foundation.protagonist_gender = protagonist_gender
+
     config = Config()
     
     if base_dir is None:
@@ -121,7 +139,8 @@ def create_novel_project(
         # Unconditional: a project without a protagonist cannot write a scene,
         # and the writer now raises rather than substituting a phantom. With no
         # foundation to read a name from, one is minted.
-        _create_protagonist(project_dir, foundation, initial_state, names_config)
+        _create_protagonist(project_dir, foundation, initial_state, names_config,
+                            protagonist_gender)
         _warn_about_names_in_foundation(project_dir, foundation)
 
         write_json(os.path.join(project_dir, 'state.json'), initial_state)
@@ -217,7 +236,8 @@ Created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
 
 def _create_protagonist(project_dir, foundation, initial_state,
-                        names_config: Optional[Dict[str, Any]] = None) -> None:
+                        names_config: Optional[Dict[str, Any]] = None,
+                        protagonist_gender: Optional[str] = None) -> None:
     """Create the protagonist entity and make it the active character.
 
     Never silently skipped: a project whose foundation names no protagonist and
@@ -240,7 +260,7 @@ def _create_protagonist(project_dir, foundation, initial_state,
         title_bank=settings.get("title_bank"),
         register=settings.get("register"),
     ) if data_dir.exists() else None
-    char_id = create_protagonist(memory, foundation, generator)
+    char_id = create_protagonist(memory, foundation, generator, gender=protagonist_gender)
     initial_state['active_character'] = char_id
 
 

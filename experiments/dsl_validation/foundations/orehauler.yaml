@@ -9,6 +9,9 @@ premise: >-
   Early in the voyage the captain is found murdered in a sealed compartment,
   and the ship's engineer must find the killer among a crew of eleven before
   the reactor or the murderer kills them all.
+# The protagonist's gender is stated explicitly: it is recorded with the
+# generated name and is never guessed or drawn at random.
+protagonist_gender: female
 protagonist_archetype: the ship's engineer, pragmatic and stubborn, trusted by the crew until the murder
 setting: a failing deep-space ore hauler far from any port
 tone: tense, claustrophobic, grounded

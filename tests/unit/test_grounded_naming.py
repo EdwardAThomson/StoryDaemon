@@ -61,8 +61,8 @@ def test_character_title_hint_applied(project):
 def test_unique_role_deduped(project):
     mm, vs = MemoryManager(project), VectorStore(project)
     tool = CharacterGenerateTool(mm, vs, NameGenerator(DATA_DIR), genre="scifi")
-    first = tool.execute(role="protagonist", description="the hero")
-    second = tool.execute(role="protagonist", description="another hero")
+    first = tool.execute(role="protagonist", description="the hero", gender="male")
+    second = tool.execute(role="protagonist", description="another hero", gender="female")
     assert second.get("duplicate") is True
     assert second["character_id"] == first["character_id"]
 
@@ -83,3 +83,30 @@ def test_location_dedup(project):
     second = tool.execute(description="d2", name="the citadel")
     assert second.get("duplicate") is True
     assert second["location_id"] == first["location_id"]
+
+
+def test_character_generate_without_a_gender_is_a_hard_failure(tmp_path):
+    """Gender is recorded with the minted name; it is never drawn at random."""
+    import pytest
+    from novel_agent.memory.manager import MemoryManager
+    from novel_agent.tools.memory_tools import CharacterGenerateTool
+    from novel_agent.tools.name_generator import NameGenerator
+    from pathlib import Path
+    (tmp_path / "state.json").write_text("{}")
+    memory = MemoryManager(tmp_path)
+
+    class Vec:
+        def index_character(self, c):
+            pass
+
+    tool = CharacterGenerateTool(memory, Vec(), NameGenerator(Path("novel_agent/data/names")),
+                                 genre="historical")
+    with pytest.raises(ValueError, match="never guessed"):
+        tool.execute(role="minor", description="a quartermaster")
+    with pytest.raises(ValueError, match="must agree"):
+        tool.execute(role="minor", description="a quartermaster who keeps her log",
+                     gender="male")
+    assert memory.list_characters() == []
+    ok = tool.execute(role="minor", description="a quartermaster", gender="female")
+    assert memory.load_character(ok["character_id"]).gender == "female"
+    assert ok["gender"] == "female"

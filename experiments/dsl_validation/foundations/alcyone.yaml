@@ -11,6 +11,9 @@ premise: >-
   searching for a lost expedition. The ship's naturalist carries a missing
   sibling's cipher notebook; the captain owes a debt that goes unnamed; the
   quartermaster has sailed these waters before and says little about it.
+# The protagonist's gender is stated explicitly: it is recorded with the
+# generated name and is never guessed or drawn at random.
+protagonist_gender: female
 protagonist_archetype: the ship's naturalist, determined and methodical, searching for a missing sibling who sailed with the lost expedition
 setting: a survey brig among uncharted volcanic islands, 1871
 tone: literary, atmospheric, slow-burning suspense

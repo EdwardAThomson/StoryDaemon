@@ -84,10 +84,11 @@ def test_prose_gauge_separates_foundation_names_from_other_noise():
 
 
 class Foundation:
-    def __init__(self, archetype, name=None, genre="historical adventure"):
+    def __init__(self, archetype, name=None, genre="historical adventure", gender="female"):
         self.protagonist_archetype = archetype
         self.protagonist_name = name
         self.genre = genre
+        self.protagonist_gender = gender
 
 
 class Gen:
@@ -138,20 +139,36 @@ def test_gender_from_text_reads_only_a_clear_statement():
     assert gender_from_text("she asked him") == ""
 
 
-def test_the_protagonist_gets_the_gender_its_name_was_drawn_for(memory):
+def test_the_protagonist_gets_the_stated_gender(memory):
     gen = Gen()
-    cid = create_protagonist(memory, Foundation("A naturalist searching for her missing brother"), gen)
-    assert gen.gender == "female"
-    assert memory.load_character(cid).gender == "female"
+    cid = create_protagonist(memory, Foundation("A naturalist searching for a lost expedition",
+                                                gender="male"), gen)
+    assert gen.gender == "male"
+    assert memory.load_character(cid).gender == "male"
 
 
-def test_the_protagonist_is_not_male_by_default(memory):
-    seen = set()
-    for _ in range(40):
-        gen = Gen()
-        cid = create_protagonist(memory, Foundation("A naturalist searching for a lost expedition"), gen)
-        seen.add(memory.load_character(cid).gender)
-    assert seen == {"male", "female"}
+@pytest.mark.parametrize("gender", [None, "", "unknown", "Female-ish"])
+def test_a_protagonist_without_a_stated_gender_is_a_hard_failure(memory, gender):
+    with pytest.raises(ValueError, match="never guessed"):
+        create_protagonist(memory, Foundation("A naturalist", gender=gender), Gen())
+    assert memory.list_characters() == []
+
+
+def test_an_archetype_that_states_the_other_gender_is_a_hard_failure(memory):
+    with pytest.raises(ValueError, match="must agree"):
+        create_protagonist(memory, Foundation("A naturalist searching for her brother",
+                                              gender="male"), Gen())
+
+
+def test_the_generator_has_no_default_gender():
+    from pathlib import Path
+    from novel_agent.tools.name_generator import NameGenerator
+    gen = NameGenerator(Path("novel_agent/data/names"))
+    with pytest.raises(TypeError):
+        gen.generate_name(genre="historical")
+    with pytest.raises(ValueError, match="never guessed"):
+        gen.generate_name(gender="", genre="historical")
+    assert gen.generate_name(gender="female", genre="historical")["gender"] == "female"
 
 
 def test_character_pronouns_follow_the_recorded_gender():

@@ -1,5 +1,6 @@
 """Story foundation prompting and loading for project creation."""
 
+import click
 import typer
 import yaml
 from pathlib import Path
@@ -18,7 +19,8 @@ class StoryFoundation:
         tone: str,
         themes: Optional[List[str]] = None,
         primary_goal: Optional[str] = None,
-        protagonist_name: Optional[str] = None
+        protagonist_name: Optional[str] = None,
+        protagonist_gender: Optional[str] = None
     ):
         self.genre = genre
         self.premise = premise
@@ -34,6 +36,11 @@ class StoryFoundation:
         # whose first name was "Doctor". Structure belongs in fields, not in
         # prose a regex has to mine.
         self.protagonist_name = (protagonist_name or "").strip() or None
+        # The protagonist's gender, a fact recorded with the minted name. It
+        # is required to create the protagonist and is never guessed from the
+        # archetype or drawn at random (2026-11-04); project creation fails
+        # without it.
+        self.protagonist_gender = (protagonist_gender or "").strip().lower() or None
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for state.json."""
@@ -45,7 +52,8 @@ class StoryFoundation:
             "tone": self.tone,
             "themes": self.themes,
             "primary_goal": self.primary_goal,
-            "protagonist_name": self.protagonist_name
+            "protagonist_name": self.protagonist_name,
+            "protagonist_gender": self.protagonist_gender
         }
     
     @classmethod
@@ -60,7 +68,8 @@ class StoryFoundation:
             themes=data.get("themes", []),
             primary_goal=data.get("primary_goal"),
             # Absent on foundations created before the field existed.
-            protagonist_name=data.get("protagonist_name")
+            protagonist_name=data.get("protagonist_name"),
+            protagonist_gender=data.get("protagonist_gender")
         )
 
 
@@ -90,6 +99,10 @@ def prompt_for_foundation() -> tuple[StoryFoundation, Dict[str, Any]]:
         "  Name (leave blank to have one generated)",
         type=str, default="", show_default=False
     ).strip()
+    protagonist_gender = typer.prompt(
+        "  Gender (male/female, required: recorded with the generated name)",
+        type=click.Choice(["male", "female"], case_sensitive=False)
+    ).strip().lower()
     protagonist_archetype = typer.prompt(
         "  Archetype (personality/role, NOT the name)",
         type=str
@@ -212,7 +225,7 @@ def prompt_for_foundation() -> tuple[StoryFoundation, Dict[str, Any]]:
     typer.echo(f"  Genre: {genre}")
     typer.echo(f"  Premise: {premise}")
     typer.echo(f"  Protagonist: {protagonist_name or '(name to be generated)'}"
-               f" - {protagonist_archetype}")
+               f" ({protagonist_gender}) - {protagonist_archetype}")
     typer.echo(f"  Setting: {setting}")
     typer.echo(f"  Tone: {tone}")
     if themes:
@@ -242,6 +255,7 @@ def prompt_for_foundation() -> tuple[StoryFoundation, Dict[str, Any]]:
         premise=premise,
         protagonist_archetype=protagonist_archetype,
         protagonist_name=protagonist_name,
+        protagonist_gender=protagonist_gender,
         setting=setting,
         tone=tone,
         themes=themes,
@@ -297,7 +311,9 @@ def load_foundation_from_file(file_path: Path) -> StoryFoundation:
         setting=data["setting"],
         tone=data["tone"],
         themes=themes,
-        primary_goal=primary_goal
+        primary_goal=primary_goal,
+        protagonist_name=data.get("protagonist_name"),
+        protagonist_gender=data.get("protagonist_gender")
     )
 
 

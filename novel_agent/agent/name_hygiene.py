@@ -340,3 +340,37 @@ def unminted_people_in_plan(plan: dict, known: Iterable[str],
             sentence = next((s_ for s_ in re.split(r"(?<=[.;!?])\s+", text) if name in s_), text)
             found.append((name, sentence.strip()))
     return found
+
+
+GENDERS = ("male", "female")
+
+
+def require_gender(gender, who: str) -> str:
+    """The gender as recorded, or a hard failure.
+
+    Gender is a fact recorded with a minted name. It is never guessed, never
+    defaulted and never drawn at random (Ed, 2026-11-04: "absolutely no coin
+    flipping; there must be a hard crash"). Anything other than an explicit
+    "male" or "female" raises.
+    """
+    value = (gender or "").strip().lower() if isinstance(gender, str) else ""
+    if value not in GENDERS:
+        raise ValueError(
+            f"No gender for {who}: got {gender!r}. Gender is recorded with the "
+            f"minted name and must be given explicitly as 'male' or 'female'; "
+            f"it is never guessed or drawn at random.")
+    return value
+
+
+def require_consistent(text: str, gender: str, who: str, field: str) -> None:
+    """Raise when text written about a person states the other gender.
+
+    A record that says male beside a description that says "her" is the
+    Hugh-called-"she" fault (2026-11-03). Text with no pronouns, or mixed
+    pronouns about several people, passes; a clear contradiction does not.
+    """
+    stated = gender_from_text(text)
+    if stated and stated != gender:
+        raise ValueError(
+            f"{who} is recorded as {gender}, but the {field} says {stated} "
+            f"({text[:120]!r}). Fix the {field} or the gender; the two must agree.")

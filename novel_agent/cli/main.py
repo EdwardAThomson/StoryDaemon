@@ -419,6 +419,15 @@ def new(
         "--protagonist",
         help="Protagonist archetype (personality/role)"
     ),
+    protagonist_gender: Optional[str] = typer.Option(
+        None,
+        "--protagonist-gender",
+        help=(
+            "Protagonist's gender (male or female), recorded with the generated "
+            "name. Required unless the foundation file sets protagonist_gender: "
+            "it is never guessed or drawn at random."
+        )
+    ),
     setting: Optional[str] = typer.Option(
         None,
         "--setting",
@@ -576,6 +585,7 @@ def new(
             llm_model=llm_model_override,
             plot_config=plot_config,
             name_banks=name_banks,
+            protagonist_gender=protagonist_gender,
         )
         typer.echo(f"✅ Created novel project: {project_dir}")
 

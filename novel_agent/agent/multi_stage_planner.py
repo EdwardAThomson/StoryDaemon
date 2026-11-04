@@ -680,7 +680,7 @@ You can use the following tools to gather information or create entities:
 Create a detailed plan for executing the scene intention. Consider:
 1. Which open loops should be addressed or developed?
 2. What information do you need to write this scene effectively?
-3. Should new characters or locations be introduced?
+3. Should new characters or locations be introduced? Every person the scene intention names who is not in the character list above must be created in this plan with character.generate, gender included; the tick fails if the plan names someone with no record.
 4. How should relationships evolve?
 5. What is concretely different when the scene ends? Name one event: something done, decided, lost, refused, or discovered and acted on. A question left hanging is not a key change; a scene that only notices something has none.
 
