@@ -221,6 +221,10 @@ class Character:
     # the writer and planner read it as fact. "" on legacy records and on a
     # name the author typed with nothing saying which.
     gender: str = ""
+    # How the character speaks: one of agent/personas.py's personas (grumbler,
+    # worrier, ...), picked by Python from the id when the character is
+    # created, never by the model. "" on records made before 2026-11-04.
+    persona: str = ""
     
     role: str = ""  # protagonist, antagonist, supporting, minor
     description: str = ""

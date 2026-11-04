@@ -148,6 +148,15 @@ DEFAULT_CONFIG = {
         # pipeline is byte-identical to before.
         'enable_scene_skeleton': False,
 
+        # Character personas (voices). Every character is given a persona when
+        # it is created (agent/personas.py: grumbler, worrier, gossip, dreamer,
+        # old-timer, each with one manner, from Voxelholm's townsfolk design),
+        # picked by Python from its id. When on, the writer sees each speaker's
+        # persona with a rule that it shows in what they say, never in dialect
+        # spellings or catchphrases, and older records without one are given
+        # one at the start of a tick. Off = the writer prompt is unchanged.
+        'character_personas': False,
+
         # Beat-level dedup at authoring time (Phase 3 hardening,
         # docs/progress_report_20260712.md section 8.2): a freshly authored beat
         # whose description fuzzy-matches a pending / recently completed beat, or

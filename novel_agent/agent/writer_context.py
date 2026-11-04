@@ -388,16 +388,21 @@ class WriterContextBuilder:
         the POV's people has a language bank, half the pool comes from it, so
         a walk-on in that realm can carry one of its own names.
         """
-        cast_lines = []
+        cast_lines, cast = [], []
+        personas_on = bool(self.config.get('generation.character_personas', False))
         for cid in sorted(self.memory.list_characters()):
             c = self.memory.load_character(cid)
             if not c:
                 continue
             self.name_generator.register_used_name(c.full_name)
+            cast.append(c)
             marker = " (POV)" if cid == pov_character_id else ""
             tags = ", ".join(t for t in (c.role, c.gender) if t)
             cast_lines.append(f"- {c.display_name} ({tags}){marker}{status_note(c)}")
         existing_characters = "\n".join(cast_lines) if cast_lines else "(none yet)"
+        if personas_on and cast:
+            from .personas import voices_section
+            existing_characters += voices_section(cast)
 
         genre = (project_state.get("story_foundation") or {}).get("genre") or "scifi"
         people_id = self.name_generator.resolve_people(pov_people) if pov_people else None
@@ -464,6 +469,11 @@ class WriterContextBuilder:
         details += f"**ID:** {character.id}\n"
         if character.pronouns:
             details += f"**Gender:** {character.gender} ({character.pronouns})\n"
+        if character.persona and self.config.get('generation.character_personas', False):
+            from .personas import describe
+            persona_line = describe(character.persona)
+            if persona_line:
+                details += f"**Persona:** {persona_line}\n"
         details += "\n"
         
         if character.description:

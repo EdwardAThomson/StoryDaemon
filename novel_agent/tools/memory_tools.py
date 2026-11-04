@@ -273,6 +273,8 @@ class CharacterGenerateTool(Tool):
 
         # Generate ID for new character
         character_id = self.memory_manager.generate_id("character")
+        from novel_agent.agent.personas import persona_for
+        persona = persona_for(self.memory_manager.project_path.name, character_id)
         
         # Create character entity
         character = Character(
@@ -281,6 +283,7 @@ class CharacterGenerateTool(Tool):
             family_name=family_name,
             title=title,
             gender=char_gender,
+            persona=persona,
             role=role,
             description=description,
             personality=Personality(core_traits=traits or []),

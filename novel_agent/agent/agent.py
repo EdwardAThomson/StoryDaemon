@@ -155,6 +155,7 @@ class StoryAgent:
             # name bank their name was drawn from; any that cannot be settled
             # that way stop the tick here, before anything is written.
             self._backfill_character_genders()
+            self._backfill_character_personas()
             if tick == 0:
                 result = self._first_tick()
             else:
@@ -207,6 +208,27 @@ class StoryAgent:
                 "These characters have no recorded gender and their names cannot "
                 "settle it: " + "; ".join(unresolved) + ". Set \"gender\": \"male\" or "
                 "\"female\" in each memory/characters/<id>.json. A gender is never guessed.")
+
+    def _backfill_character_personas(self):
+        """Give a persona to every character made before personas existed.
+
+        Only when ``generation.character_personas`` is on. The persona is the
+        same fixed function of the novel and the id that creation uses
+        (agent/personas.py), recorded with ``metadata.persona_source =
+        "backfill"``, so a record gets the persona it would have been born with.
+        """
+        if not self.config.get('generation.character_personas', False):
+            return
+        from .personas import persona_for
+        seed = self.memory.project_path.name
+        for cid in self.memory.list_characters():
+            c = self.memory.load_character(cid)
+            if not c or c.persona:
+                continue
+            c.persona = persona_for(seed, cid)
+            c.metadata = dict(c.metadata or {})
+            c.metadata["persona_source"] = "backfill"
+            self.memory.save_character(c)
 
     def _record_history(self, tick, result=None, error=None):
         """Commit this tick to the novel's own git history (novel_agent/history.py).

@@ -52,6 +52,7 @@ def _stub_agent(project_dir, normal_tick, config=None):
     agent._normal_tick = normal_tick
     agent._first_tick = normal_tick
     agent._backfill_character_genders = lambda: None  # no cast in these stubs
+    agent._backfill_character_personas = lambda: None
     agent._record_history = types.MethodType(StoryAgent._record_history, agent)
     return agent
 

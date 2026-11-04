@@ -104,11 +104,13 @@ def create_protagonist(memory, foundation, name_generator=None, gender=None):
         metadata["archetype_name_dropped"] = dropped
 
     char_id = memory.generate_id("character")
+    from novel_agent.agent.personas import persona_for
     character = Character(
         id=char_id,
         first_name=first,
         family_name=family,
         gender=gender,
+        persona=persona_for(memory.project_path.name, char_id),
         role="protagonist",
         description=description or f"{first} {family}".strip(),
         metadata=metadata,
