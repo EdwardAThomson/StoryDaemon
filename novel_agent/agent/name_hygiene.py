@@ -55,6 +55,7 @@ NOT_NAMES = {
 _WORD = r"[A-Z][a-z]+(?:[-'][A-Z]?[a-z]+)?"
 _TITLE_RE = re.compile(r"\b(" + "|".join(sorted(TITLES)) + r")\.?\s+(" + _WORD + r"(?:\s+" + _WORD + r")?)")
 _APPOSITIVE_RE = re.compile(r"\b(" + _WORD + r"(?:\s+" + _WORD + r")?),\s+(?:a|an|the|his|her|their|its|our|my)\s+[a-z]")
+_RELATIVE_RE = re.compile(r"\b(" + _WORD + r"(?:\s+" + _WORD + r")?),?\s+(?:who|whom|whose)\b")
 _SUBJECT_RE = re.compile(r"(?:^|[.;:!?]\s+|\n\s*)(" + _WORD + r"(?:\s+" + _WORD + r")?)\s+(?:is|was|has|had|who|whose)\b")
 _ATTRIBUTION_RE = re.compile(r"\b(?:said|asked|replied|answered|shouted|whispered|muttered|called|told)\s+(" + _WORD + r")\b")
 _FULL_NAME_RE = re.compile(r"\b(" + _WORD + r"\s+" + _WORD + r")\b")
@@ -93,11 +94,15 @@ def candidate_names(text: str) -> List[str]:
             c = _clean(m.group(m.lastindex))
             if c:
                 found.add(c)
-    for rx in (_APPOSITIVE_RE, _SUBJECT_RE):
+    for rx in (_APPOSITIVE_RE, _SUBJECT_RE, _RELATIVE_RE):
         for m in rx.finditer(text):
             c = _clean(m.group(1))
             if c:
                 found.add(c)
+    # "the Alcyone", "the Meridian's charts": a capitalised word after "the"
+    # is a ship, a house or an expedition, not a person.
+    found = {c for c in found
+             if not re.search(r"\bthe\s+[*_]?" + re.escape(c) + r"\b", text)}
     # A word the same text also uses in lower case is a common word that
     # happened to start a sentence ("Salt crusted the rail"), not a name.
     return sorted(c for c in found if not any(w.lower() in lowered for w in c.split()))
@@ -267,3 +272,71 @@ def clean_description(description: str, minted_first: str, minted_family: str,
                 text = re.sub(r"\b" + re.escape(w) + r"(?=\b|'s)", minted_first, text)
             foreign = foreign_names(text, roster)
     return text, foreign
+
+
+_FEMALE = re.compile(r"\b(she|her|hers|herself)\b", re.I)
+_MALE = re.compile(r"\b(he|him|his|himself)\b", re.I)
+
+
+def gender_from_text(text: str) -> str:
+    """"female" or "male" when the text's pronouns say so unambiguously, else
+    "". Used only where the author's or planner's own text already states a
+    gender for the person being minted, so the minted name agrees with it."""
+    text = text or ""
+    f, m = len(_FEMALE.findall(text)), len(_MALE.findall(text))
+    if f and not m:
+        return "female"
+    if m and not f:
+        return "male"
+    if f >= 2 * m and f >= 2:
+        return "female"
+    if m >= 2 * f and m >= 2:
+        return "male"
+    return ""
+
+
+def replace_name(text: str, old: str, first: str, family: str = "") -> str:
+    """Put a minted name where an unminted one stood: the whole old name
+    becomes the minted full name, any lone word of it the minted first name."""
+    if not text or not old or not first:
+        return text
+    full = " ".join(w for w in (first, family) if w)
+    out = re.sub(r"\b" + re.escape(old) + r"\b", full if " " in old else first, text)
+    if " " in old:
+        for w in old.split():
+            out = re.sub(r"\b" + re.escape(w) + r"\b", first, out)
+    return out
+
+
+PLAN_TEXT_FIELDS = (
+    "scene_intention", "key_change", "progress_milestone", "progress_step",
+    "palette_shift", "transition_path", "dialogue_targets", "rationale",
+)
+
+
+def unminted_people_in_plan(plan: dict, known: Iterable[str],
+                            ignore: Iterable[str] = ()) -> List[Tuple[str, str]]:
+    """People the plan's own text names who have no record: [(name, the
+    sentence that introduces them)]. Person-shaped patterns only (never a
+    bare repeated word), so a ship or a place in the intention is not minted
+    as a person. ``ignore`` holds world nouns and existing location and
+    faction names."""
+    plan = plan or {}
+    skip = set(ignore or ())
+    parts = known_name_parts(known)
+    found: List[Tuple[str, str]] = []
+    seen: Set[str] = set()
+    for key in PLAN_TEXT_FIELDS:
+        text = plan.get(key)
+        if not isinstance(text, str) or not text:
+            continue
+        for name in candidate_names(text):
+            words = name.split()
+            if name in seen or name.lower() in parts or any(w.lower() in parts for w in words):
+                continue
+            if all(w in skip for w in words) or name in skip:
+                continue
+            seen.add(name)
+            sentence = next((s_ for s_ in re.split(r"(?<=[.;!?])\s+", text) if name in s_), text)
+            found.append((name, sentence.strip()))
+    return found

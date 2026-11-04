@@ -176,9 +176,18 @@ class CharacterGenerateTool(Tool):
         if affiliation:
             metadata["affiliation"] = affiliation
 
+        # The gender is recorded with the name (2026-11-04). An explicit hint
+        # wins; else the description's own pronouns, so a description that
+        # says "she" never gets a man's name; else an even draw.
+        char_gender = (gender or "").lower()
+        if char_gender not in ("male", "female"):
+            try:
+                from novel_agent.agent.name_hygiene import gender_from_text
+                char_gender = gender_from_text(description)
+            except Exception:
+                char_gender = ""
         if self.name_generator:
-            # Random 50/50 if gender not specified (to avoid LLM bias)
-            char_gender = gender or random.choice(["male", "female"])
+            char_gender = char_gender or random.choice(["male", "female"])
             # Passed only when given, so a generator without the keyword
             # (an older fake, a custom one) keeps working.
             extra = {"affiliation": affiliation} if affiliation else {}
@@ -187,6 +196,7 @@ class CharacterGenerateTool(Tool):
             )
             first_name = name_result["first_name"]
             family_name = name_result["last_name"]
+            char_gender = name_result.get("gender", char_gender) or char_gender
             gen_title = name_result.get("title", "") or (title or "")
             if name_result.get("people"):
                 metadata["worldgen"] = {
@@ -252,8 +262,15 @@ class CharacterGenerateTool(Tool):
                 existing = self.memory_manager.load_character(cid)
                 if existing:
                     roster.append(existing.full_name)
+            from novel_agent.agent.name_hygiene import foreign_names
+            before = foreign_names(description, roster + [f"{first_name} {family_name}"])
             description, foreign_names_left = clean_description(
                 description, first_name, family_name, roster)
+            replaced = [n for n in before if n not in foreign_names_left]
+            if replaced:
+                # The planner's name for this person; the plan text that still
+                # says it is pointed at this record, not minted again.
+                metadata["replaced_names"] = replaced
             if foreign_names_left:
                 metadata["unminted_names_in_description"] = foreign_names_left
         except Exception:
@@ -268,6 +285,7 @@ class CharacterGenerateTool(Tool):
             first_name=first_name,
             family_name=family_name,
             title=title,
+            gender=char_gender,
             role=role,
             description=description,
             personality=Personality(core_traits=traits or []),
@@ -288,7 +306,8 @@ class CharacterGenerateTool(Tool):
         result = {
             "success": True,
             "character_id": character_id,
-            "name": character.full_name
+            "name": character.full_name,
+            "gender": character.gender,
         }
         if foreign_names_left:
             result["note"] = (

@@ -599,6 +599,7 @@ class NameGenerator:
                 "first_name": first_name,
                 "last_name": last_name,
                 "title": title or "",
+                "gender": gender,
                 "meaning": drawn["meaning"],
                 "people": people_id,
                 "language": self.language_banks[people_id].get("language") or "",
@@ -629,7 +630,12 @@ class NameGenerator:
             "full_name": f"{title} {full_name}" if title else full_name,
             "first_name": first_name,
             "last_name": last_name,
-            "title": title or ""
+            "title": title or "",
+            # The gender the name was drawn for. It is a fact about the
+            # character, recorded beside the name, so no prompt can disagree
+            # with it (2026-11-04: every minted protagonist was male by this
+            # function's default while the foundation said "her").
+            "gender": gender,
         }
 
     def _generate_syllable_name(

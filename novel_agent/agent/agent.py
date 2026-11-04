@@ -293,6 +293,11 @@ class StoryAgent:
             # Resolve planner POV/location refs (name/nickname/ID) to canonical IDs
             self._resolve_plan_entities(plan)
 
+            # Step 4.6: people the plan names but never created are minted
+            # now, and the minted names replace theirs in the plan, so the
+            # writer never sees a name the generator did not make.
+            self._mint_planner_named_people(plan, execution_results, tick)
+
             # Step 5: Store plan and results
             print("   5. Storing plan...")
             plan_file = self.plan_manager.save_plan(
@@ -684,6 +689,10 @@ class StoryAgent:
             
             # Merge results
             execution_results = self._merge_execution_results(entity_results, remaining_results)
+
+            # Same as step 4.6 on a normal tick: mint anyone the plan names
+            # without a record before the writer sees the plan.
+            self._mint_planner_named_people(plan, execution_results, tick)
             
             # Step 8: Store plan
             print("   7. Storing plan...")
@@ -713,6 +722,11 @@ class StoryAgent:
 
             print("   10. Committing scene...")
             scene_id = self.committer.commit_scene(scene_data, tick, plan)
+
+            # Names gauge (instrument only), as at step 8.6 of a normal tick.
+            names_gauge = self._names_gauge(scene_data.get("text", ""))
+            if names_gauge:
+                scene_data["names_gauge"] = names_gauge
 
             if eval_result:
                 try:
@@ -1799,6 +1813,102 @@ class StoryAgent:
         except Exception as e:
             logging.getLogger(__name__).warning(f"Coherence metrics failed (tick {tick}): {e}")
             return None
+
+    def _mint_planner_named_people(self, plan, execution_results, tick, cap=3):
+        """Mint anyone the plan's text names who has no character record.
+
+        Names come from the generator and nowhere else. A planner reading a
+        premise wrote "obtains the log from Yusuf, who warns..." with no
+        character.generate call, so no record existed for the description
+        cleaner to clean and the prose used the premise's name 19 times
+        (2026-11-03). Each such person is created through character.generate
+        (the generator mints the name and its gender), the minted name
+        replaces theirs in every text field of the plan, and the creation is
+        appended to this tick's results so the writer sees the new character
+        like any other. Capped per tick; never raises; returns what it did.
+        """
+        done = []
+        try:
+            from .name_hygiene import (PLAN_TEXT_FIELDS, gender_from_text,
+                                       replace_name, unminted_people_in_plan,
+                                       world_words)
+            tool = self.tools.get_tool("character.generate") if self.tools else None
+            if tool is None:
+                return done
+            roster = []
+            for cid in self.memory.list_characters():
+                c = self.memory.load_character(cid)
+                if c:
+                    roster.append(c.full_name)
+                    roster.extend(c.nicknames or [])
+            ignore = set()
+            foundation = self.state.get("story_foundation") or {}
+            ignore |= world_words(" ".join(str(foundation.get(k) or "") for k in ("premise", "setting")))
+            for lid in self.memory.list_locations():
+                loc = self.memory.load_location(lid)
+                if loc and getattr(loc, "name", ""):
+                    ignore.add(loc.name)
+                    ignore.update(loc.name.split())
+            for fid in self.memory.list_factions():
+                fac = self.memory.load_faction(fid)
+                if fac and getattr(fac, "name", ""):
+                    ignore.add(fac.name)
+                    ignore.update(fac.name.split())
+            # A person the plan names may already have a record from this very
+            # plan: character.generate minted the quartermaster, but the
+            # intention still calls him by the premise's name. Point the plan
+            # at that record instead of minting a second person.
+            claimed = {}
+            for cid in self.memory.list_characters():
+                c = self.memory.load_character(cid)
+                if not c:
+                    continue
+                meta = c.metadata or {}
+                for n in list(meta.get("replaced_names") or []) + list(meta.get("unminted_names_in_description") or []):
+                    claimed.setdefault(n, c)
+            for name, sentence in unminted_people_in_plan(plan, roster, ignore)[:cap]:
+                owner = claimed.get(name)
+                if owner is not None:
+                    for key in PLAN_TEXT_FIELDS:
+                        if isinstance(plan.get(key), str):
+                            plan[key] = replace_name(plan[key], name, owner.first_name, owner.family_name)
+                    left = list((owner.metadata or {}).get("unminted_names_in_description") or [])
+                    if name in left:
+                        owner.description = replace_name(owner.description, name, owner.first_name, owner.family_name)
+                        left.remove(name)
+                        owner.metadata["unminted_names_in_description"] = left
+                        owner.metadata.setdefault("replaced_names", []).append(name)
+                        self.memory.save_character(owner)
+                    done.append({"named_in_plan": name, "character_id": owner.id,
+                                 "minted": owner.full_name, "gender": owner.gender, "existing": True})
+                    continue
+                description = replace_name(sentence, name, "This character")
+                result = tool.execute(role="minor", description=description,
+                                      gender=gender_from_text(sentence) or None)
+                if not (result or {}).get("success") or result.get("duplicate"):
+                    continue
+                char = self.memory.load_character(result["character_id"])
+                if not char:
+                    continue
+                for key in PLAN_TEXT_FIELDS:
+                    if isinstance(plan.get(key), str):
+                        plan[key] = replace_name(plan[key], name, char.first_name, char.family_name)
+                (execution_results or {}).setdefault("actions_executed", []).append({
+                    "action_index": None,
+                    "tool": "character.generate",
+                    "args": {"role": "minor", "description": description, "auto_minted_for": name},
+                    "result": result,
+                    "success": True,
+                })
+                done.append({"named_in_plan": name, "character_id": char.id,
+                             "minted": char.full_name, "gender": char.gender})
+                print(f"        Minted {char.full_name} ({char.id}, {char.gender}) for "
+                      f"'{name}', named in the plan with no record")
+            if done:
+                plan["auto_minted_people"] = done
+        except Exception as e:
+            logging.getLogger(__name__).warning("Minting planner-named people failed: %s", e)
+        return done
 
     def _names_gauge(self, scene_text):
         """Per-scene names gauge (step 8.6), or None. Thin wrapped hook over the

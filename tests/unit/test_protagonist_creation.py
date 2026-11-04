@@ -30,7 +30,8 @@ class Gen:
     def __init__(self, first="Rell", last="Tavish"):
         self.first, self.last, self.registered = first, last, None
 
-    def generate_name(self, genre="scifi"):
+    def generate_name(self, gender="male", genre="scifi"):
+        self.gender = gender
         return {"first_name": self.first, "last_name": self.last}
 
     def register_used_name(self, name):

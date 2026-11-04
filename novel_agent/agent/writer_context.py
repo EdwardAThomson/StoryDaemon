@@ -395,7 +395,8 @@ class WriterContextBuilder:
                 continue
             self.name_generator.register_used_name(c.full_name)
             marker = " (POV)" if cid == pov_character_id else ""
-            cast_lines.append(f"- {c.display_name} ({c.role}){marker}{status_note(c)}")
+            tags = ", ".join(t for t in (c.role, c.gender) if t)
+            cast_lines.append(f"- {c.display_name} ({tags}){marker}{status_note(c)}")
         existing_characters = "\n".join(cast_lines) if cast_lines else "(none yet)"
 
         genre = (project_state.get("story_foundation") or {}).get("genre") or "scifi"
@@ -407,7 +408,7 @@ class WriterContextBuilder:
                 affiliation = people_id if (people_id and i < 2) else None
                 minted = self.name_generator.generate_name(
                     gender=gender, genre=genre, affiliation=affiliation)
-                pool.append(minted["full_name"])
+                pool.append(f'{minted["full_name"]} ({minted.get("gender", gender)})')
             except ValueError:
                 break
         approved_new_names = "\n".join(f"- {n}" for n in pool) if pool else "(use a role descriptor instead)"
@@ -460,7 +461,10 @@ class WriterContextBuilder:
         
         # Format character details
         details = f"**Name:** {character.display_name} (full name: {character.full_name})\n"
-        details += f"**ID:** {character.id}\n\n"
+        details += f"**ID:** {character.id}\n"
+        if character.pronouns:
+            details += f"**Gender:** {character.gender} ({character.pronouns})\n"
+        details += "\n"
         
         if character.description:
             details += f"**Description:** {character.description}\n\n"

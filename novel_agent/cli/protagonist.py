@@ -23,9 +23,10 @@ the field was being filled wrongly and the code quietly covered for it.
 """
 
 import logging
+import random
 from typing import Optional, Tuple
 
-from novel_agent.agent.name_hygiene import name_shaped_head, strip_name_head
+from novel_agent.agent.name_hygiene import gender_from_text, name_shaped_head, strip_name_head
 
 logger = logging.getLogger(__name__)
 
@@ -60,13 +61,25 @@ def create_protagonist(memory, foundation, name_generator=None):
         genre = (getattr(foundation, "genre", "") or "").strip()
         given = (getattr(foundation, "protagonist_name", "") or "").strip()
 
+    # The gender is minted with the name and recorded beside it. The
+    # generator's default is male, and this call used to pass nothing, so
+    # every minted protagonist was a man while foundations said "her": the
+    # writer then called Hugh "she" (2026-11-04). When the archetype's own
+    # pronouns state a gender, that is the author's fact and the name is
+    # drawn to match it; otherwise it is an even draw, as for every other
+    # character.
+    stated = gender_from_text(archetype)
+    gender = ""
     if given:
         first, family = split_name(given)
         source = "foundation"
+        gender = stated
     elif name_generator is not None:
-        minted = name_generator.generate_name(genre=genre or "scifi")
+        gender = stated or random.choice(["male", "female"])
+        minted = name_generator.generate_name(gender=gender, genre=genre or "scifi")
         first = minted.get("first_name", "")
         family = minted.get("last_name", "") or minted.get("family_name", "")
+        gender = minted.get("gender", gender) or gender
         source = "generated"
         _warn_if_archetype_looks_like_a_name(archetype, f"{first} {family}".strip())
     else:
@@ -96,6 +109,7 @@ def create_protagonist(memory, foundation, name_generator=None):
         id=char_id,
         first_name=first,
         family_name=family,
+        gender=gender,
         role="protagonist",
         description=description or f"{first} {family}".strip(),
         metadata=metadata,
@@ -103,7 +117,8 @@ def create_protagonist(memory, foundation, name_generator=None):
     memory.save_character(character)
     if name_generator is not None:
         name_generator.register_used_name(f"{first} {family}".strip())
-    logger.info("Created protagonist %s (%s %s, %s)", char_id, first, family, source)
+    logger.info("Created protagonist %s (%s %s, %s, %s)", char_id, first, family,
+                gender or "gender not recorded", source)
     return char_id
 
 

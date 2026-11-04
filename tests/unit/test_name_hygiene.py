@@ -91,7 +91,8 @@ class Foundation:
 
 
 class Gen:
-    def generate_name(self, genre="scifi"):
+    def generate_name(self, gender="male", genre="scifi"):
+        self.gender = gender
         return {"first_name": "Rell", "last_name": "Tavish"}
 
     def register_used_name(self, name):
@@ -122,3 +123,56 @@ def test_an_explicit_protagonist_name_keeps_its_archetype(memory):
     assert c.first_name == "Elena"
     assert c.description == "Elena Marsh, a naturalist"
     assert "archetype_name_dropped" not in c.metadata
+
+
+# --- Gender is recorded with the minted name (2026-11-04) -------------------
+
+from novel_agent.agent.name_hygiene import gender_from_text, replace_name, unminted_people_in_plan
+from novel_agent.memory.entities import Character
+
+
+def test_gender_from_text_reads_only_a_clear_statement():
+    assert gender_from_text("a naturalist searching for her missing brother") == "female"
+    assert gender_from_text("a captain who keeps his own counsel") == "male"
+    assert gender_from_text("a naturalist searching for a missing brother") == ""
+    assert gender_from_text("she asked him") == ""
+
+
+def test_the_protagonist_gets_the_gender_its_name_was_drawn_for(memory):
+    gen = Gen()
+    cid = create_protagonist(memory, Foundation("A naturalist searching for her missing brother"), gen)
+    assert gen.gender == "female"
+    assert memory.load_character(cid).gender == "female"
+
+
+def test_the_protagonist_is_not_male_by_default(memory):
+    seen = set()
+    for _ in range(40):
+        gen = Gen()
+        cid = create_protagonist(memory, Foundation("A naturalist searching for a lost expedition"), gen)
+        seen.add(memory.load_character(cid).gender)
+    assert seen == {"male", "female"}
+
+
+def test_character_pronouns_follow_the_recorded_gender():
+    assert Character(id="C1", first_name="Hugh", gender="male").pronouns == "he/him"
+    assert Character(id="C2", first_name="Ada", gender="female").pronouns == "she/her"
+    assert Character(id="C3", first_name="Old").pronouns == ""
+    assert Character.from_dict({"id": "C4", "first_name": "Legacy"}).gender == ""
+
+
+def test_the_plan_names_people_who_have_no_record():
+    plan = {"scene_intention": "Theobald quietly obtains the eastern-approach log from Yusuf, "
+                                "who warns that one page was replaced.",
+            "rationale": "The scene stays aboard the Alcyone."}
+    found = unminted_people_in_plan(plan, ["Theobald Thornbury"], ignore={"Alcyone"})
+    assert [n for n, _ in found] == ["Yusuf"]
+    assert unminted_people_in_plan({"scene_intention": "Theobald boards the Valdhold."},
+                                   ["Theobald Thornbury"]) == []
+
+
+def test_replace_name_puts_the_minted_name_in_place():
+    assert replace_name("the log from Yusuf, who warns", "Yusuf", "Septimus", "Percy") == \
+        "the log from Septimus, who warns"
+    assert replace_name("Elena Marsh found it; Elena kept it.", "Elena Marsh", "Ada", "Vane") == \
+        "Ada Vane found it; Ada kept it."
