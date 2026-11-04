@@ -151,6 +151,10 @@ class StoryAgent:
 
         # Use two-phase execution for first tick only
         try:
+            # Characters recorded before gender was stored get it from the
+            # name bank their name was drawn from; any that cannot be settled
+            # that way stop the tick here, before anything is written.
+            self._backfill_character_genders()
             if tick == 0:
                 result = self._first_tick()
             else:
@@ -162,6 +166,47 @@ class StoryAgent:
             raise
         self._record_history(tick, result=result)
         return result
+
+    def _backfill_character_genders(self):
+        """Give every character without a recorded gender the gender of its name.
+
+        Names were drawn from gendered lists, but until 2026-11-04 the gender
+        was not stored. The list a first name appears in is its gender, and
+        that is recorded (``metadata.gender_source = "name_bank"``). A name
+        that appears under both genders, or in no gendered list (an imported
+        language's names carry no gender; an author-typed name was never
+        drawn), cannot be settled from the name, and nothing guesses: the
+        tick fails and names each character, so the gender can be set by hand
+        in its memory/characters/<id>.json.
+        """
+        from ..tools.name_generator import NameGenerator
+        generator = None
+        tool = self.tools.get_tool("name.generate") if self.tools else None
+        if tool is not None:
+            generator = getattr(tool, "generator", None)
+        if generator is None:
+            generator = NameGenerator(Path(__file__).resolve().parent.parent / "data" / "names")
+        genre = (self.state.get("story_foundation") or {}).get("genre") or None
+        unresolved = []
+        for cid in self.memory.list_characters():
+            c = self.memory.load_character(cid)
+            if not c or c.gender in ("male", "female"):
+                continue
+            found = generator.genders_of_first_name(c.first_name, genre)
+            if len(found) == 1:
+                c.gender = found[0]
+                c.metadata = dict(c.metadata or {})
+                c.metadata["gender_source"] = "name_bank"
+                self.memory.save_character(c)
+                print(f"   Recorded {c.full_name} ({cid}) as {c.gender}, from the name bank")
+            else:
+                why = "listed under both genders" if found else "in no gendered name list"
+                unresolved.append(f"{cid} {c.full_name} ({why})")
+        if unresolved:
+            raise ValueError(
+                "These characters have no recorded gender and their names cannot "
+                "settle it: " + "; ".join(unresolved) + ". Set \"gender\": \"male\" or "
+                "\"female\" in each memory/characters/<id>.json. A gender is never guessed.")
 
     def _record_history(self, tick, result=None, error=None):
         """Commit this tick to the novel's own git history (novel_agent/history.py).

@@ -193,3 +193,39 @@ def test_replace_name_puts_the_minted_name_in_place():
         "the log from Septimus, who warns"
     assert replace_name("Elena Marsh found it; Elena kept it.", "Elena Marsh", "Ada", "Vane") == \
         "Ada Vane found it; Ada kept it."
+
+
+# --- Legacy records and non-person names (2026-11-04) ----------------------
+
+def test_a_first_names_gender_is_the_list_it_was_drawn_from():
+    from pathlib import Path
+    from novel_agent.tools.name_generator import NameGenerator
+    gen = NameGenerator(Path("novel_agent/data/names"))
+    assert gen.genders_of_first_name("Hugh", "historical adventure") == ["male"]
+    assert gen.genders_of_first_name("Octavia", "historical adventure") == ["female"]
+    assert gen.genders_of_first_name("Alex", "modern") == ["female", "male"]   # ambiguous
+    assert gen.genders_of_first_name("Yusuf", "historical adventure") == []   # never drawn
+
+
+def test_legacy_characters_get_the_gender_of_their_name_or_the_tick_stops(memory):
+    from novel_agent.agent.agent import StoryAgent
+    memory.save_character(Character(id=memory.generate_id("character"), first_name="Hugh",
+                                    family_name="Chesterton", role="protagonist"))
+    agent = StoryAgent.__new__(StoryAgent)
+    agent.memory, agent.tools = memory, None
+    agent.state = {"story_foundation": {"genre": "historical adventure"}}
+    agent._backfill_character_genders()
+    hugh = memory.load_character("C000")
+    assert hugh.gender == "male" and hugh.metadata["gender_source"] == "name_bank"
+
+    memory.save_character(Character(id=memory.generate_id("character"), first_name="Yusuf"))
+    with pytest.raises(ValueError, match="Yusuf"):
+        agent._backfill_character_genders()
+
+
+def test_a_faction_name_involves_no_gender():
+    from pathlib import Path
+    from novel_agent.tools.name_generator import NameGenerator
+    gen = NameGenerator(Path("novel_agent/data/names"))
+    name = gen.generate_surname("historical adventure")
+    assert name and " " not in name

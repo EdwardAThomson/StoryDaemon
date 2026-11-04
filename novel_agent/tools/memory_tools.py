@@ -722,9 +722,10 @@ class FactionGenerateTool(Tool):
         # Faction_<id> pattern if no generator is available.
         final_name = name
         if not final_name and self.name_generator:
-            gender = random.choice(["male", "female"])
-            name_result = self.name_generator.generate_name(gender=gender, genre=self.genre)
-            final_name = name_result.get("full_name") or name_result.get("first_name")
+            # A faction is not a person: its name is a family name from the
+            # story's bank ("Ashford"), with no gender asked for or recorded.
+            # It used to mint a whole person's name for a random gender.
+            final_name = self.name_generator.generate_surname(genre=self.genre)
 
         if not final_name:
             final_name = f"Faction_{faction_id}"

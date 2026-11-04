@@ -434,8 +434,10 @@ class NameGenerator:
             return json.load(f)
 
     def _firsts(self, bank: dict, gender: str) -> List[str]:
-        names = bank["first_name"]
-        return names.get(gender) or names.get("male") or []
+        # Exactly the list for this gender. It used to fall back to the male
+        # list when a bank had no list for the gender asked for, which would
+        # record a woman under a man's name.
+        return list(bank["first_name"].get(gender) or [])
 
     def _lasts(self, bank: dict, register: Optional[str]) -> List[str]:
         """Surnames for a bank, honouring an optional register."""
@@ -465,6 +467,10 @@ class NameGenerator:
     def _mint(self, bank: dict, gender: str, register: Optional[str]):
         if bank.get("mode") == "drawn":
             return self._draw(bank, gender, register)
+        if gender not in bank["first_name"]:
+            raise ValueError(
+                f"bank {bank.get('_key')!r} has no {gender} first-name syllables; "
+                f"a name of another gender, or an ungendered one, is never substituted")
         first = self._generate_syllable_name(bank["first_name"], gender)
         last = self._generate_syllable_name(bank["last_name"], "neutral")
         return first, last
@@ -643,6 +649,69 @@ class NameGenerator:
             # function's default while the foundation said "her").
             "gender": gender,
         }
+
+    def generate_surname(self, genre: str = "scifi") -> str:
+        """A family name from the story's bank, for naming a thing that is not
+        a person (a house, a firm, a company). Surnames carry no gender, so
+        nothing about gender is asked for, chosen or recorded."""
+        bank = self._bank_for_genre(genre)
+        if bank.get("mode") == "drawn":
+            lasts = self._lasts(bank, None)
+            if lasts:
+                return random.choice(lasts)
+            companion = self.coined_companions.get(bank.get("_key"))
+            if not companion:
+                raise ValueError(f"bank {bank.get('_key')!r} has no surnames")
+            return self._generate_syllable_name(companion["last_name"], "neutral")
+        return self._generate_syllable_name(bank["last_name"], "neutral")
+
+    def genders_of_first_name(self, first_name: str, genre: Optional[str] = None) -> List[str]:
+        """Every gender the banks list this first name under.
+
+        For a character recorded before gender was stored: its name was drawn
+        from a gendered list, so the list it appears in is its gender. The
+        story's own bank is searched first; only if the name is not in it are
+        the other banks searched. A drawn bank answers by membership, a
+        syllable bank by whether the name splits into a start and an end of
+        that gender. The caller accepts exactly one answer: an empty list (a
+        language-bank name, an author-typed name) or two (modern's "Alex",
+        or a scifi name built from syllables both genders share) is not a
+        gender.
+        """
+        name = (first_name or "").strip()
+        if not name:
+            return []
+
+        def in_bank(bank) -> set:
+            found = set()
+            firsts = bank.get("first_name") or {}
+            for g in ("male", "female"):
+                data = firsts.get(g)
+                if isinstance(data, list):
+                    pool = set(data)
+                    for per in (bank.get("periods") or {}).values():
+                        pool |= set((per or {}).get(g) or [])
+                    if name in pool:
+                        found.add(g)
+                elif isinstance(data, dict):
+                    starts, ends = data.get("start") or [], data.get("end") or []
+                    low = name.lower()
+                    if any(low.startswith(s.lower()) and low[len(s):] in {e.lower() for e in ends}
+                           for s in starts):
+                        found.add(g)
+            return found
+
+        own = self._bank_for_genre(genre) if genre else None
+        if own is not None:
+            hit = in_bank(own)
+            if hit:
+                return sorted(hit)
+        found = set()
+        for key, bank in self.banks.items():
+            if bank is own:
+                continue
+            found |= in_bank(bank)
+        return sorted(found)
 
     def _generate_syllable_name(
         self,
