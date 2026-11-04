@@ -23,6 +23,7 @@ def create_novel_project(
     plot_config: Optional[Dict[str, Any]] = None,
     name_banks: Optional[Dict[str, Any]] = None,
     protagonist_gender: Optional[str] = None,
+    protagonist_age: Optional[str] = None,
 ) -> str:
     """Create a new novel project directory structure.
     
@@ -38,6 +39,8 @@ def create_novel_project(
             foundation does not carry one (e.g. from --protagonist-gender).
             Required one way or the other: creation fails before anything is
             written when neither states it, or when they disagree.
+        protagonist_age: The protagonist's age group (young | adult | old),
+            on the same terms as the gender (e.g. from --protagonist-age).
         
     Returns:
         Path to created project directory
@@ -58,6 +61,15 @@ def create_novel_project(
     protagonist_gender = require_gender(protagonist_gender or stated, "the protagonist")
     if foundation is not None:
         foundation.protagonist_gender = protagonist_gender
+    from ..agent.name_hygiene import require_age_group
+    stated_age = getattr(foundation, "protagonist_age", None) if foundation is not None else None
+    if protagonist_age and stated_age and protagonist_age.strip().lower() != stated_age:
+        raise ValueError(
+            f"The protagonist's age group is given twice and disagrees: "
+            f"{protagonist_age!r} on the command line, {stated_age!r} in the foundation.")
+    protagonist_age = require_age_group(protagonist_age or stated_age, "the protagonist")
+    if foundation is not None:
+        foundation.protagonist_age = protagonist_age
 
     config = Config()
     
@@ -140,7 +152,7 @@ def create_novel_project(
         # and the writer now raises rather than substituting a phantom. With no
         # foundation to read a name from, one is minted.
         _create_protagonist(project_dir, foundation, initial_state, names_config,
-                            protagonist_gender)
+                            protagonist_gender, protagonist_age)
         _warn_about_names_in_foundation(project_dir, foundation)
 
         write_json(os.path.join(project_dir, 'state.json'), initial_state)
@@ -237,7 +249,8 @@ Created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
 def _create_protagonist(project_dir, foundation, initial_state,
                         names_config: Optional[Dict[str, Any]] = None,
-                        protagonist_gender: Optional[str] = None) -> None:
+                        protagonist_gender: Optional[str] = None,
+                        protagonist_age: Optional[str] = None) -> None:
     """Create the protagonist entity and make it the active character.
 
     Never silently skipped: a project whose foundation names no protagonist and
@@ -260,7 +273,8 @@ def _create_protagonist(project_dir, foundation, initial_state,
         title_bank=settings.get("title_bank"),
         register=settings.get("register"),
     ) if data_dir.exists() else None
-    char_id = create_protagonist(memory, foundation, generator, gender=protagonist_gender)
+    char_id = create_protagonist(memory, foundation, generator, gender=protagonist_gender,
+                                 age_group=protagonist_age)
     initial_state['active_character'] = char_id
 
 

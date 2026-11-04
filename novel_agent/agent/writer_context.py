@@ -397,7 +397,7 @@ class WriterContextBuilder:
             self.name_generator.register_used_name(c.full_name)
             cast.append(c)
             marker = " (POV)" if cid == pov_character_id else ""
-            tags = ", ".join(t for t in (c.role, c.gender) if t)
+            tags = ", ".join(t for t in (c.role, c.gender, c.age_group) if t)
             cast_lines.append(f"- {c.display_name} ({tags}){marker}{status_note(c)}")
         existing_characters = "\n".join(cast_lines) if cast_lines else "(none yet)"
         if personas_on and cast:
@@ -469,6 +469,8 @@ class WriterContextBuilder:
         details += f"**ID:** {character.id}\n"
         if character.pronouns:
             details += f"**Gender:** {character.gender} ({character.pronouns})\n"
+        if character.age_group:
+            details += f"**Age:** {character.age_group}\n"
         if character.persona and self.config.get('generation.character_personas', False):
             from .personas import describe
             persona_line = describe(character.persona)

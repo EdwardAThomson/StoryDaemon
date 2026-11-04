@@ -237,7 +237,7 @@ def test_recent_lists_newest_first(tmp_path):
 
 def test_new_project_is_a_repository(tmp_path):
     from novel_agent.cli.project import create_novel_project
-    project_dir = Path(create_novel_project("history-test", str(tmp_path), protagonist_gender="male"))
+    project_dir = Path(create_novel_project("history-test", str(tmp_path), protagonist_gender="male", protagonist_age="adult"))
     assert history.has_repo(project_dir)
     assert _log(project_dir) == [["novel created", "StoryDaemon"]]
 

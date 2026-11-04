@@ -362,6 +362,27 @@ def require_gender(gender, who: str) -> str:
     return value
 
 
+AGE_GROUPS = ("young", "adult", "old")
+AGE_GROUP_HELP = ("young (a child or a young adult, up to about 30), adult (about 30 "
+                  "to 60) or old (over about 60)")
+
+
+def require_age_group(age_group, who: str) -> str:
+    """The age group as recorded, or a hard failure.
+
+    Like gender, a character's age is a fact recorded on its record, never
+    guessed from the name or the prose. It decides which personas a
+    character can have (an old-timer must be old), so it is required
+    wherever a character is created.
+    """
+    value = (age_group or "").strip().lower() if isinstance(age_group, str) else ""
+    if value not in AGE_GROUPS:
+        raise ValueError(
+            f"No age group for {who}: got {age_group!r}. It must be given "
+            f"explicitly as {AGE_GROUP_HELP}; it is never guessed.")
+    return value
+
+
 def require_consistent(text: str, gender: str, who: str, field: str) -> None:
     """Raise when text written about a person states the other gender.
 

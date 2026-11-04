@@ -13,7 +13,7 @@ from novel_agent.cli.project import (
 def test_create_novel_project():
     """Test creating a new novel project."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        project_dir = create_novel_project("test-novel", tmpdir, protagonist_gender="female")
+        project_dir = create_novel_project("test-novel", tmpdir, protagonist_gender="female", protagonist_age="adult")
         
         # Check directory exists. The dir name is "<name>_<8-char uuid>" so multiple
         # projects can share a display name without colliding.
@@ -40,8 +40,8 @@ def test_create_novel_project():
 def test_same_name_projects_get_distinct_dirs():
     """Two projects with the same display name coexist via the uuid suffix."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        first = create_novel_project("test-novel", tmpdir, protagonist_gender="female")
-        second = create_novel_project("test-novel", tmpdir, protagonist_gender="female")
+        first = create_novel_project("test-novel", tmpdir, protagonist_gender="female", protagonist_age="adult")
+        second = create_novel_project("test-novel", tmpdir, protagonist_gender="female", protagonist_age="adult")
 
         # No collision: distinct directories, both present, same display name prefix.
         assert first != second
@@ -53,7 +53,7 @@ def test_same_name_projects_get_distinct_dirs():
 def test_load_and_save_project_state():
     """Test loading and saving project state."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        project_dir = create_novel_project("test-novel", tmpdir, protagonist_gender="female")
+        project_dir = create_novel_project("test-novel", tmpdir, protagonist_gender="female", protagonist_age="adult")
         
         # Load initial state
         state = load_project_state(project_dir)
@@ -78,7 +78,7 @@ def test_load_and_save_project_state():
 def test_find_project_dir():
     """Test finding project directory."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        project_dir = create_novel_project("test-novel", tmpdir, protagonist_gender="female")
+        project_dir = create_novel_project("test-novel", tmpdir, protagonist_gender="female", protagonist_age="adult")
         
         # Find from project directory
         found_dir = find_project_dir(project_dir)

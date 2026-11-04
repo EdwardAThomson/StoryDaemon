@@ -428,6 +428,15 @@ def new(
             "it is never guessed or drawn at random."
         )
     ),
+    protagonist_age: Optional[str] = typer.Option(
+        None,
+        "--protagonist-age",
+        help=(
+            "Protagonist's age group: young (up to about 30), adult or old (over "
+            "about 60). Required unless the foundation file sets protagonist_age; "
+            "it decides which personas fit and is never guessed."
+        )
+    ),
     setting: Optional[str] = typer.Option(
         None,
         "--setting",
@@ -586,6 +595,7 @@ def new(
             plot_config=plot_config,
             name_banks=name_banks,
             protagonist_gender=protagonist_gender,
+            protagonist_age=protagonist_age,
         )
         typer.echo(f"✅ Created novel project: {project_dir}")
 

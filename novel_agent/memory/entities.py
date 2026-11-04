@@ -225,6 +225,9 @@ class Character:
     # worrier, ...), picked by Python from the id when the character is
     # created, never by the model. "" on records made before 2026-11-04.
     persona: str = ""
+    # young | adult | old, recorded when the character is created (required,
+    # like gender). It decides which personas fit. "" on older records.
+    age_group: str = ""
     
     role: str = ""  # protagonist, antagonist, supporting, minor
     description: str = ""

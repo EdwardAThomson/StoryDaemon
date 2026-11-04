@@ -32,7 +32,7 @@ def test_every_persona_has_one_known_manner():
 def test_the_persona_is_a_fixed_function_of_the_novel_and_the_id():
     a = personas.persona_for("alcyone_1a2b3c4d", "C001")
     assert all(personas.persona_for("alcyone_1a2b3c4d", "C001") == a for _ in range(5))
-    picks = {personas.persona_for(f"novel_{i}", "C000") for i in range(40)}
+    picks = {personas.persona_for(f"novel_{i}", "C000", "old") for i in range(40)}
     assert picks == set(personas.names())  # novels differ, and every persona is reachable
     with pytest.raises(ValueError):
         personas.persona_for("alcyone", "")
@@ -47,7 +47,7 @@ def test_a_generated_character_is_given_its_persona(memory):
             pass
 
     tool = CharacterGenerateTool(memory, Vec(), NameGenerator(NAMES), genre="historical")
-    out = tool.execute(role="minor", description="a quartermaster", gender="male")
+    out = tool.execute(role="minor", description="a quartermaster", gender="male", age_group="adult")
     c = memory.load_character(out["character_id"])
     assert c.persona == personas.persona_for(memory.project_path.name, c.id)
 
@@ -58,7 +58,7 @@ def test_the_protagonist_is_given_its_persona(memory):
     from novel_agent.tools.name_generator import NameGenerator
     f = StoryFoundation(genre="historical adventure", premise="p",
                         protagonist_archetype="a junior surveyor", setting="s",
-                        tone="t", protagonist_gender="female")
+                        tone="t", protagonist_gender="female", protagonist_age="young")
     cid = create_protagonist(memory, f, NameGenerator(NAMES))
     c = memory.load_character(cid)
     assert c.persona == personas.persona_for(memory.project_path.name, cid)
@@ -66,7 +66,7 @@ def test_the_protagonist_is_given_its_persona(memory):
 
 def _cast(memory):
     memory.save_character(Character(id="C000", first_name="Ada", family_name="Vane",
-                                    gender="female", role="protagonist", persona="worrier"))
+                                    gender="female", age_group="young", role="protagonist", persona="worrier"))
     memory.save_character(Character(id="C001", first_name="Tom", family_name="Hale",
                                     gender="male", role="supporting", persona="grumbler"))
 
@@ -88,6 +88,7 @@ def test_the_writer_sees_personas_only_when_they_are_on(memory):
     assert "- Ada: worrier, plain manner" in cast
     assert "never through misspelt or dialect words, a catchphrase" in cast
     assert "**Persona:** worrier, plain manner" in details
+    assert "**Age:** young" in details and "- Ada (protagonist, female, young) (POV)" in cast
 
 
 def test_older_records_get_their_persona_at_the_start_of_a_tick(memory):
@@ -104,3 +105,40 @@ def test_older_records_get_their_persona_at_the_start_of_a_tick(memory):
     c = memory.load_character("C000")
     assert c.persona == personas.persona_for(memory.project_path.name, "C000")
     assert c.metadata["persona_source"] == "backfill"
+
+
+def test_an_old_timer_is_always_old():
+    for age in ("young", "adult", ""):
+        picks = {personas.persona_for(f"novel_{i}", "C000", age) for i in range(60)}
+        assert "oldtimer" not in picks and len(picks) == 4
+    assert personas.fits("oldtimer", "old") and not personas.fits("oldtimer", "")
+
+
+def test_a_character_without_an_age_group_is_a_hard_failure(memory):
+    from novel_agent.tools.memory_tools import CharacterGenerateTool
+    from novel_agent.tools.name_generator import NameGenerator
+
+    class Vec:
+        def index_character(self, c):
+            pass
+
+    tool = CharacterGenerateTool(memory, Vec(), NameGenerator(NAMES), genre="historical")
+    with pytest.raises(ValueError, match="never guessed"):
+        tool.execute(role="minor", description="a quartermaster", gender="male")
+    assert memory.list_characters() == []
+    out = tool.execute(role="minor", description="a quartermaster", gender="male",
+                       age_group="old")
+    assert memory.load_character(out["character_id"]).age_group == "old"
+    assert out["age_group"] == "old"
+
+
+def test_a_protagonist_without_an_age_group_is_a_hard_failure(memory):
+    from novel_agent.cli.protagonist import create_protagonist
+    from novel_agent.cli.foundation import StoryFoundation
+    from novel_agent.tools.name_generator import NameGenerator
+    f = StoryFoundation(genre="historical adventure", premise="p",
+                        protagonist_archetype="a junior surveyor", setting="s",
+                        tone="t", protagonist_gender="female")
+    with pytest.raises(ValueError, match="never guessed"):
+        create_protagonist(memory, f, NameGenerator(NAMES))
+    assert memory.list_characters() == []

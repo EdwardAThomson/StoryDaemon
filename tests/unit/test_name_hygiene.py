@@ -84,11 +84,12 @@ def test_prose_gauge_separates_foundation_names_from_other_noise():
 
 
 class Foundation:
-    def __init__(self, archetype, name=None, genre="historical adventure", gender="female"):
+    def __init__(self, archetype, name=None, genre="historical adventure", gender="female", age="adult"):
         self.protagonist_archetype = archetype
         self.protagonist_name = name
         self.genre = genre
         self.protagonist_gender = gender
+        self.protagonist_age = age
 
 
 class Gen:

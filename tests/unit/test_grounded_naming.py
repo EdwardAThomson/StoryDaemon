@@ -44,7 +44,7 @@ def test_solo_place_name(gen):
 def test_character_name_always_minted(project):
     tool = CharacterGenerateTool(MemoryManager(project), VectorStore(project),
                                  NameGenerator(DATA_DIR), genre="scifi")
-    res = tool.execute(role="supporting", description="a guard", name="Bob Smith", gender="male")
+    res = tool.execute(role="supporting", description="a guard", name="Bob Smith", gender="male", age_group="adult")
     assert res["success"]
     char = MemoryManager(project).load_character(res["character_id"])
     # The LLM-supplied name must be ignored.
@@ -54,15 +54,15 @@ def test_character_name_always_minted(project):
 def test_character_title_hint_applied(project):
     tool = CharacterGenerateTool(MemoryManager(project), VectorStore(project),
                                  NameGenerator(DATA_DIR), genre="scifi")
-    res = tool.execute(role="supporting", description="an officer", gender="male", title="Captain")
+    res = tool.execute(role="supporting", description="an officer", gender="male", age_group="adult", title="Captain")
     char = MemoryManager(project).load_character(res["character_id"])
     assert char.title == "Captain"
 
 def test_unique_role_deduped(project):
     mm, vs = MemoryManager(project), VectorStore(project)
     tool = CharacterGenerateTool(mm, vs, NameGenerator(DATA_DIR), genre="scifi")
-    first = tool.execute(role="protagonist", description="the hero", gender="male")
-    second = tool.execute(role="protagonist", description="another hero", gender="female")
+    first = tool.execute(role="protagonist", description="the hero", gender="male", age_group="adult")
+    second = tool.execute(role="protagonist", description="another hero", gender="female", age_group="adult")
     assert second.get("duplicate") is True
     assert second["character_id"] == first["character_id"]
 
@@ -105,8 +105,8 @@ def test_character_generate_without_a_gender_is_a_hard_failure(tmp_path):
         tool.execute(role="minor", description="a quartermaster")
     with pytest.raises(ValueError, match="must agree"):
         tool.execute(role="minor", description="a quartermaster who keeps her log",
-                     gender="male")
+                     gender="male", age_group="adult")
     assert memory.list_characters() == []
-    ok = tool.execute(role="minor", description="a quartermaster", gender="female")
+    ok = tool.execute(role="minor", description="a quartermaster", gender="female", age_group="adult")
     assert memory.load_character(ok["character_id"]).gender == "female"
     assert ok["gender"] == "female"

@@ -119,7 +119,7 @@ def cast_roster(memory) -> str:
         except Exception:
             c = None
         if c:
-            tags = ", ".join(t for t in (c.role, getattr(c, "gender", "")) if t)
+            tags = ", ".join(t for t in (c.role, getattr(c, "gender", ""), getattr(c, "age_group", "")) if t)
             lines.append(f"- {c.id}: {c.display_name} ({tags}){_status_note(c)}")
     return "\n".join(lines)
 

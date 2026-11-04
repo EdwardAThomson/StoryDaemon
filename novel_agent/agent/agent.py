@@ -215,7 +215,8 @@ class StoryAgent:
         Only when ``generation.character_personas`` is on. The persona is the
         same fixed function of the novel and the id that creation uses
         (agent/personas.py), recorded with ``metadata.persona_source =
-        "backfill"``, so a record gets the persona it would have been born with.
+        "backfill"``. A record with no age group is never given an age-bound
+        persona (the old-timer), since its age is not known.
         """
         if not self.config.get('generation.character_personas', False):
             return
@@ -225,7 +226,7 @@ class StoryAgent:
             c = self.memory.load_character(cid)
             if not c or c.persona:
                 continue
-            c.persona = persona_for(seed, cid)
+            c.persona = persona_for(seed, cid, c.age_group)
             c.metadata = dict(c.metadata or {})
             c.metadata["persona_source"] = "backfill"
             self.memory.save_character(c)

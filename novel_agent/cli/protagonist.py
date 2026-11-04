@@ -46,7 +46,7 @@ def split_name(full_name: str) -> Tuple[str, str]:
     return words[0], " ".join(words[1:])
 
 
-def create_protagonist(memory, foundation, name_generator=None, gender=None):
+def create_protagonist(memory, foundation, name_generator=None, gender=None, age_group=None):
     """Create and persist the protagonist. Returns the new character id.
 
     The name is taken from foundation.protagonist_name when the author gave
@@ -71,6 +71,11 @@ def create_protagonist(memory, foundation, name_generator=None, gender=None):
         gender = getattr(foundation, "protagonist_gender", None)
     gender = require_gender(gender, who)
     require_consistent(archetype, gender, "The protagonist", "archetype")
+    # The age group is the same kind of fact: stated, never read off the text.
+    from novel_agent.agent.name_hygiene import require_age_group
+    if age_group is None and foundation is not None:
+        age_group = getattr(foundation, "protagonist_age", None)
+    age_group = require_age_group(age_group, who)
 
     if given:
         first, family = split_name(given)
@@ -110,7 +115,8 @@ def create_protagonist(memory, foundation, name_generator=None, gender=None):
         first_name=first,
         family_name=family,
         gender=gender,
-        persona=persona_for(memory.project_path.name, char_id),
+        age_group=age_group,
+        persona=persona_for(memory.project_path.name, char_id, age_group),
         role="protagonist",
         description=description or f"{first} {family}".strip(),
         metadata=metadata,

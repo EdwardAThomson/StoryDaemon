@@ -96,6 +96,11 @@ class CharacterGenerateTool(Tool):
                     "enum": ["male", "female"],
                     "description": "REQUIRED. The character's gender, recorded with the generated name. Never omitted; a call without it fails."
                 },
+                "age_group": {
+                    "type": "string",
+                    "enum": ["young", "adult", "old"],
+                    "description": "REQUIRED. young (a child or young adult, up to about 30), adult (about 30 to 60) or old (over about 60). Recorded on the character; a call without it fails."
+                },
                 "title": {
                     "type": "string",
                     "description": "Optional honorific/rank hint (e.g. Captain, Dr.)",
@@ -146,7 +151,8 @@ class CharacterGenerateTool(Tool):
                 title: Optional[str] = None,
                 traits: Optional[List[str]] = None,
                 goals: Optional[List[str]] = None,
-                affiliation: Optional[str] = None) -> Dict[str, Any]:
+                affiliation: Optional[str] = None,
+                age_group: Optional[str] = None) -> Dict[str, Any]:
         """Create a new character.
 
         The canonical name is always system-generated. ``gender`` and ``title``
@@ -179,8 +185,10 @@ class CharacterGenerateTool(Tool):
         # given; it is never guessed from the description or drawn at random,
         # and a description that states the other gender is refused. Both
         # raise, which halts the tick: ambiguity here is not acceptable.
-        from novel_agent.agent.name_hygiene import require_consistent, require_gender
+        from novel_agent.agent.name_hygiene import (require_age_group, require_consistent,
+                                                    require_gender)
         char_gender = require_gender(gender, "character.generate")
+        char_age = require_age_group(age_group, "character.generate")
         require_consistent(description, char_gender, "The new character", "description")
         if self.name_generator:
             # Passed only when given, so a generator without the keyword
@@ -274,7 +282,7 @@ class CharacterGenerateTool(Tool):
         # Generate ID for new character
         character_id = self.memory_manager.generate_id("character")
         from novel_agent.agent.personas import persona_for
-        persona = persona_for(self.memory_manager.project_path.name, character_id)
+        persona = persona_for(self.memory_manager.project_path.name, character_id, char_age)
         
         # Create character entity
         character = Character(
@@ -283,6 +291,7 @@ class CharacterGenerateTool(Tool):
             family_name=family_name,
             title=title,
             gender=char_gender,
+            age_group=char_age,
             persona=persona,
             role=role,
             description=description,
@@ -306,6 +315,7 @@ class CharacterGenerateTool(Tool):
             "character_id": character_id,
             "name": character.full_name,
             "gender": character.gender,
+            "age_group": character.age_group,
         }
         if foreign_names_left:
             result["note"] = (

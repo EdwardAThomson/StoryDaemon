@@ -139,7 +139,7 @@ Then emit the JSON object below:
 
 - Keep actions focused (2-4 tools maximum per plan)
 - Use memory.search to recall relevant context
-- Use character.generate to create characters - names will be auto-generated uniquely; always pass gender ('male' or 'female'), and create every person the scene names who is not already a character
+- Use character.generate to create characters - names will be auto-generated uniquely; always pass gender ('male' or 'female') and age_group ('young', 'adult' or 'old'), and create every person the scene names who is not already a character
 - Use location.generate to create locations as needed
 - Use relationship.create when characters first interact significantly
 - Use relationship.update to track relationship changes

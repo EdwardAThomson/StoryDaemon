@@ -31,7 +31,11 @@
       "label": "old-timer",
       "manner": "proper",
       "notices": "how things used to be done and what has changed since",
-      "with_others": "courteous, unhurried, measures the present against long memory"
+      "with_others": "courteous, unhurried, measures the present against long memory",
+      "ages": [
+        "old"
+      ]
     }
-  }
+  },
+  "ages_note": "A persona with 'ages' is given only to a character of those age groups; one without fits any age. A record with no age group gets only personas that fit any age."
 }

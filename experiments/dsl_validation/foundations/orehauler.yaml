@@ -12,6 +12,9 @@ premise: >-
 # The protagonist's gender is stated explicitly: it is recorded with the
 # generated name and is never guessed or drawn at random.
 protagonist_gender: female
+# The age group (young | adult | old) is stated the same way: it decides
+# which personas the protagonist can have and is never guessed.
+protagonist_age: adult
 protagonist_archetype: the ship's engineer, pragmatic and stubborn, trusted by the crew until the murder
 setting: a failing deep-space ore hauler far from any port
 tone: tense, claustrophobic, grounded

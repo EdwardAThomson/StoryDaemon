@@ -340,7 +340,7 @@ def test_character_generate_records_the_people(entities, project):
     store = VectorStore(project)
     tool = CharacterGenerateTool(memory, store, gen, genre="fantasy")
     assert "affiliation" in tool.parameters
-    result = tool.execute(role="supporting", description="a ferryman", gender="male",
+    result = tool.execute(role="supporting", description="a ferryman", gender="male", age_group="adult",
                           affiliation="Vokekuk Principality")
     character = memory.load_character(result["character_id"])
     assert character.first_name in {p["name"] for p in entities.languages[0].persons}
@@ -429,7 +429,7 @@ def test_novel_new_auto_detects_languages_beside_the_world():
     runner, app = _cli()
     with tempfile.TemporaryDirectory() as tmpdir:
         result = runner.invoke(app, [
-            "new", "lang-novel", "--dir", tmpdir, "--no-interactive", "--protagonist-gender", "female",
+            "new", "lang-novel", "--dir", tmpdir, "--no-interactive", "--protagonist-gender", "female", "--protagonist-age", "adult",
             "--world", str(FIXTURES / "region-small.json"),
         ])
         assert result.exit_code == 0, result.output
@@ -465,7 +465,7 @@ def test_novel_new_with_explicit_languages_file():
         world = Path(tmpdir) / "my-world.json"
         world.write_text((FIXTURES / "region-small.json").read_text(encoding="utf-8"), encoding="utf-8")
         result = runner.invoke(app, [
-            "new", "lang-novel", "--dir", tmpdir, "--no-interactive", "--protagonist-gender", "female", "--world", str(world),
+            "new", "lang-novel", "--dir", tmpdir, "--no-interactive", "--protagonist-gender", "female", "--protagonist-age", "adult", "--world", str(world),
             "--languages", str(FIXTURES / "region-small-languages.json"),
             "--setting", "The marches.",
         ])
@@ -478,7 +478,7 @@ def test_novel_new_with_explicit_languages_file():
 
         # without --languages and nothing beside the world: no languages, no complaint
         result = runner.invoke(app, [
-            "new", "plain-novel", "--dir", tmpdir, "--no-interactive", "--protagonist-gender", "female", "--world", str(world)])
+            "new", "plain-novel", "--dir", tmpdir, "--no-interactive", "--protagonist-gender", "female", "--protagonist-age", "adult", "--world", str(world)])
         assert result.exit_code == 0, result.output
         assert "Languages" not in result.output
         project = next(Path(tmpdir).glob("plain-novel_*"))
@@ -494,7 +494,7 @@ def test_novel_new_rejects_bad_languages_before_creating_anything(sector_data):
         sector = Path(tmpdir) / "sector.json"
         sector.write_text(json.dumps(sector_data), encoding="utf-8")
         result = runner.invoke(app, [
-            "new", "lang-novel", "--dir", tmpdir, "--no-interactive", "--protagonist-gender", "female", "--world", str(sector),
+            "new", "lang-novel", "--dir", tmpdir, "--no-interactive", "--protagonist-gender", "female", "--protagonist-age", "adult", "--world", str(sector),
             "--languages", str(FIXTURES / "region-small-languages.json")])
         assert result.exit_code == 1
         assert "which the world file does not have" in result.output
@@ -503,13 +503,13 @@ def test_novel_new_rejects_bad_languages_before_creating_anything(sector_data):
         bad = Path(tmpdir) / "bad.json"
         bad.write_text(json.dumps({"schema": "worldgen/region@0.1"}), encoding="utf-8")
         result = runner.invoke(app, [
-            "new", "lang-novel", "--dir", tmpdir, "--no-interactive", "--protagonist-gender", "female",
+            "new", "lang-novel", "--dir", tmpdir, "--no-interactive", "--protagonist-gender", "female", "--protagonist-age", "adult",
             "--world", str(FIXTURES / "region-small.json"), "--languages", str(bad)])
         assert result.exit_code == 1
         assert "Unknown languages schema" in result.output
         # --languages needs --world
         result = runner.invoke(app, [
-            "new", "lang-novel", "--dir", tmpdir, "--no-interactive", "--protagonist-gender", "female",
+            "new", "lang-novel", "--dir", tmpdir, "--no-interactive", "--protagonist-gender", "female", "--protagonist-age", "adult",
             "--languages", str(FIXTURES / "region-small-languages.json")])
         assert result.exit_code == 1
         assert "--languages needs --world" in result.output

@@ -20,7 +20,8 @@ class StoryFoundation:
         themes: Optional[List[str]] = None,
         primary_goal: Optional[str] = None,
         protagonist_name: Optional[str] = None,
-        protagonist_gender: Optional[str] = None
+        protagonist_gender: Optional[str] = None,
+        protagonist_age: Optional[str] = None
     ):
         self.genre = genre
         self.premise = premise
@@ -41,6 +42,9 @@ class StoryFoundation:
         # archetype or drawn at random (2026-11-04); project creation fails
         # without it.
         self.protagonist_gender = (protagonist_gender or "").strip().lower() or None
+        # young | adult | old: required like the gender (2026-11-04), since it
+        # decides which personas the protagonist can have.
+        self.protagonist_age = (protagonist_age or "").strip().lower() or None
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for state.json."""
@@ -53,7 +57,8 @@ class StoryFoundation:
             "themes": self.themes,
             "primary_goal": self.primary_goal,
             "protagonist_name": self.protagonist_name,
-            "protagonist_gender": self.protagonist_gender
+            "protagonist_gender": self.protagonist_gender,
+            "protagonist_age": self.protagonist_age
         }
     
     @classmethod
@@ -69,7 +74,8 @@ class StoryFoundation:
             primary_goal=data.get("primary_goal"),
             # Absent on foundations created before the field existed.
             protagonist_name=data.get("protagonist_name"),
-            protagonist_gender=data.get("protagonist_gender")
+            protagonist_gender=data.get("protagonist_gender"),
+            protagonist_age=data.get("protagonist_age")
         )
 
 
@@ -102,6 +108,10 @@ def prompt_for_foundation() -> tuple[StoryFoundation, Dict[str, Any]]:
     protagonist_gender = typer.prompt(
         "  Gender (male/female, required: recorded with the generated name)",
         type=click.Choice(["male", "female"], case_sensitive=False)
+    ).strip().lower()
+    protagonist_age = typer.prompt(
+        "  Age (young/adult/old, required: young is up to about 30, old over about 60)",
+        type=click.Choice(["young", "adult", "old"], case_sensitive=False)
     ).strip().lower()
     protagonist_archetype = typer.prompt(
         "  Archetype (personality/role, NOT the name)",
@@ -225,7 +235,7 @@ def prompt_for_foundation() -> tuple[StoryFoundation, Dict[str, Any]]:
     typer.echo(f"  Genre: {genre}")
     typer.echo(f"  Premise: {premise}")
     typer.echo(f"  Protagonist: {protagonist_name or '(name to be generated)'}"
-               f" ({protagonist_gender}) - {protagonist_archetype}")
+               f" ({protagonist_gender}, {protagonist_age}) - {protagonist_archetype}")
     typer.echo(f"  Setting: {setting}")
     typer.echo(f"  Tone: {tone}")
     if themes:
@@ -256,6 +266,7 @@ def prompt_for_foundation() -> tuple[StoryFoundation, Dict[str, Any]]:
         protagonist_archetype=protagonist_archetype,
         protagonist_name=protagonist_name,
         protagonist_gender=protagonist_gender,
+        protagonist_age=protagonist_age,
         setting=setting,
         tone=tone,
         themes=themes,
@@ -313,7 +324,8 @@ def load_foundation_from_file(file_path: Path) -> StoryFoundation:
         themes=themes,
         primary_goal=primary_goal,
         protagonist_name=data.get("protagonist_name"),
-        protagonist_gender=data.get("protagonist_gender")
+        protagonist_gender=data.get("protagonist_gender"),
+        protagonist_age=data.get("protagonist_age")
     )
 
 

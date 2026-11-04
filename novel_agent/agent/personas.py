@@ -33,13 +33,22 @@ def names():
     return list(table()["personas"])
 
 
-def persona_for(seed: str, character_id: str) -> str:
-    """The persona for a character: a fixed function of the novel and the id,
-    so it is the same every time it is asked and needs no stored randomness."""
+def fits(persona: str, age_group: str) -> bool:
+    """Whether a persona suits a character of this age group. A persona that
+    names its ages (the old-timer: old only) never goes to anyone else, nor to
+    a record whose age is not recorded."""
+    ages = (table()["personas"].get(persona) or {}).get("ages")
+    return not ages or (age_group or "") in ages
+
+
+def persona_for(seed: str, character_id: str, age_group: str = "") -> str:
+    """The persona for a character: a fixed function of the novel, the id and
+    the recorded age group, so it is the same every time it is asked and
+    needs no stored randomness."""
     if not character_id:
         raise ValueError("A persona is picked from the character's id; the id is empty.")
     digest = hashlib.sha256(f"{seed}:{character_id}".encode("utf-8")).digest()
-    keys = names()
+    keys = [k for k in names() if fits(k, age_group)]
     return keys[int.from_bytes(digest[:4], "big") % len(keys)]
 
 
