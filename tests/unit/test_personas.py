@@ -142,3 +142,15 @@ def test_a_protagonist_without_an_age_group_is_a_hard_failure(memory):
     with pytest.raises(ValueError, match="never guessed"):
         create_protagonist(memory, f, NameGenerator(NAMES))
     assert memory.list_characters() == []
+
+
+def test_the_planner_sees_the_allowed_age_groups(memory):
+    """The planner reads only the tools description; a live Opus plan passed
+    "middle-aged" when the values were not shown there (2026-11-04)."""
+    from novel_agent.tools.memory_tools import CharacterGenerateTool
+    from novel_agent.tools.registry import ToolRegistry
+    registry = ToolRegistry()
+    registry.register(CharacterGenerateTool(memory, None, None))
+    text = registry.get_tools_description()
+    assert "age_group (string: one of young | adult | old)" in text
+    assert "gender (string: one of male | female)" in text
