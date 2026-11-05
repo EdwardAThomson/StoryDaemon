@@ -1,6 +1,7 @@
 """Memory-related tools for the story agent."""
 
 import random
+import re
 from typing import Dict, List, Optional, Any
 from pathlib import Path
 from ..memory.manager import MemoryManager
@@ -126,6 +127,25 @@ class CharacterGenerateTool(Tool):
                         "from that people's own tongue."
                     ),
                     "optional": True
+                },
+                "kin_of": {
+                    "type": "string",
+                    "description": (
+                        "For a blood relative of an existing character (a brother, "
+                        "mother, son), that character's id, e.g. C000. The new "
+                        "character takes the same family name and the family "
+                        "relationship is recorded. Give kinship with it."
+                    ),
+                    "optional": True
+                },
+                "kinship": {
+                    "type": "string",
+                    "enum": list(KINSHIPS),
+                    "description": (
+                        "With kin_of: what the NEW character is to that one "
+                        "(sibling, parent or child)."
+                    ),
+                    "optional": True
                 }
             }
         )
@@ -152,7 +172,9 @@ class CharacterGenerateTool(Tool):
                 traits: Optional[List[str]] = None,
                 goals: Optional[List[str]] = None,
                 affiliation: Optional[str] = None,
-                age_group: Optional[str] = None) -> Dict[str, Any]:
+                age_group: Optional[str] = None,
+                kin_of: Optional[str] = None,
+                kinship: Optional[str] = None) -> Dict[str, Any]:
         """Create a new character.
 
         The canonical name is always system-generated. ``gender`` and ``title``
@@ -190,6 +212,14 @@ class CharacterGenerateTool(Tool):
         char_gender = require_gender(gender, "character.generate")
         char_age = require_age_group(age_group, "character.generate")
         require_consistent(description, char_gender, "The new character", "description")
+        # A blood relative shares the family name, and the link is recorded
+        # with real ids. Before this the planner wrote the brother as a
+        # stranger and then relationship.create(character_b="<brother_id>"),
+        # a placeholder no record answers to, so the siblings got unrelated
+        # surnames and a relationship to nobody (live Opus run, 2026-11-05).
+        kin = self._require_kin(kin_of, kinship)
+        if kin is not None:
+            metadata["kin"] = {"of": kin.id, "kinship": kinship.strip().lower()}
         if self.name_generator:
             # Passed only when given, so a generator without the keyword
             # (an older fake, a custom one) keeps working.
@@ -199,6 +229,18 @@ class CharacterGenerateTool(Tool):
             )
             first_name = name_result["first_name"]
             family_name = name_result["last_name"]
+            if kin is not None and kin.family_name:
+                family_name = kin.family_name
+                taken_names = {c.full_name.lower() for c in self._characters()}
+                for _ in range(20):  # a sibling never shares the whole name
+                    if f"{first_name} {family_name}".lower() not in taken_names:
+                        break
+                    first_name = self.name_generator.generate_name(
+                        gender=char_gender, genre=self.genre, **extra)["first_name"]
+                else:
+                    raise ValueError(
+                        f"No first name could be drawn for a relative of {kin.id} "
+                        "that is not already taken in the family.")
             char_gender = name_result.get("gender", char_gender) or char_gender
             gen_title = name_result.get("title", "") or (title or "")
             if name_result.get("people"):
@@ -308,6 +350,8 @@ class CharacterGenerateTool(Tool):
         
         # Save to disk
         self.memory_manager.save_character(character)
+        if kin is not None:
+            self._record_kinship(kin, character, kinship)
         
         # Index in vector store
         self.vector_store.index_character(character)
@@ -323,12 +367,68 @@ class CharacterGenerateTool(Tool):
             "gender": character.gender,
             "age_group": character.age_group,
         }
+        if kin is not None:
+            result["kin_of"] = kin.id
+            result["kinship"] = metadata["kin"]["kinship"]
         if foreign_names_left:
             result["note"] = (
                 "The description names people who do not exist in this story: "
                 + ", ".join(foreign_names_left)
                 + ". Only generated names exist; refer to characters by their ids.")
         return result
+
+
+    def _characters(self):
+        out = []
+        for cid in self.memory_manager.list_characters():
+            c = self.memory_manager.load_character(cid)
+            if c is not None:
+                out.append(c)
+        return out
+
+    def _require_kin(self, kin_of, kinship):
+        """The existing character a new relative belongs to, or None. A half
+        given link (one without the other, an id with no record, an unknown
+        kinship) is refused: kinship is a recorded fact, never guessed."""
+        kin_of = (kin_of or "").strip()
+        kinship = (kinship or "").strip().lower()
+        if not kin_of and not kinship:
+            return None
+        if not kin_of or not kinship:
+            raise ValueError("character.generate: kin_of and kinship go together; "
+                             "give both or neither.")
+        if kinship not in KINSHIPS:
+            raise ValueError(f"character.generate: kinship must be one of "
+                             f"{' | '.join(KINSHIPS)}, not {kinship!r}.")
+        kin = self.memory_manager.load_character(kin_of)
+        if kin is None:
+            raise ValueError(f"character.generate: kin_of {kin_of!r} is not an existing "
+                             "character id; a relative can only be made of someone "
+                             "who already has a record.")
+        return kin
+
+    def _record_kinship(self, kin, new, kinship):
+        """The family relationship, with both real ids, unless one exists."""
+        if self.memory_manager.get_relationship_between(kin.id, new.id):
+            return
+        kinship = kinship.strip().lower()
+        self.memory_manager.add_relationship(RelationshipGraph(
+            id=self.memory_manager.generate_id("relationship"),
+            character_a=kin.id,
+            character_b=new.id,
+            relationship_type=KINSHIP_LABELS[kinship],
+            perspective_a="",
+            perspective_b="",
+            status="family",
+            intensity=5,
+            metadata={"kinship": {"of": kin.id, "new": new.id, "new_is": kinship}},
+        ))
+
+
+# What a new character can be to an existing one. Each shares the family name.
+KINSHIPS = ("sibling", "parent", "child")
+KINSHIP_LABELS = {"sibling": "siblings", "parent": "parent and child",
+                  "child": "parent and child"}
 
 
 class LocationGenerateTool(Tool):
@@ -460,11 +560,11 @@ class RelationshipCreateTool(Tool):
             parameters={
                 "character_a": {
                     "type": "string",
-                    "description": "First character ID"
+                    "description": "First character's exact id (e.g. C000), an existing character"
                 },
                 "character_b": {
                     "type": "string",
-                    "description": "Second character ID"
+                    "description": "Second character's exact id, an existing character; a character created in this same plan has no id yet, so it cannot be named here"
                 },
                 "relationship_type": {
                     "type": "string",
@@ -509,6 +609,22 @@ class RelationshipCreateTool(Tool):
         Returns:
             Success status and relationship ID
         """
+        # Both ends must be real characters. Planners write placeholders for
+        # characters created in the same plan ("<brother_id>", "{captain_id}",
+        # "Yusuf"): seven runs out of thirty stored relationships to nobody
+        # (2026-11-05). Nothing is saved for an id with no record.
+        missing = [c for c in (character_a, character_b)
+                   if not re.fullmatch(r"C\d{3,}", str(c or ""))
+                   or self.memory_manager.load_character(str(c)) is None]
+        if missing:
+            return {
+                "success": False,
+                "error": (f"No character has the id {', '.join(map(repr, missing))}; "
+                          "nothing was recorded. Use the exact id of an existing "
+                          "character. For a relative, pass kin_of and kinship to "
+                          "character.generate instead."),
+            }
+
         # Check if relationship already exists
         existing = self.memory_manager.get_relationship_between(character_a, character_b)
         if existing:
