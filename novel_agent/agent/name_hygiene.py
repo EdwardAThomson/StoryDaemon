@@ -50,6 +50,8 @@ NOT_NAMES = {
     'Here', 'Only', 'Even', 'Perhaps', 'One', 'Two', 'Three', 'Four', 'Five',
     'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen',
     'Fourteen', 'Fifteen', 'Twenty', 'Thirty', 'Hundred', 'Thousand',
+    'First', 'Second', 'Third', 'Fourth', 'Fifth', 'Last', 'Next', 'Finally',
+    'Meanwhile', 'Later', 'Earlier', 'Also', 'However', 'Overall',
 }
 
 _WORD = r"[A-Z][a-z]+(?:[-'][A-Z]?[a-z]+)?"
@@ -94,9 +96,20 @@ def candidate_names(text: str) -> List[str]:
             c = _clean(m.group(m.lastindex))
             if c:
                 found.add(c)
+    starts = {m.start(1) for m in _SENTENCE_START_RE.finditer(text)}
+    mid_sentence = {m.group(1) for m in _TOKEN_RE.finditer(text) if m.start(1) not in starts}
     for rx in (_APPOSITIVE_RE, _SUBJECT_RE, _RELATIVE_RE):
         for m in rx.finditer(text):
             c = _clean(m.group(1))
+            # A lone word opening a sentence before "is"/"has" ("Supper is the
+            # quiet counterweight", a live Opus plan, 2026-11-05) is
+            # capitalised by position, not because it is a name: keep it only
+            # when the text also capitalises it mid-sentence. The appositive
+            # ("Yusuf, the quartermaster") and "who" stay strong signals;
+            # "First, the captain agrees" is stopped by NOT_NAMES instead.
+            if (c and rx is _SUBJECT_RE and " " not in c
+                    and m.start(1) in starts and c not in mid_sentence):
+                continue
             if c:
                 found.add(c)
     # "the Alcyone", "the Meridian's charts": a capitalised word after "the"

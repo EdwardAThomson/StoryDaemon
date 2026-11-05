@@ -230,3 +230,15 @@ def test_a_faction_name_involves_no_gender():
     gen = NameGenerator(Path("novel_agent/data/names"))
     name = gen.generate_surname("historical adventure")
     assert name and " " not in name
+
+
+def test_a_word_capitalised_only_by_opening_a_sentence_is_not_a_person():
+    """A live Opus plan (2026-11-05) failed its tick twice on 'First', 'Third'
+    and 'Supper', each capitalised only because it opened a sentence."""
+    assert candidate_names("First, the captain agrees to sail.") == []
+    assert candidate_names("Third, the face-down letter waits on the desk.") == []
+    assert candidate_names("Supper is the quiet counterweight to the deck scene.") == []
+    # a real person is still caught: named again, a 'who', or an appositive
+    assert candidate_names("Yusuf is wary. Later Yusuf warns her.") == ["Yusuf"]
+    assert candidate_names("She obtains the log from Yusuf, who warns her.") == ["Yusuf"]
+    assert "Yusuf" in candidate_names("Ada meets Yusuf, the quartermaster, at dawn.")
