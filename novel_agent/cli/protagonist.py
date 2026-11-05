@@ -116,7 +116,9 @@ def create_protagonist(memory, foundation, name_generator=None, gender=None, age
         family_name=family,
         gender=gender,
         age_group=age_group,
-        persona=persona_for(memory.project_path.name, char_id, age_group),
+        persona=persona_for(memory.project_path.name, char_id, age_group,
+                            [c.persona for c in map(memory.load_character, memory.list_characters())
+                             if c is not None and c.persona]),
         role="protagonist",
         description=description or f"{first} {family}".strip(),
         metadata=metadata,

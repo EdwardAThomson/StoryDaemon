@@ -49,7 +49,7 @@ def test_a_generated_character_is_given_its_persona(memory):
     tool = CharacterGenerateTool(memory, Vec(), NameGenerator(NAMES), genre="historical")
     out = tool.execute(role="minor", description="a quartermaster", gender="male", age_group="adult")
     c = memory.load_character(out["character_id"])
-    assert c.persona == personas.persona_for(memory.project_path.name, c.id)
+    assert c.persona == personas.persona_for(memory.project_path.name, c.id, "adult")
 
 
 def test_the_protagonist_is_given_its_persona(memory):
@@ -61,7 +61,7 @@ def test_the_protagonist_is_given_its_persona(memory):
                         tone="t", protagonist_gender="female", protagonist_age="young")
     cid = create_protagonist(memory, f, NameGenerator(NAMES))
     c = memory.load_character(cid)
-    assert c.persona == personas.persona_for(memory.project_path.name, cid)
+    assert c.persona == personas.persona_for(memory.project_path.name, cid, "young")
 
 
 def _cast(memory):
@@ -154,3 +154,33 @@ def test_the_planner_sees_the_allowed_age_groups(memory):
     text = registry.get_tools_description()
     assert "age_group (string: one of young | adult | old)" in text
     assert "gender (string: one of male | female)" in text
+
+
+def test_a_persona_the_cast_lacks_is_preferred_while_one_fits():
+    keys = set(personas.names()) - {"oldtimer"}
+    for i in range(30):
+        taken = []
+        for n in range(4):  # four adults take the four adult personas, no repeats
+            taken.append(personas.persona_for(f"novel_{i}", f"C{n:03d}", "adult", taken))
+        assert set(taken) == keys
+        # a fifth adult must repeat one, and still gets a fitting persona
+        assert personas.persona_for(f"novel_{i}", "C004", "adult", taken) in keys
+
+
+def test_a_new_character_avoids_the_casts_personas(memory):
+    from novel_agent.tools.memory_tools import CharacterGenerateTool
+    from novel_agent.tools.name_generator import NameGenerator
+
+    class Vec:
+        def index_character(self, c):
+            pass
+
+    tool = CharacterGenerateTool(memory, Vec(), NameGenerator(NAMES), genre="historical")
+    got = [memory.load_character(tool.execute(role="minor", description="a sailor",
+                                              gender="male", age_group="adult")["character_id"]).persona
+           for _ in range(4)]
+    assert len(set(got)) == 4
+
+
+def test_the_writer_is_told_a_persona_is_not_every_line():
+    assert "a worrier does not ask a question in every line" in personas.VOICE_RULES

@@ -41,15 +41,23 @@ def fits(persona: str, age_group: str) -> bool:
     return not ages or (age_group or "") in ages
 
 
-def persona_for(seed: str, character_id: str, age_group: str = "") -> str:
-    """The persona for a character: a fixed function of the novel, the id and
-    the recorded age group, so it is the same every time it is asked and
-    needs no stored randomness."""
+def persona_for(seed: str, character_id: str, age_group: str = "", taken=()) -> str:
+    """The persona for a character: a fixed function of the novel, the id, the
+    recorded age group and the personas the cast already has, so it is the
+    same every time it is asked and needs no stored randomness.
+
+    ``taken`` is the personas of the characters created before this one. A
+    persona nobody has yet is preferred while one fits, because two
+    characters with one persona speak with one voice (two grumblers in the
+    first persona run, 2026-11-05, both blamed bad workmanship); once every
+    fitting persona is in use, any of them can be given again."""
     if not character_id:
         raise ValueError("A persona is picked from the character's id; the id is empty.")
     digest = hashlib.sha256(f"{seed}:{character_id}".encode("utf-8")).digest()
     keys = [k for k in names() if fits(k, age_group)]
-    return keys[int.from_bytes(digest[:4], "big") % len(keys)]
+    free = [k for k in keys if k not in set(taken or ())]
+    pool = free or keys
+    return pool[int.from_bytes(digest[:4], "big") % len(pool)]
 
 
 def label(persona: str) -> str:
@@ -77,8 +85,9 @@ VOICE_RULES = (
     "they treat the others, so their lines could not be swapped. Show it through "
     "the substance of what they say, in ordinary English: never through misspelt "
     "or dialect words, a catchphrase, or the same complaint or worry in every "
-    "line. Let it colour some lines, not all of them; the scene's business comes "
-    "first."
+    "line. A persona shows in some of a character's lines, not in every one: a "
+    "worrier does not ask a question in every line, nor a grumbler complain in "
+    "every line, and most lines simply get on with the scene's business."
 )
 
 

@@ -282,7 +282,13 @@ class CharacterGenerateTool(Tool):
         # Generate ID for new character
         character_id = self.memory_manager.generate_id("character")
         from novel_agent.agent.personas import persona_for
-        persona = persona_for(self.memory_manager.project_path.name, character_id, char_age)
+        taken = []
+        for cid in self.memory_manager.list_characters():
+            other = self.memory_manager.load_character(cid)
+            if other is not None and other.id != character_id and other.persona:
+                taken.append(other.persona)
+        persona = persona_for(self.memory_manager.project_path.name, character_id, char_age,
+                              taken)
         
         # Create character entity
         character = Character(

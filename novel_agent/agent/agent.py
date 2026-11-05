@@ -222,11 +222,14 @@ class StoryAgent:
             return
         from .personas import persona_for
         seed = self.memory.project_path.name
-        for cid in self.memory.list_characters():
-            c = self.memory.load_character(cid)
-            if not c or c.persona:
+        cast = [self.memory.load_character(cid) for cid in sorted(self.memory.list_characters())]
+        cast = [c for c in cast if c is not None]
+        taken = [c.persona for c in cast if c.persona]
+        for c in cast:
+            if c.persona:
                 continue
-            c.persona = persona_for(seed, cid, c.age_group)
+            c.persona = persona_for(seed, c.id, c.age_group, taken)
+            taken.append(c.persona)
             c.metadata = dict(c.metadata or {})
             c.metadata["persona_source"] = "backfill"
             self.memory.save_character(c)
