@@ -680,7 +680,7 @@ You can use the following tools to gather information or create entities:
 Create a detailed plan for executing the scene intention. Consider:
 1. Which open loops should be addressed or developed?
 2. What information do you need to write this scene effectively?
-3. Should new characters or locations be introduced?
+3. Should new characters or locations be introduced? Every person the scene intention names who is not in the character list above must be created in this plan with character.generate, giving gender (exactly 'male' or 'female') and age_group (exactly 'young', 'adult' or 'old'); the tick fails if the plan names someone with no record. A blood relative of an existing character (a brother, a mother, a son) is created with kin_of (that character's id) and kinship ('sibling', 'parent' or 'child'), which gives the family name and records the relationship; never link a character created in this plan with relationship.create, since it has no id yet. Any minor person the scene will need who speaks, is addressed or is named (a leadsman, a clerk) and is not in the character list comes from character.walk_on (role, gender, age_group); a walk-on already in the character list is used as it is, never made again.
 4. How should relationships evolve?
 5. What is concretely different when the scene ends? Name one event: something done, decided, lost, refused, or discovered and acted on. A question left hanging is not a key change; a scene that only notices something has none.
 

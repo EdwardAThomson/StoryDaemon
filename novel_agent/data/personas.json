@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "source": "Voxelholm townsfolk personas draft (EdwardAThomson/voxelholm PR #214, docs/personas.md): five personas, one manner each.",
+  "manners": {
+    "plain": "direct and unceremonious: no flourishes, few courtesies",
+    "warm": "friendly and familiar: easy with people, quick to draw them in",
+    "proper": "courteous and formal: careful forms of address, measured sentences"
+  },
+  "personas": {
+    "grumbler": {
+      "manner": "plain",
+      "notices": "what is wrong, late, badly done or unfair, and who is to blame",
+      "with_others": "expects little of them and says so; grudging thanks"
+    },
+    "worrier": {
+      "manner": "plain",
+      "notices": "risks, what could go wrong, what has not been checked",
+      "with_others": "asks whether they are sure; seeks reassurance and doubts it"
+    },
+    "gossip": {
+      "manner": "warm",
+      "notices": "other people: who said what, who is seeing whom, the latest news",
+      "with_others": "draws them in, trades what they know for what they have heard"
+    },
+    "dreamer": {
+      "manner": "warm",
+      "notices": "beauty, distance, what lies beyond, what might be one day",
+      "with_others": "gentle and a little absent; drifts from the business at hand"
+    },
+    "oldtimer": {
+      "label": "old-timer",
+      "manner": "proper",
+      "notices": "how things used to be done and what has changed since",
+      "with_others": "courteous, unhurried, measures the present against long memory",
+      "ages": [
+        "old"
+      ]
+    }
+  },
+  "ages_note": "A persona with 'ages' is given only to a character of those age groups; one without fits any age. A record with no age group gets only personas that fit any age."
+}

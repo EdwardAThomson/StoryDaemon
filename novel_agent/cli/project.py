@@ -22,6 +22,8 @@ def create_novel_project(
     llm_model: Optional[str] = None,
     plot_config: Optional[Dict[str, Any]] = None,
     name_banks: Optional[Dict[str, Any]] = None,
+    protagonist_gender: Optional[str] = None,
+    protagonist_age: Optional[str] = None,
 ) -> str:
     """Create a new novel project directory structure.
     
@@ -33,6 +35,12 @@ def create_novel_project(
         llm_model: Optional LLM model override to store in project config
         plot_config: Optional plot-first mode configuration
         name_banks: Optional names.* overrides (e.g. from --name-bank)
+        protagonist_gender: The protagonist's gender (male | female) when the
+            foundation does not carry one (e.g. from --protagonist-gender).
+            Required one way or the other: creation fails before anything is
+            written when neither states it, or when they disagree.
+        protagonist_age: The protagonist's age group (young | adult | old),
+            on the same terms as the gender (e.g. from --protagonist-age).
         
     Returns:
         Path to created project directory
@@ -41,6 +49,28 @@ def create_novel_project(
         ValueError: If project already exists
         IOError: If directories cannot be created
     """
+    # The protagonist's gender is settled before anything touches the disk:
+    # a project that cannot mint its protagonist must fail whole, not leave a
+    # half-created directory behind.
+    from ..agent.name_hygiene import require_gender
+    stated = getattr(foundation, "protagonist_gender", None) if foundation is not None else None
+    if protagonist_gender and stated and protagonist_gender.strip().lower() != stated:
+        raise ValueError(
+            f"The protagonist's gender is given twice and disagrees: "
+            f"{protagonist_gender!r} on the command line, {stated!r} in the foundation.")
+    protagonist_gender = require_gender(protagonist_gender or stated, "the protagonist")
+    if foundation is not None:
+        foundation.protagonist_gender = protagonist_gender
+    from ..agent.name_hygiene import require_age_group
+    stated_age = getattr(foundation, "protagonist_age", None) if foundation is not None else None
+    if protagonist_age and stated_age and protagonist_age.strip().lower() != stated_age:
+        raise ValueError(
+            f"The protagonist's age group is given twice and disagrees: "
+            f"{protagonist_age!r} on the command line, {stated_age!r} in the foundation.")
+    protagonist_age = require_age_group(protagonist_age or stated_age, "the protagonist")
+    if foundation is not None:
+        foundation.protagonist_age = protagonist_age
+
     config = Config()
     
     if base_dir is None:
@@ -121,7 +151,9 @@ def create_novel_project(
         # Unconditional: a project without a protagonist cannot write a scene,
         # and the writer now raises rather than substituting a phantom. With no
         # foundation to read a name from, one is minted.
-        _create_protagonist(project_dir, foundation, initial_state, names_config)
+        _create_protagonist(project_dir, foundation, initial_state, names_config,
+                            protagonist_gender, protagonist_age)
+        _warn_about_names_in_foundation(project_dir, foundation)
 
         write_json(os.path.join(project_dir, 'state.json'), initial_state)
         
@@ -216,7 +248,9 @@ Created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
 
 def _create_protagonist(project_dir, foundation, initial_state,
-                        names_config: Optional[Dict[str, Any]] = None) -> None:
+                        names_config: Optional[Dict[str, Any]] = None,
+                        protagonist_gender: Optional[str] = None,
+                        protagonist_age: Optional[str] = None) -> None:
     """Create the protagonist entity and make it the active character.
 
     Never silently skipped: a project whose foundation names no protagonist and
@@ -239,8 +273,49 @@ def _create_protagonist(project_dir, foundation, initial_state,
         title_bank=settings.get("title_bank"),
         register=settings.get("register"),
     ) if data_dir.exists() else None
-    char_id = create_protagonist(memory, foundation, generator)
+    char_id = create_protagonist(memory, foundation, generator, gender=protagonist_gender,
+                                 age_group=protagonist_age)
     initial_state['active_character'] = char_id
+
+
+def _warn_about_names_in_foundation(project_dir, foundation) -> None:
+    """Say so when the premise, archetype or setting names people.
+
+    Names in a novel come from the generator. A name written into the
+    foundation's prose reaches the planner and the writer verbatim and ends up
+    in the prose beside the minted cast (one run used a premise's "Yusuf" 128
+    times for a character the generator had called Richard Huntington). This
+    only warns: the foundation is the author's text and is never rewritten.
+    Never raises.
+    """
+    import logging
+    try:
+        from ..agent.name_hygiene import foreign_names
+        from ..memory.manager import MemoryManager
+        from pathlib import Path
+        if foundation is None:
+            return
+        text = " ".join(
+            (getattr(foundation, k, "") or "")
+            for k in ("premise", "protagonist_archetype", "setting"))
+        memory = MemoryManager(Path(project_dir))
+        known = [getattr(foundation, "protagonist_name", "") or ""]
+        for cid in memory.list_characters():
+            c = memory.load_character(cid)
+            if c:
+                known.append(c.full_name)
+        names = foreign_names(text, known)
+        if names:
+            msg = (
+                "The story foundation names people the generator did not mint: "
+                + ", ".join(names)
+                + ". Names come from the generator; describe people by role in the "
+                "premise, archetype and setting, or set protagonist_name for the "
+                "protagonist. These names will otherwise reach the prose.")
+            logging.getLogger(__name__).warning(msg)
+            print(f"⚠️  {msg}")
+    except Exception as e:  # a hygiene warning must never stop project creation
+        logging.getLogger(__name__).debug("Foundation name check skipped: %s", e)
 
 
 def find_project_dir(start_dir: Optional[str] = None) -> str:

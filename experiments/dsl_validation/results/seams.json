@@ -387,6 +387,403 @@
   "true_join_after": null
  },
  {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S000",
+  "kind": "seam",
+  "boundary": 11,
+  "true_join_after": 4
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S000",
+  "kind": "control",
+  "boundary": 11,
+  "true_join_after": null,
+  "continuity": 4,
+  "join_detected": false,
+  "after_paragraph": null,
+  "evidence": "Setting, characters, tone and the dialogue about stakes, soundings and wet boots flow consistently from start to end, with no contradictions in detail or shifts in voice or tense."
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S000",
+  "kind": "seam",
+  "boundary": 21,
+  "true_join_after": 8
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S000",
+  "kind": "control",
+  "boundary": 21,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S000",
+  "kind": "seam",
+  "boundary": 31,
+  "true_join_after": 3,
+  "continuity": 2,
+  "join_detected": true,
+  "after_paragraph": 2,
+  "evidence": "Paragraph 2 says the pencil is absent and Walter has the notebook aboard, then paragraph 3 abruptly lifts the coil (set down in paragraph 1 and never mentioned as picked up) as if in a new beginning, and later the line, the coil, and the boat tether are handled inconsistently (the coil is both lifted and left at the boat, the line runs from boat to shore yet he 'hooks weed with the sounding line' and later 'gathers the coil at his feet'), while paragraph 2's rhythm is a long interior block unlike the briefer action beats around it."
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S000",
+  "kind": "control",
+  "boundary": 31,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S000",
+  "kind": "seam",
+  "boundary": 41,
+  "true_join_after": 6
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S000",
+  "kind": "control",
+  "boundary": 41,
+  "true_join_after": null,
+  "continuity": 3,
+  "join_detected": true,
+  "after_paragraph": 4,
+  "evidence": "Paragraph 5 restarts with a fresh scene-setting description of the workroom as though newly introduced, even though paragraphs 1-4 already had the clerk, surveyor, lamp, and rain in it, and it repeats the rain-on-window motif; the surveyor is also re-described in paragraph 7 as if first met, though he has been speaking and working since paragraph 1."
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S001",
+  "kind": "seam",
+  "boundary": 11,
+  "true_join_after": 9
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S001",
+  "kind": "control",
+  "boundary": 11,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S001",
+  "kind": "seam",
+  "boundary": 21,
+  "true_join_after": 4
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S001",
+  "kind": "control",
+  "boundary": 21,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S001",
+  "kind": "seam",
+  "boundary": 31,
+  "true_join_after": 6
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S001",
+  "kind": "control",
+  "boundary": 31,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S001",
+  "kind": "seam",
+  "boundary": 41,
+  "true_join_after": 8,
+  "continuity": 2,
+  "join_detected": true,
+  "after_paragraph": 8,
+  "evidence": "Paragraph 8 has Nicholas writing the entry while Walter blotted and Faustus latched the case, but paragraph 9 'He sanded the ink and left the page open beneath the lamp' restarts the action, and paragraphs 10-14 then repeat the closing of the log, the loose copy kept with it, and the lamp, with Elena's end-of-scene return plan restating earlier points."
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S001",
+  "kind": "control",
+  "boundary": 41,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S001",
+  "kind": "seam",
+  "boundary": 51,
+  "true_join_after": 7
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S001",
+  "kind": "control",
+  "boundary": 51,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S002",
+  "kind": "seam",
+  "boundary": 11,
+  "true_join_after": 6
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S002",
+  "kind": "control",
+  "boundary": 11,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S002",
+  "kind": "seam",
+  "boundary": 21,
+  "true_join_after": 6,
+  "continuity": 2,
+  "join_detected": true,
+  "after_paragraph": 8,
+  "evidence": "Paragraphs 1-8 are concrete scene action in a dialogue-driven mode, while paragraphs 9-10 shift to abstract, essayistic commentary on measurement and survey marks (with a generic 'Temporary survey marks...' statement), and paragraph 11-12 reuse and restate the stake/cord/chalk details in a way that reads like a different drafting pass (e.g., 'circle' and 'broken circle' appear without prior introduction)."
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S002",
+  "kind": "control",
+  "boundary": 21,
+  "true_join_after": null,
+  "continuity": 4,
+  "join_detected": false,
+  "after_paragraph": null,
+  "evidence": "The passage keeps one consistent voice, tense, and set of characters, and the details carry through (1889 survey, 1897 notebook, Ulmabbey/Ullenby, the request wording), with no repeated or contradicted facts and no reset in rhythm."
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S002",
+  "kind": "seam",
+  "boundary": 31,
+  "true_join_after": 6,
+  "continuity": 4,
+  "join_detected": false,
+  "after_paragraph": null,
+  "evidence": "The passage keeps the same characters, procedure, vocabulary (stations, cross marks, boxed center and bearing, spoiled station) and measured tone throughout, and every later detail follows from earlier ones with no contradictions or resets."
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S002",
+  "kind": "control",
+  "boundary": 31,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S002",
+  "kind": "seam",
+  "boundary": 41,
+  "true_join_after": 2,
+  "continuity": 2,
+  "join_detected": true,
+  "after_paragraph": 2,
+  "evidence": "Paragraph 2 ends with Nicholas still waiting for the light and unsure of the faint groove, but paragraph 3 abruptly introduces a lichen edge lifting and a clearly disclosed second curve, and the style shifts from dense introspection to short procedural sentences, with paragraph 5 then repeating the discovery as an announcement."
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S002",
+  "kind": "control",
+  "boundary": 41,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S003",
+  "kind": "seam",
+  "boundary": 11,
+  "true_join_after": 3
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S003",
+  "kind": "control",
+  "boundary": 11,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S003",
+  "kind": "seam",
+  "boundary": 21,
+  "true_join_after": 6
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S003",
+  "kind": "control",
+  "boundary": 21,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S003",
+  "kind": "seam",
+  "boundary": 31,
+  "true_join_after": 5
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S003",
+  "kind": "control",
+  "boundary": 31,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S003",
+  "kind": "seam",
+  "boundary": 41,
+  "true_join_after": 11
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S003",
+  "kind": "control",
+  "boundary": 41,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S004",
+  "kind": "seam",
+  "boundary": 11,
+  "true_join_after": 11,
+  "continuity": 2,
+  "join_detected": true,
+  "after_paragraph": 9,
+  "evidence": "Paragraphs 2-9 are repetitive and contradictory (Walter speaks twice in a row, Nicholas places the notebook \"beyond his elbow, within reach\" despite Walter saying it stays at the far edge, then repeats his statement in 11), while paragraph 12 onward shifts to a more narrative, lyrical style, with Elena's notebook suddenly open and a new discovery."
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S004",
+  "kind": "control",
+  "boundary": 11,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S004",
+  "kind": "seam",
+  "boundary": 21,
+  "true_join_after": 13
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S004",
+  "kind": "control",
+  "boundary": 21,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S004",
+  "kind": "seam",
+  "boundary": 31,
+  "true_join_after": 9,
+  "continuity": 3,
+  "join_detected": true,
+  "after_paragraph": 9,
+  "evidence": "Paragraphs 1-9 form a tight, clipped, dialogue-driven exchange about the hidden leaf, while paragraph 10 brings in Yusuf and the lost Meridian expedition with a new thread of danger, and paragraphs 13-15 shift into a more lyrical register and attribute to Nicholas an eastward compass reading and a first dot not previously set up."
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S004",
+  "kind": "control",
+  "boundary": 31,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S004",
+  "kind": "seam",
+  "boundary": 41,
+  "true_join_after": 5
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S004",
+  "kind": "control",
+  "boundary": 41,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S004",
+  "kind": "seam",
+  "boundary": 51,
+  "true_join_after": 11
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S005",
+  "kind": "seam",
+  "boundary": 11,
+  "true_join_after": 4
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S005",
+  "kind": "control",
+  "boundary": 11,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S005",
+  "kind": "seam",
+  "boundary": 21,
+  "true_join_after": 10
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S005",
+  "kind": "control",
+  "boundary": 21,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S005",
+  "kind": "seam",
+  "boundary": 31,
+  "true_join_after": 6
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S005",
+  "kind": "control",
+  "boundary": 31,
+  "true_join_after": null
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S005",
+  "kind": "seam",
+  "boundary": 41,
+  "true_join_after": 8
+ },
+ {
+  "cell": "e2-luna-alcyone-sectev2",
+  "scene": "S005",
+  "kind": "control",
+  "boundary": 41,
+  "true_join_after": null
+ },
+ {
   "cell": "e2-luna-alcyone-sectev",
   "scene": "S000",
   "kind": "seam",

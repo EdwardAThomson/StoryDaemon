@@ -43,6 +43,7 @@ from ..tools.registry import ToolRegistry
 from ..tools.memory_tools import (
     MemorySearchTool,
     CharacterGenerateTool,
+    WalkOnTool,
     LocationGenerateTool,
     RelationshipCreateTool,
     RelationshipUpdateTool,
@@ -419,6 +420,24 @@ def new(
         "--protagonist",
         help="Protagonist archetype (personality/role)"
     ),
+    protagonist_gender: Optional[str] = typer.Option(
+        None,
+        "--protagonist-gender",
+        help=(
+            "Protagonist's gender (male or female), recorded with the generated "
+            "name. Required unless the foundation file sets protagonist_gender: "
+            "it is never guessed or drawn at random."
+        )
+    ),
+    protagonist_age: Optional[str] = typer.Option(
+        None,
+        "--protagonist-age",
+        help=(
+            "Protagonist's age group: young (up to about 30), adult or old (over "
+            "about 60). Required unless the foundation file sets protagonist_age; "
+            "it decides which personas fit and is never guessed."
+        )
+    ),
     setting: Optional[str] = typer.Option(
         None,
         "--setting",
@@ -576,6 +595,8 @@ def new(
             llm_model=llm_model_override,
             plot_config=plot_config,
             name_banks=name_banks,
+            protagonist_gender=protagonist_gender,
+            protagonist_age=protagonist_age,
         )
         typer.echo(f"✅ Created novel project: {project_dir}")
 
@@ -738,7 +759,9 @@ def tick(
 
         tool_registry.register(name_gen_tool)
         tool_registry.register(MemorySearchTool(memory_manager, vector_store))
-        tool_registry.register(CharacterGenerateTool(memory_manager, vector_store, name_gen_tool.generator, beat_mode=beat_mode, genre=genre))
+        character_tool = CharacterGenerateTool(memory_manager, vector_store, name_gen_tool.generator, beat_mode=beat_mode, genre=genre)
+        tool_registry.register(character_tool)
+        tool_registry.register(WalkOnTool(character_tool))
         tool_registry.register(LocationGenerateTool(memory_manager, vector_store, name_gen_tool.generator, genre=genre))
         tool_registry.register(RelationshipCreateTool(memory_manager))
         tool_registry.register(RelationshipUpdateTool(memory_manager))
@@ -951,7 +974,9 @@ def run(
 
                     tool_registry.register(name_gen_tool)
                     tool_registry.register(MemorySearchTool(memory_manager, vector_store))
-                    tool_registry.register(CharacterGenerateTool(memory_manager, vector_store, name_gen_tool.generator, beat_mode=beat_mode, genre=genre))
+                    character_tool = CharacterGenerateTool(memory_manager, vector_store, name_gen_tool.generator, beat_mode=beat_mode, genre=genre)
+                    tool_registry.register(character_tool)
+                    tool_registry.register(WalkOnTool(character_tool))
                     tool_registry.register(LocationGenerateTool(memory_manager, vector_store, name_gen_tool.generator, genre=genre))
                     tool_registry.register(RelationshipCreateTool(memory_manager))
                     tool_registry.register(RelationshipUpdateTool(memory_manager))

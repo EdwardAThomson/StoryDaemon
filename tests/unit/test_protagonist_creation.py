@@ -20,17 +20,20 @@ from novel_agent.memory.manager import MemoryManager
 
 
 class Foundation:
-    def __init__(self, archetype, name=None, genre="historical adventure"):
+    def __init__(self, archetype, name=None, genre="historical adventure", gender="female", age="adult"):
         self.protagonist_archetype = archetype
         self.protagonist_name = name
         self.genre = genre
+        self.protagonist_gender = gender
+        self.protagonist_age = age
 
 
 class Gen:
     def __init__(self, first="Rell", last="Tavish"):
         self.first, self.last, self.registered = first, last, None
 
-    def generate_name(self, genre="scifi"):
+    def generate_name(self, gender="male", genre="scifi"):
+        self.gender = gender
         return {"first_name": self.first, "last_name": self.last}
 
     def register_used_name(self, name):

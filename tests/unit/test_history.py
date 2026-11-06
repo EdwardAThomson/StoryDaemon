@@ -51,6 +51,8 @@ def _stub_agent(project_dir, normal_tick, config=None):
     )
     agent._normal_tick = normal_tick
     agent._first_tick = normal_tick
+    agent._backfill_character_genders = lambda: None  # no cast in these stubs
+    agent._backfill_character_personas = lambda: None
     agent._record_history = types.MethodType(StoryAgent._record_history, agent)
     return agent
 
@@ -235,7 +237,7 @@ def test_recent_lists_newest_first(tmp_path):
 
 def test_new_project_is_a_repository(tmp_path):
     from novel_agent.cli.project import create_novel_project
-    project_dir = Path(create_novel_project("history-test", str(tmp_path)))
+    project_dir = Path(create_novel_project("history-test", str(tmp_path), protagonist_gender="male", protagonist_age="adult"))
     assert history.has_repo(project_dir)
     assert _log(project_dir) == [["novel created", "StoryDaemon"]]
 

@@ -67,6 +67,11 @@ class ToolRegistry:
                 param_parts = []
                 for param_name, param_spec in tool.parameters.items():
                     param_type = param_spec.get("type", "any")
+                    if param_spec.get("enum"):
+                        # The allowed values must be visible: the planner sees
+                        # only this line, and a free-text answer to an enum
+                        # ("middle-aged" for young|adult|old) fails the tool.
+                        param_type += ": one of " + " | ".join(str(v) for v in param_spec["enum"])
                     is_optional = param_spec.get("optional", False)
                     optional_marker = " (optional)" if is_optional else ""
                     param_parts.append(f"{param_name} ({param_type}){optional_marker}")
