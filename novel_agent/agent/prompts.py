@@ -139,7 +139,7 @@ Then emit the JSON object below:
 
 - Keep actions focused (2-4 tools maximum per plan)
 - Use memory.search to recall relevant context
-- Use character.generate to create characters - names will be auto-generated uniquely; always pass gender ('male' or 'female') and age_group ('young', 'adult' or 'old'), and create every person the scene names who is not already a character; for a blood relative of an existing character pass kin_of (that id) and kinship ('sibling', 'parent' or 'child')
+- Use character.generate to create characters - names will be auto-generated uniquely; always pass gender ('male' or 'female') and age_group ('young', 'adult' or 'old'), and create every person the scene names who is not already a character; for a blood relative of an existing character pass kin_of (that id) and kinship ('sibling', 'parent' or 'child'); for a minor person the scene needs (a leadsman, a clerk) who speaks or is named, call character.walk_on (role, gender, age_group)
 - Use location.generate to create locations as needed
 - Use relationship.create when characters first interact significantly
 - Use relationship.update to track relationship changes
@@ -393,7 +393,7 @@ Existing characters — refer to them by these exact names; never rename them:
 {existing_characters}
 
 NAMING RULE — you must never invent a character name:
-- Incidental walk-ons (a guard, a clerk, a passerby) should stay unnamed — refer to them by role.
+- A walk-on in the list above (a leadsman, a clerk) goes by exactly that name. Any other incidental person (a guard, a passerby) stays unnamed: refer to them by role, and never give them a name, a surname or a "Mr" of your own.
 - If a NEW character genuinely needs a name for dialogue or continuity, use one of these pre-approved names (top of list first), not one you make up:
 {approved_new_names}
 

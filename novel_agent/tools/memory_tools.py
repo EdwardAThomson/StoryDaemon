@@ -425,6 +425,77 @@ class CharacterGenerateTool(Tool):
         ))
 
 
+class WalkOnTool(Tool):
+    """A walk-on: a minor person the scene needs (a leadsman, a clerk), with a
+    name minted in Python and a record on disk, so the prose never has to
+    invent one. A live Opus run (2026-11-06) named three walk-ons the
+    generator never minted ("Mr Harker's at his figures"). One person per
+    role: asking again for a role the story already has returns that person,
+    so the same leadsman comes back in every scene."""
+
+    def __init__(self, character_tool: "CharacterGenerateTool"):
+        super().__init__(
+            name="character.walk_on",
+            description=(
+                "Get a walk-on for this scene: a minor person who speaks, is "
+                "addressed or is named (a leadsman, a clerk, a guard). The name "
+                "is generated and the person is saved. A role the story already "
+                "has returns that same person, so call it again whenever that "
+                "role appears."
+            ),
+            parameters={
+                "role": {
+                    "type": "string",
+                    "description": "The walk-on's job or place in the scene, e.g. 'leadsman', 'master's mate', 'harbour clerk'",
+                },
+                "gender": {
+                    "type": "string",
+                    "enum": ["male", "female"],
+                    "description": "REQUIRED. Recorded with the generated name.",
+                },
+                "age_group": {
+                    "type": "string",
+                    "enum": ["young", "adult", "old"],
+                    "description": "REQUIRED. young (up to about 30), adult (about 30 to 60) or old (over about 60).",
+                },
+            },
+        )
+        self.character_tool = character_tool
+        self.memory_manager = character_tool.memory_manager
+
+    @staticmethod
+    def _role_key(role: str) -> str:
+        key = re.sub(r"[^a-z' ]+", " ", (role or "").lower())
+        key = re.sub(r"^(?:the|a|an)\s+", "", key.strip())
+        return re.sub(r"\s+", " ", key).strip()
+
+    def execute(self, role: str, gender: Optional[str] = None,
+                age_group: Optional[str] = None) -> Dict[str, Any]:
+        from novel_agent.agent.name_hygiene import require_age_group, require_gender
+        key = self._role_key(role)
+        if not key:
+            raise ValueError("character.walk_on: a walk-on needs a role, e.g. 'leadsman'.")
+        for cid in sorted(self.memory_manager.list_characters()):
+            c = self.memory_manager.load_character(cid)
+            if c and (c.metadata or {}).get("walk_on") and self._role_key(c.role) == key:
+                return {"success": True, "character_id": c.id, "name": c.full_name,
+                        "gender": c.gender, "age_group": c.age_group, "role": c.role,
+                        "existing": True}
+        # A walk-on's facts are required exactly like any character's.
+        require_gender(gender, "character.walk_on")
+        require_age_group(age_group, "character.walk_on")
+        out = self.character_tool.execute(
+            role=role.strip(), description=f"A walk-on: the {key}.",
+            gender=gender, age_group=age_group)
+        c = self.memory_manager.load_character(out["character_id"])
+        if c is not None and not out.get("duplicate"):
+            c.metadata = dict(c.metadata or {}, walk_on=True)
+            self.memory_manager.save_character(c)
+        out["role"] = role.strip()
+        out["existing"] = False
+        return out
+
+
 # What a new character can be to an existing one. Each shares the family name.
 KINSHIPS = ("sibling", "parent", "child")
 KINSHIP_LABELS = {"sibling": "siblings", "parent": "parent and child",

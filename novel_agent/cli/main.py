@@ -43,6 +43,7 @@ from ..tools.registry import ToolRegistry
 from ..tools.memory_tools import (
     MemorySearchTool,
     CharacterGenerateTool,
+    WalkOnTool,
     LocationGenerateTool,
     RelationshipCreateTool,
     RelationshipUpdateTool,
@@ -758,7 +759,9 @@ def tick(
 
         tool_registry.register(name_gen_tool)
         tool_registry.register(MemorySearchTool(memory_manager, vector_store))
-        tool_registry.register(CharacterGenerateTool(memory_manager, vector_store, name_gen_tool.generator, beat_mode=beat_mode, genre=genre))
+        character_tool = CharacterGenerateTool(memory_manager, vector_store, name_gen_tool.generator, beat_mode=beat_mode, genre=genre)
+        tool_registry.register(character_tool)
+        tool_registry.register(WalkOnTool(character_tool))
         tool_registry.register(LocationGenerateTool(memory_manager, vector_store, name_gen_tool.generator, genre=genre))
         tool_registry.register(RelationshipCreateTool(memory_manager))
         tool_registry.register(RelationshipUpdateTool(memory_manager))
@@ -971,7 +974,9 @@ def run(
 
                     tool_registry.register(name_gen_tool)
                     tool_registry.register(MemorySearchTool(memory_manager, vector_store))
-                    tool_registry.register(CharacterGenerateTool(memory_manager, vector_store, name_gen_tool.generator, beat_mode=beat_mode, genre=genre))
+                    character_tool = CharacterGenerateTool(memory_manager, vector_store, name_gen_tool.generator, beat_mode=beat_mode, genre=genre)
+                    tool_registry.register(character_tool)
+                    tool_registry.register(WalkOnTool(character_tool))
                     tool_registry.register(LocationGenerateTool(memory_manager, vector_store, name_gen_tool.generator, genre=genre))
                     tool_registry.register(RelationshipCreateTool(memory_manager))
                     tool_registry.register(RelationshipUpdateTool(memory_manager))
