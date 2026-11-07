@@ -390,12 +390,6 @@ def test_writer_context_carries_the_pov_language(entities, project):
     text = format_writer_prompt(ctx)
     assert "speaks Gaipo" in text
     assert "LANGUAGE RULES" in text
-    # half the approved pool comes from that people
-    # Each pooled name carries the gender it was drawn for: "- Lidavai (female)".
-    pool = [line[2:].rsplit(" (", 1)[0] for line in ctx["approved_new_names"].splitlines()]
-    assert all(line.endswith(("(male)", "(female)")) for line in ctx["approved_new_names"].splitlines())
-    gaipo_names = {p["name"] for p in entities.languages[1].persons}
-    assert len(pool) == 4 and len([n for n in pool if n in gaipo_names]) == 2
 
     # a character with no people falls back to the location's realm
     plan = {"pov_character": "C000", "target_location": "L000", "scene_intention": "x", "key_change": "y"}

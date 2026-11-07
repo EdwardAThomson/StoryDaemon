@@ -196,9 +196,9 @@ def test_exemptions_are_narrow():
     assert len(CONTRACT_EXEMPTIONS) <= 3
 
 
-def test_revision_is_exempt_from_offering_new_names():
+def test_no_task_is_offered_spare_names():
+    assert "approved_new_names" not in contract_fields_for("write")
     assert "approved_new_names" not in contract_fields_for("revise")
-    assert "approved_new_names" in contract_fields_for("write")
 
 
 def test_an_empty_section_is_retried_before_the_whole_write_is_abandoned():

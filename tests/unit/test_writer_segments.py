@@ -62,7 +62,6 @@ def _ctx(**overrides):
         "location_id": "L000",
         "location_details": "The archive",
         "existing_characters": "- Mira (POV)",
-        "approved_new_names": "- Tobin Vale",
         "scene_length_guidance": "\n\n**Length Guidance:** Write roughly 1400 words.",
         "word_target": 1400,
     }

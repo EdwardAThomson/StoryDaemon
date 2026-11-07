@@ -166,10 +166,10 @@ class WriterContextBuilder:
                 if arc_pressure_section else finale_section
             )
 
-        # Cast roster + a pool of pre-minted names for any new character (Phase 1 grounding)
-        existing_characters, approved_new_names = self._build_cast_and_name_pool(
-            project_state, pov_character_id, pov_people
-        )
+        # The cast, which is every name the writer may use (2026-11-07: the
+        # pool of spare minted names is gone; a name the writer took from it
+        # had no record, and walk-ons now come from character.walk_on).
+        existing_characters = self._build_cast(pov_character_id)
 
         return {
             "novel_name": novel_name,
@@ -196,7 +196,6 @@ class WriterContextBuilder:
             "word_target": word_target,
             "scene_skeleton": scene_skeleton,
             "existing_characters": existing_characters,
-            "approved_new_names": approved_new_names,
             "languages_section": languages_section,
             "languages_imported": languages_imported,
             "language_situation": situation,
@@ -378,23 +377,16 @@ class WriterContextBuilder:
         except Exception:
             return ""
 
-    def _build_cast_and_name_pool(self, project_state: Dict[str, Any],
-                                  pov_character_id: str,
-                                  pov_people: Optional[str] = None) -> tuple[str, str]:
-        """List the existing cast and mint a small pool of unused, grounded names.
-
-        The writer is told to use cast names or, only when a new character truly
-        needs a name, one of the pooled names — so it never invents one. When
-        the POV's people has a language bank, half the pool comes from it, so
-        a walk-on in that realm can carry one of its own names.
-        """
+    def _build_cast(self, pov_character_id: str) -> str:
+        """The cast list: every character the writer may name, with role,
+        gender and age group, and their personas when those are on. Nobody
+        outside it may be named (see prompts.WRITE_NAMING_RULE)."""
         cast_lines, cast = [], []
         personas_on = bool(self.config.get('generation.character_personas', False))
         for cid in sorted(self.memory.list_characters()):
             c = self.memory.load_character(cid)
             if not c:
                 continue
-            self.name_generator.register_used_name(c.full_name)
             cast.append(c)
             marker = " (POV)" if cid == pov_character_id else ""
             tags = ", ".join(t for t in (c.role, c.gender, c.age_group) if t)
@@ -403,21 +395,7 @@ class WriterContextBuilder:
         if personas_on and cast:
             from .personas import voices_section
             existing_characters += voices_section(cast)
-
-        genre = (project_state.get("story_foundation") or {}).get("genre") or "scifi"
-        people_id = self.name_generator.resolve_people(pov_people) if pov_people else None
-        pool = []
-        for i in range(4):
-            try:
-                gender = "male" if len(pool) % 2 == 0 else "female"
-                affiliation = people_id if (people_id and i < 2) else None
-                minted = self.name_generator.generate_name(
-                    gender=gender, genre=genre, affiliation=affiliation)
-                pool.append(f'{minted["full_name"]} ({minted.get("gender", gender)})')
-            except ValueError:
-                break
-        approved_new_names = "\n".join(f"- {n}" for n in pool) if pool else "(use a role descriptor instead)"
-        return existing_characters, approved_new_names
+        return existing_characters
     
     def _protagonist_fallback(self, project_state):
         """No longer a fallback: a missing POV character is now an error.

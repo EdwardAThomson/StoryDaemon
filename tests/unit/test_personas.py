@@ -75,14 +75,14 @@ def test_the_writer_sees_personas_only_when_they_are_on(memory):
     from novel_agent.agent.writer_context import WriterContextBuilder
     _cast(memory)
     off = WriterContextBuilder(memory, None, Config())
-    cast, _ = off._build_cast_and_name_pool({}, "C000")
+    cast = off._build_cast("C000")
     _, details = off._get_character_details("C000")
     assert "persona" not in cast.lower() and "Persona" not in details
 
     cfg = Config()
     cfg.set("generation.character_personas", True)
     on = WriterContextBuilder(memory, None, cfg)
-    cast, _ = on._build_cast_and_name_pool({}, "C000")
+    cast = on._build_cast("C000")
     _, details = on._get_character_details("C000")
     assert "- Tom: grumbler, plain manner" in cast
     assert "- Ada: worrier, plain manner" in cast

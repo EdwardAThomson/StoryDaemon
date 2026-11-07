@@ -27,15 +27,20 @@ def project():
     shutil.rmtree(d, ignore_errors=True)
 
 
-def test_cast_and_pool(project):
+def test_the_cast_is_the_only_source_of_names(project):
+    """2026-11-07: no pool of spare names. A name the writer took from it had
+    no record behind it; walk-ons come from character.walk_on instead."""
     d, mm = project
     wcb = WriterContextBuilder(mm, VectorStore(d), Config())
-    cast, pool = wcb._build_cast_and_name_pool({"story_foundation": {"genre": "fantasy"}}, "C000")
+    cast = wcb._build_cast("C000")
     assert "Elil" in cast and "(POV)" in cast
-    pool_names = [line[2:] for line in pool.splitlines()]
-    assert len(pool_names) == 4
-    # The minted pool must not reuse an existing character's name.
-    assert all(n != "Elil Urnorn" for n in pool_names)
+    plan = {"pov_character": "C000", "scene_intention": "x", "key_change": "y"}
+    ctx = wcb.build_writer_context(plan, {"actions_executed": []},
+                                   {"story_foundation": {"genre": "fantasy"}, "current_tick": 1})
+    assert "approved_new_names" not in ctx
+    from novel_agent.agent.prompts import format_writer_prompt
+    text = format_writer_prompt(ctx)
+    assert "pre-approved" not in text and "Name only the people listed above" in text
 
 
 def test_writer_prompt_renders_with_new_keys(project):
