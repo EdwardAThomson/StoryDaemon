@@ -355,6 +355,36 @@ def test_character_generate_records_the_people(entities, project):
     assert location.name.endswith(" ford")
 
 
+def test_a_walk_on_takes_the_local_peoples_name(entities, project):
+    """Ed, 2026-11-07: walk-ons should come from the local language. One
+    person per role and people: each realm has its own harbour clerk."""
+    from novel_agent.tools.memory_tools import CharacterGenerateTool, WalkOnTool
+
+    class Vec:
+        def index_character(self, c):
+            pass
+
+    memory = MemoryManager(project)
+    persist_languages(memory, entities)
+    gen = NameGenerator(DATA_DIR, languages_file=bank_file_path(project))
+    tool = WalkOnTool(CharacterGenerateTool(memory, Vec(), gen, genre="fantasy"))
+    assert "affiliation" in tool.parameters
+    a = tool.execute(role="harbour clerk", gender="female", age_group="adult",
+                     affiliation="Vokekuk Principality")
+    clerk = memory.load_character(a["character_id"])
+    assert clerk.first_name in {p["name"] for p in entities.languages[0].persons}
+    assert clerk.metadata["worldgen"]["people"] == "R0" and clerk.metadata["walk_on"]
+    # the same role in the same realm is the same person
+    again = tool.execute(role="the harbour clerk", gender="female", age_group="adult",
+                         affiliation="R0")
+    assert again["character_id"] == a["character_id"] and again["existing"]
+    # in another realm it is someone else, named in that realm's tongue
+    b = tool.execute(role="harbour clerk", gender="male", age_group="adult", affiliation="Gaipo")
+    assert b["character_id"] != a["character_id"]
+    assert memory.load_character(b["character_id"]).first_name in {
+        p["name"] for p in entities.languages[1].persons}
+
+
 # ============================================================================
 # The writer sees it
 # ============================================================================

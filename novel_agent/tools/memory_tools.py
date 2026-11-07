@@ -458,6 +458,15 @@ class WalkOnTool(Tool):
                     "enum": ["young", "adult", "old"],
                     "description": "REQUIRED. young (up to about 30), adult (about 30 to 60) or old (over about 60).",
                 },
+                "affiliation": {
+                    "type": "string",
+                    "description": (
+                        "The realm or people of the place the scene happens, by "
+                        "name. When the world's languages were imported, the "
+                        "walk-on's name comes from that people's own tongue."
+                    ),
+                    "optional": True,
+                },
             },
         )
         self.character_tool = character_tool
@@ -469,24 +478,38 @@ class WalkOnTool(Tool):
         key = re.sub(r"^(?:the|a|an)\s+", "", key.strip())
         return re.sub(r"\s+", " ", key).strip()
 
+    def _people_of(self, affiliation: Optional[str]) -> str:
+        gen = getattr(self.character_tool, "name_generator", None)
+        if not gen or not (affiliation or "").strip():
+            return ""
+        return gen.resolve_people(affiliation) or ""
+
     def execute(self, role: str, gender: Optional[str] = None,
-                age_group: Optional[str] = None) -> Dict[str, Any]:
+                age_group: Optional[str] = None,
+                affiliation: Optional[str] = None) -> Dict[str, Any]:
         from novel_agent.agent.name_hygiene import require_age_group, require_gender
         key = self._role_key(role)
         if not key:
             raise ValueError("character.walk_on: a walk-on needs a role, e.g. 'leadsman'.")
+        # One person per role and people: the harbour clerk of one realm is
+        # not the harbour clerk of another (2026-11-07, Ed: walk-ons should
+        # come from the local language).
+        people = self._people_of(affiliation)
         for cid in sorted(self.memory_manager.list_characters()):
             c = self.memory_manager.load_character(cid)
-            if c and (c.metadata or {}).get("walk_on") and self._role_key(c.role) == key:
+            c_people = ((c.metadata or {}).get("worldgen") or {}).get("people", "") if c else ""
+            if (c and (c.metadata or {}).get("walk_on") and self._role_key(c.role) == key
+                    and c_people == people):
                 return {"success": True, "character_id": c.id, "name": c.full_name,
                         "gender": c.gender, "age_group": c.age_group, "role": c.role,
                         "existing": True}
         # A walk-on's facts are required exactly like any character's.
         require_gender(gender, "character.walk_on")
         require_age_group(age_group, "character.walk_on")
+        extra = {"affiliation": affiliation.strip()} if (affiliation or "").strip() else {}
         out = self.character_tool.execute(
             role=role.strip(), description=f"A walk-on: the {key}.",
-            gender=gender, age_group=age_group)
+            gender=gender, age_group=age_group, **extra)
         c = self.memory_manager.load_character(out["character_id"])
         if c is not None and not out.get("duplicate"):
             c.metadata = dict(c.metadata or {}, walk_on=True)
