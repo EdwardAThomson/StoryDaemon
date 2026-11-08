@@ -119,6 +119,15 @@ DEFAULT_CONFIG = {
         # sketch's literal per-sub-block mode.
         'subblock_generation': False,
         'subblock_section_blocks': 10,
+        # The model plans the scene's paragraphs (agent/paragraph_plan.py):
+        # Python's sampled skeleton sets how many of each kind, the model
+        # orders them by what happens and picks dialogue speakers from the
+        # cast by id, and Python checks the plan (shares, speakers, unrecorded
+        # names) before any prose; one retry, then the sampled skeleton as
+        # before. Needs enable_scene_skeleton. 4000 tokens: the plan is one
+        # line per paragraph, and a thinking model reasons first.
+        'paragraph_plan_by_model': False,
+        'paragraph_plan_max_tokens': 4000,
         # One cheap planning call per sectioned scene splits the intention
         # into one job per section, so a middle section advances the scene by
         # a step instead of re-delivering the whole scene (the 2026-10-31

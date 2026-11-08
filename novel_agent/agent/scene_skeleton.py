@@ -310,18 +310,24 @@ def _word_range(mode: str) -> Tuple[int, int]:
 
 
 def skeleton_lines(skeleton: List[str], first: int = 1,
-                   last: Optional[int] = None) -> str:
+                   last: Optional[int] = None,
+                   notes: Optional[List[str]] = None) -> str:
     """Numbered plan lines for blocks ``first``..``last`` (1-based inclusive).
 
     Numbers are absolute positions in the whole plan, so a section rendered on
     its own keeps the same [n] addresses the full plan would have given it.
+    ``notes`` (one per item, from agent/paragraph_plan.py) says what happens
+    in each paragraph; without them the lines are exactly as before.
     """
     last = len(skeleton) if last is None else last
     targets = block_word_targets(skeleton)
     out = []
     for i in range(first, last + 1):
         mode = skeleton[i - 1]
-        out.append(f"{i}. {mode}, ~{targets[i - 1]} words: {MODE_GUIDE[mode]}")
+        line = f"{i}. {mode}, ~{targets[i - 1]} words: {MODE_GUIDE[mode]}"
+        if notes and i - 1 < len(notes) and notes[i - 1]:
+            line += f"\n   What happens: {notes[i - 1]}"
+        out.append(line)
     return chr(10).join(out)
 
 
@@ -360,7 +366,8 @@ def plan_rules(sectioned: bool = False) -> str:
 - A paragraph's dominant mode must match its plan item."""
 
 
-def skeleton_prompt_section(skeleton: List[str]) -> str:
+def skeleton_prompt_section(skeleton: List[str],
+                            notes: Optional[List[str]] = None) -> str:
     """Writer-prompt guidance carrying the plan with the [n] marker protocol.
 
     The marker rules are the Gate B lessons verbatim: per-item markers (the
@@ -383,7 +390,7 @@ paragraph plan EXACTLY, about {round(expected_words(skeleton))} words in total.
 Each numbered item names the single dominant mode that paragraph must have,
 and the length that paragraph should run.
 
-{skeleton_lines(skeleton)}"""
+{skeleton_lines(skeleton, notes=notes)}"""
 
 
 _MARKER = re.compile(r"^[ \t]*\[(\d+)\][ \t]*", re.M)

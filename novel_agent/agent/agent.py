@@ -411,6 +411,7 @@ class StoryAgent:
                 execution_results,
                 self.state
             )
+            writer_context = self._plan_paragraphs(writer_context)
             
             scene_data = self.writer.write_scene(writer_context)
             
@@ -776,6 +777,7 @@ class StoryAgent:
                 execution_results,
                 self.state
             )
+            writer_context = self._plan_paragraphs(writer_context)
             scene_data = self.writer.write_scene(writer_context)
             
             print("   9. Evaluating scene...")
@@ -1912,31 +1914,8 @@ class StoryAgent:
         done = []
         try:
             from .name_hygiene import (PLAN_TEXT_FIELDS, replace_name,
-                                       unminted_people_in_plan, world_words)
-            roster = []
-            claimed = {}
-            for cid in self.memory.list_characters():
-                c = self.memory.load_character(cid)
-                if not c:
-                    continue
-                roster.append(c.full_name)
-                roster.extend(c.nicknames or [])
-                meta = c.metadata or {}
-                for n in list(meta.get("replaced_names") or []) + list(meta.get("unminted_names_in_description") or []):
-                    claimed.setdefault(n, c)
-            ignore = set()
-            foundation = self.state.get("story_foundation") or {}
-            ignore |= world_words(" ".join(str(foundation.get(k) or "") for k in ("premise", "setting")))
-            for lid in self.memory.list_locations():
-                loc = self.memory.load_location(lid)
-                if loc and getattr(loc, "name", ""):
-                    ignore.add(loc.name)
-                    ignore.update(loc.name.split())
-            for fid in self.memory.list_factions():
-                fac = self.memory.load_faction(fid)
-                if fac and getattr(fac, "name", ""):
-                    ignore.add(fac.name)
-                    ignore.update(fac.name.split())
+                                       unminted_people_in_plan)
+            roster, claimed, ignore = self._known_names()
             found = unminted_people_in_plan(plan, roster, ignore)
         except Exception as e:
             logging.getLogger(__name__).warning("Plan name check skipped: %s", e)
@@ -1970,6 +1949,101 @@ class StoryAgent:
                 f"person with character.generate (gender included) and refer to them "
                 f"by the minted name.")
         return done
+
+    def _known_names(self):
+        """(roster, claimed, ignore) for holding text to the records: every
+        name and nickname a character answers to; the names a record has
+        claimed from the planner (``replaced_names`` and
+        ``unminted_names_in_description``); and the world nouns, location and
+        faction names that are not people."""
+        from .name_hygiene import world_words
+        roster = []
+        claimed = {}
+        for cid in self.memory.list_characters():
+            c = self.memory.load_character(cid)
+            if not c:
+                continue
+            roster.append(c.full_name)
+            roster.extend(c.nicknames or [])
+            meta = c.metadata or {}
+            for n in list(meta.get("replaced_names") or []) + list(meta.get("unminted_names_in_description") or []):
+                claimed.setdefault(n, c)
+        ignore = set()
+        foundation = self.state.get("story_foundation") or {}
+        ignore |= world_words(" ".join(str(foundation.get(k) or "") for k in ("premise", "setting")))
+        for lid in self.memory.list_locations():
+            loc = self.memory.load_location(lid)
+            if loc and getattr(loc, "name", ""):
+                ignore.add(loc.name)
+                ignore.update(loc.name.split())
+        for fid in self.memory.list_factions():
+            fac = self.memory.load_faction(fid)
+            if fac and getattr(fac, "name", ""):
+                ignore.add(fac.name)
+                ignore.update(fac.name.split())
+        return roster, claimed, ignore
+
+    def _plan_paragraphs(self, writer_context):
+        """The model plans the scene's paragraphs; Python checks the plan
+        (agent/paragraph_plan.py). Gated by generation.paragraph_plan_by_model
+        and only with a sampled skeleton. On acceptance the writer context's
+        skeleton becomes the planned kinds, each item gains a line saying what
+        happens, and the plan section of the length guidance is re-rendered.
+        Otherwise everything is left as it was. Never raises (a refused or
+        failed plan costs the plan, not the scene)."""
+        if not self.config.get('generation.paragraph_plan_by_model', False):
+            return writer_context
+        skeleton = writer_context.get("scene_skeleton")
+        if not skeleton:
+            return writer_context
+        try:
+            from .name_hygiene import unminted_people_in_plan
+            from .paragraph_plan import plan_paragraphs
+            from .prompts import story_context_section
+            from .scene_skeleton import skeleton_prompt_section
+
+            roster = []
+            for cid in sorted(self.memory.list_characters()):
+                c = self.memory.load_character(cid)
+                if c:
+                    desc = ", ".join(t for t in (c.role, c.gender, c.age_group) if t)
+                    roster.append((cid, c.display_name, desc))
+            known, _claimed, ignore = self._known_names()
+
+            def name_check(text):
+                return [n for n, _s in unminted_people_in_plan(
+                    {"scene_intention": text}, known, ignore)]
+
+            budget = int(self.config.get('generation.paragraph_plan_max_tokens', 4000) or 4000)
+
+            def generate(prompt):
+                return self.writer._generate_segment(prompt, budget)[0] or ""
+
+            kinds, notes, report = plan_paragraphs(
+                generate, story_context_section(writer_context, task="write"),
+                skeleton, roster, name_check)
+            writer_context["paragraph_plan_report"] = report
+            if not kinds:
+                print(f"        ⚠️  Paragraph plan refused twice; using the sampled "
+                      f"plan. Last problems: {'; '.join(report['problems'][-1][:4])}")
+                return writer_context
+            old = skeleton_prompt_section(skeleton)
+            guidance = writer_context.get("scene_length_guidance") or ""
+            if old not in guidance:
+                logging.getLogger(__name__).warning(
+                    "Paragraph plan: sampled plan section not found; keeping it")
+                return writer_context
+            writer_context["scene_length_guidance"] = guidance.replace(
+                old, skeleton_prompt_section(kinds, notes))
+            writer_context["scene_skeleton"] = kinds
+            writer_context["paragraph_notes"] = notes
+            print(f"        paragraph plan by the model: {len(kinds)} paragraphs "
+                  f"(sampled {len(skeleton)}), accepted on attempt "
+                  f"{report['attempts']}")
+        except Exception as e:  # noqa: BLE001
+            logging.getLogger(__name__).warning(
+                f"Paragraph plan failed; using the sampled plan: {e}")
+        return writer_context
 
     def _names_gauge(self, scene_text):
         """Per-scene names gauge (step 8.6), or None. Thin wrapped hook over the
