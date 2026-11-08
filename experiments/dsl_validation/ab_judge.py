@@ -71,6 +71,8 @@ def scene_pairs(project):
     out = []
     for p in sorted(ab.glob("scene_*_single.md")):
         n = p.name.split("_")[1]
+        if not (ab / f"scene_{n}_peritem.md").exists():
+            continue                       # the run stopped before this arm
         texts, metas = {}, {}
         for arm in ARMS:
             texts[arm] = (ab / f"scene_{n}_{arm}.md").read_text().strip()

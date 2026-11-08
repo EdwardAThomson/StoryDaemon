@@ -272,8 +272,40 @@ def install_ab(project):
     SceneWriter.write_scene = ab_write
 
 
+def replay_peritem(project, n, max_usd):
+    """Write the per-item version of scene ``n`` again from its saved writer
+    brief, with no planning and no tick: for a run that stopped after the
+    single-call version was saved. Same prompt, limits, caching and guards."""
+    from novel_agent.agent import segments as seg
+    from novel_agent.agent.writer import SceneWriter
+    from novel_agent.cli.project import get_project_config
+    from novel_agent.tools.llm_setup import initialize_llm_with_persona
+    out = project / "ab"
+    ctx = json.loads((out / f"scene_{n:03d}_context.json").read_text())
+    config = get_project_config(project)
+    llm = initialize_llm_with_persona(backend=config.get("llm.backend"),
+                                      model=config.get("llm.model"),
+                                      timeout=config.get("llm.timeout", 300))
+    install_requests(project / "usage.jsonl", max_usd)
+    install_peritem_prompt()
+    for k, v in PERITEM.items():
+        config.set(k, v)
+    seg.token_budget_for = lambda w, c=None: PERITEM_MAX_TOKENS
+    ARM["name"] = "peritem"
+    b = SceneWriter(llm, config).write_scene(ctx)
+    if not b.get("sectioned"):
+        raise StopRun("the per-item arm fell back to single-shot")
+    (out / f"scene_{n:03d}_peritem.md").write_text(b.get("text", ""))
+    (out / f"scene_{n:03d}_peritem.json").write_text(json.dumps(
+        {k: v for k, v in b.items() if k != "text"}, indent=2, default=str))
+    print(f"[ab] replayed scene {n}: per-item {b.get('word_count')} words, "
+          f"spent ${SPENT['usd']:.3f}")
+
+
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--replay-peritem", type=int, metavar="N",
+                    help="only re-write scene N's per-item version from its saved brief")
     ap.add_argument("--name", required=True)
     ap.add_argument("--foundation", required=True)
     ap.add_argument("--model", required=True)
@@ -282,6 +314,15 @@ def main():
                     help="spend cap for this invocation; no call starts past it")
     ap.add_argument("--set", action="append", default=[], metavar="KEY=VALUE")
     args = ap.parse_args()
+
+    if args.replay_peritem is not None:
+        project = run_cell.find_project(args.name)
+        try:
+            replay_peritem(project, args.replay_peritem, args.max_usd)
+        except StopRun as e:
+            print(f"[ab] STOPPED: {e}. Spent ${SPENT['usd']:.3f}.")
+            sys.exit(3)
+        return
 
     sets = ["generation.enable_scene_skeleton=true",
             "generation.character_personas=true",
