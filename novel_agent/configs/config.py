@@ -63,6 +63,10 @@ DEFAULT_CONFIG = {
         # Established canon in the writer prompt: the lore and open loops most
         # relevant to this scene, plus any confirmed deaths/destruction.
         'writer_canon': True,
+        # The foundation's genre, setting and tone in every writing call
+        # (agent/writer_context.py:_novel_section). Before 2026-11-09 the
+        # writer never saw them.
+        'writer_foundation': True,
         'writer_canon_lore': 4,
         'writer_canon_loops': 4,
         'enable_fact_extraction': True,

@@ -125,6 +125,15 @@ class WriterContextBuilder:
         # and departed entities most relevant to this scene.
         recent_context = self._with_story_and_canon(
             recent_context, plan, full_text_count + summary_count)
+
+        # The novel's genre, setting and tone, from the foundation. Until
+        # 2026-11-09 the writer never saw them: a novel of manners set in 1815
+        # reached the prompt only through whatever the plan happened to say.
+        # It rides the recent_context slot like the synopsis, so every writing
+        # call (single-shot, continuation, sections, revision) carries it.
+        novel_section = self._novel_section(project_state)
+        if novel_section:
+            recent_context = f"{novel_section}\n\n{recent_context}"
         
         # Format tool results
         tool_results_summary = self._format_tool_results(execution_results)
@@ -590,6 +599,21 @@ class WriterContextBuilder:
         
         return "\n".join(context_parts).strip()
     
+    def _novel_section(self, project_state: Optional[Dict[str, Any]]) -> str:
+        """'## The Novel' with the foundation's genre, setting and tone, or ""
+        (gated by generation.writer_foundation; never raises)."""
+        if not self.config.get('generation.writer_foundation', True):
+            return ""
+        try:
+            f = (project_state or {}).get("story_foundation") or {}
+            lines = [f"**{label}:** {str(f.get(key)).strip()}"
+                     for key, label in (("genre", "Genre"), ("setting", "Setting"), ("tone", "Tone"))
+                     if str(f.get(key) or "").strip()]
+            return "## The Novel\n\n" + "\n".join(lines) if lines else ""
+        except Exception as e:  # never cost a scene
+            logger.warning(f"Could not build the novel section: {e}")
+            return ""
+
     def _with_story_and_canon(self, recent_context: str, plan: Dict[str, Any],
                               window: int) -> str:
         """Prefix the story-so-far and canon sections; never raises."""
