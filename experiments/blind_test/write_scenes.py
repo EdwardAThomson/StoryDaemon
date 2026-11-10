@@ -38,6 +38,9 @@ ARMS = {
     # austen_plans.py, checked by hand), not one the model drafts: the model's
     # own plan recalled her chapter's events (2026-11-10).
     "dsl": {"generation.enable_scene_skeleton": True, "generation.paragraph_plan_by_model": False},
+    # The DSL arm plus style targets measured from the author's own novel
+    # (work/blind/style/<novel>.json, the passage itself left out).
+    "dsl_style": {"generation.enable_scene_skeleton": True, "generation.paragraph_plan_by_model": False},
     "plain": {"generation.enable_scene_skeleton": False, "generation.paragraph_plan_by_model": False},
 }
 COMMON = {
@@ -46,7 +49,10 @@ COMMON = {
     "generation.writer_canon": False,             # no lore in these projects anyway
     "generation.story_synopsis": True,            # the story-so-far rides the synopsis
     "generation.scene_max_segments": 2,
-    "generation.scene_budget_multiplier": 3,      # room for Opus thinking on top of the prose
+    # Room for Opus thinking on top of the prose. 3 was enough without style
+    # targets (about 900 thinking tokens); with them Opus thought for 2,318
+    # and was cut off at 3,209 (2026-11-10). Unused room costs nothing.
+    "generation.scene_budget_multiplier": 8,
     "generation.paragraph_plan_max_tokens": 6000,
 }
 TITLES = {"croft": "Admiral", "brand": "Admiral", "wentworth": "Captain", "benwick": "Captain",
@@ -217,6 +223,23 @@ def austen_plan(scene_id, brief, names):
     return kinds, notes, targets, [it["words"] for it in items]
 
 
+def style_section(novel, words):
+    """Style targets from the author's measured profile, turned into counts
+    for a scene of this length. Plain English, one line per measure."""
+    p = json.loads((WORK / "style" / f"{novel}.json").read_text())
+    per = lambda rate: max(1, round(rate * words / 1000))
+    return f"""
+
+**Style targets (measured from the period's own novels; hit these numbers):**
+- Sentences average about {round(p['sentence_mean_words'])} words, and their lengths vary a great deal: about {p['short_sentence_pct']}% are 6 words or fewer and about {p['long_sentence_pct']}% run to 30 words or more. Build the long ones from balanced clauses joined by commas and semicolons.
+- Semicolons: about {per(p['semicolons_per_1k'])} in this scene ({p['semicolons_per_1k']} per 1,000 words), in narration and in speech.
+- Dashes: about {per(p['dashes_per_1k'])} in this scene, written as an em dash (—), where speech breaks off or turns.
+- No contractions anywhere, in speech or narration: "do not", "cannot", "I am", "it is".
+- Speech: about {p['speech_word_pct']}% of the scene's words inside quotation marks.
+- "said" for about {round(p['said_share'] * 100)}% of speech tags; otherwise "replied", "cried", "answered" and the like.
+- Avoid "seemed", "felt", "as if", "as though", "suddenly", "somehow": at most {per(p['seemed_felt_per_1k'])} in the whole scene."""
+
+
 def write_arm(scene_id, arm, brief, names, foundation, llm_factory):
     from novel_agent.agent.agent import StoryAgent
     from novel_agent.agent.writer import SceneWriter
@@ -266,6 +289,8 @@ def write_arm(scene_id, arm, brief, names, foundation, llm_factory):
         ctx["scene_length_guidance"] = ctx["scene_length_guidance"].replace(
             old, S.skeleton_prompt_section(kinds, notes))
         ctx["paragraph_notes"] = notes
+        if arm == "dsl_style":
+            ctx["scene_length_guidance"] += style_section(brief["novel"], total)
     if ARMS[arm]["generation.paragraph_plan_by_model"]:
         stub = SimpleNamespace(config=config, memory=memory, writer=writer, state=state)
         stub._known_names = lambda: StoryAgent._known_names(stub)
@@ -297,7 +322,7 @@ def check(scene_id, arm, text, meta, memory, state, brief):
         faults.append("did not end on its own")
     if not 0.6 * brief["words"] <= words <= 1.5 * brief["words"]:
         faults.append(f"{words} words for a target of {brief['words']}")
-    if arm == "dsl" and not meta.get("skeleton_compliance"):
+    if arm.startswith("dsl") and not meta.get("skeleton_compliance"):
         faults.append("no skeleton compliance recorded (plan not used?)")
     if re.search(r"^\s*\[\d+\]", text, re.M):
         faults.append("paragraph markers left in the prose")
