@@ -34,7 +34,10 @@ sys.path.insert(0, str(REPO))
 WORK = REPO / "work" / "blind"
 MODEL = "openrouter:anthropic/claude-opus-5.5"
 ARMS = {
-    "dsl": {"generation.enable_scene_skeleton": True, "generation.paragraph_plan_by_model": True},
+    # The DSL arm's paragraph plan is Austen's own (work/blind/plans, from
+    # austen_plans.py, checked by hand), not one the model drafts: the model's
+    # own plan recalled her chapter's events (2026-11-10).
+    "dsl": {"generation.enable_scene_skeleton": True, "generation.paragraph_plan_by_model": False},
     "plain": {"generation.enable_scene_skeleton": False, "generation.paragraph_plan_by_model": False},
 }
 COMMON = {
@@ -190,6 +193,30 @@ def make_project(scene_id, arm, brief, names, foundation):
     return path, memory, pov_id, lid, ids
 
 
+def scaled(words):
+    """A paragraph's target from Austen's length. Opus writes over each
+    target, more so on short ones (step 2: about 1.0-1.4x, 3.4x on a
+    13-word item), so aim under by size."""
+    f = 0.88 if words >= 60 else 0.8 if words >= 25 else 0.7
+    return max(3, round(words * f))
+
+
+def austen_plan(scene_id, brief, names):
+    """Austen's paragraph plan: kinds, one line per paragraph (with the
+    speaker for dialogue) and a scaled word target per paragraph."""
+    items = json.loads((WORK / "plans" / f"{scene_id}.json").read_text())
+    people = names[brief["novel"]]["people"]
+
+    def who(k):
+        p = people[k]
+        return f"{TITLES.get(k, '')} {p['first']} {p['last']}".strip()
+    kinds = [it["kind"] for it in items]
+    notes = [(f"{who(it['speaker'])} speaks. " if it["kind"] == "DIALOGUE" and it.get("speaker") else "")
+             + it["what"] for it in items]
+    targets = [scaled(it["words"]) for it in items]
+    return kinds, notes, targets, [it["words"] for it in items]
+
+
 def write_arm(scene_id, arm, brief, names, foundation, llm_factory):
     from novel_agent.agent.agent import StoryAgent
     from novel_agent.agent.writer import SceneWriter
@@ -197,12 +224,19 @@ def write_arm(scene_id, arm, brief, names, foundation, llm_factory):
     from novel_agent.cli.project import get_project_config
 
     STATE["arm"], STATE["scene"] = arm, scene_id
+    from novel_agent.agent import scene_skeleton as S
+    kinds, notes, targets, _austen = austen_plan(scene_id, brief, names)
+    total = sum(targets)
+    original = getattr(S, "_blind_original_targets", S.block_word_targets)
+    S._blind_original_targets = original
+    S.block_word_targets = (lambda sk, seed=None: list(targets) if list(sk) == kinds
+                            else original(sk, seed))
     path, memory, pov_id, lid, ids = make_project(scene_id, arm, brief, names, foundation)
     config = get_project_config(str(path))
     for k, v in {**COMMON, **ARMS[arm],
                  "generation.default_scene_length": "long",
-                 "generation.scene_word_targets": {"brief": 300, "short": brief["words"],
-                                                   "long": brief["words"], "extended": brief["words"]}}.items():
+                 "generation.scene_word_targets": {"brief": 300, "short": total,
+                                                   "long": total, "extended": total}}.items():
         config.set(k, v)
     state = json.loads((path / "state.json").read_text())
     state["current_tick"] = 12
@@ -210,8 +244,13 @@ def write_arm(scene_id, arm, brief, names, foundation, llm_factory):
     intention = brief["intention"]
     if brief.get("secret"):
         intention += f" (Known to the author, never to be stated in this scene: {brief['secret']})"
+    if arm == "plain":
+        # The same events as the DSL arm, with no kinds, lengths or paragraphing.
+        intention += "\n\nWhat happens, in order:\n" + "\n".join(f"- {n}" for n in notes)
     plan = {"scene_intention": intention, "key_change": brief["key_change"],
             "pov_character": pov_id, "target_location": lid, "metadata": {}}
+    if ARMS[arm]["generation.enable_scene_skeleton"]:
+        plan["scene_skeleton"] = list(kinds)
 
     llm = llm_factory()
     writer = SceneWriter(llm, config)
@@ -220,6 +259,13 @@ def write_arm(scene_id, arm, brief, names, foundation, llm_factory):
     # disk; the library's empty-history line would tell the writer otherwise.
     ctx["recent_context"] = ctx["recent_context"].replace(
         "This is the first scene of the novel.", "This scene comes from the middle of the novel.")
+    if ARMS[arm]["generation.enable_scene_skeleton"]:
+        old = S.skeleton_prompt_section(kinds)
+        if old not in ctx["scene_length_guidance"] or ctx.get("scene_skeleton") != kinds:
+            raise StopRun(f"{scene_id}/{arm}: Austen's plan did not reach the writer")
+        ctx["scene_length_guidance"] = ctx["scene_length_guidance"].replace(
+            old, S.skeleton_prompt_section(kinds, notes))
+        ctx["paragraph_notes"] = notes
     if ARMS[arm]["generation.paragraph_plan_by_model"]:
         stub = SimpleNamespace(config=config, memory=memory, writer=writer, state=state)
         stub._known_names = lambda: StoryAgent._known_names(stub)
@@ -235,7 +281,7 @@ def write_arm(scene_id, arm, brief, names, foundation, llm_factory):
     text = result.get("text", "")
     (out / f"{arm}.md").write_text(text)
     meta = {k: v for k, v in result.items() if k != "text"}
-    meta.update(project=str(path), word_target=brief["words"],
+    meta.update(project=str(path), word_target=total, austen_words=brief["words"],
                 skeleton=ctx.get("scene_skeleton"), plan_report=ctx.get("paragraph_plan_report"))
     (out / f"{arm}.json").write_text(json.dumps(meta, indent=1, default=str))
     return text, meta, memory, state
@@ -260,13 +306,22 @@ def check(scene_id, arm, text, meta, memory, state, brief):
         c = memory.load_character(cid)
         roster += [c.first_name, c.family_name, c.full_name]
     roster += [l.name for l in (memory.load_location(i) for i in memory.list_locations()) if l]
+    novel = json.loads((WORK / "names.json").read_text())[brief["novel"]]
+    roster += [v for p in novel["people"].values() for v in (p["first"], p["last"])]
+    roster += list(novel["places"].values())          # places the story mentions
     gauge = prose_gauge(text, roster, state.get("story_foundation") or {})
     names = gauge.get("unregistered_names") or gauge.get("other") or []
+    names = sorted({re.sub(r"['\u2019]s$", "", n) for n in names} - set(roster))
     if names:
         faults.append(f"names not in the cast (check by hand, the gauge has false alarms): {names}")
     shared = verbatim_overlap(text, scene_id)
     if shared:
         faults.append(f"{len(shared)} eight-word runs shared with Austen, e.g. {shared[0]!r}")
+    paras = [len(p.split()) for p in re.split(r"\n\s*\n", text) if p.strip()]
+    _k, _n, _t, austen = austen_plan(scene_id, brief, json.loads((WORK / "names.json").read_text()))
+    med = lambda xs: sorted(xs)[len(xs) // 2] if xs else 0
+    print(f"  {scene_id}/{arm}: {len(paras)} paragraphs (Austen {len(austen)}), median "
+          f"{med(paras)} words (Austen {med(austen)})", flush=True)
     print(f"  {scene_id}/{arm}: {words} words, segments {meta.get('segments_used')}, "
           f"{'OK' if not faults else 'CHECK: ' + '; '.join(faults)}", flush=True)
     return faults
