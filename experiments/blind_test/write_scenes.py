@@ -61,7 +61,11 @@ COMMON = {
 }
 TITLES = {"croft": "Admiral", "brand": "Admiral", "wentworth": "Captain", "benwick": "Captain",
           "harville": "Captain", "brigden": "Captain", "colonel_campbell": "Colonel",
-          "lady_russell": "Lady", "lady_dalrymple": "Lady", "lady_catherine": "Lady", "drew": "Sir"}
+          "lady_russell": "Lady", "lady_dalrymple": "Lady", "lady_catherine": "Lady", "drew": "Sir",
+          # Marriage (Ferrier): earls' and dukes' daughters are Lady + first name.
+          "lady_juliana": "Lady", "lady_emily": "Lady", "lady_matilda": "Lady", "general_carver": "General"}
+# Peers go by their title, never their name; the place comes from names.json.
+STYLED = {"duke": "the Duke of {altamont}", "lord_lindore": "Lord {lindore}"}
 
 
 def full_names():
@@ -219,6 +223,8 @@ def austen_plan(scene_id, brief, names):
 
     def who(k):
         p = people[k]
+        if k in STYLED:
+            return STYLED[k].format(**names[brief["novel"]]["places"])
         return f"{TITLES.get(k, '')} {p['first']} {p['last']}".strip()
     kinds = [it["kind"] for it in items]
     notes = [(f"{who(it['speaker'])} speaks. " if it["kind"] == "DIALOGUE" and it.get("speaker") else "")
@@ -232,13 +238,17 @@ def style_section(novel, words):
     for a scene of this length. Plain English, one line per measure."""
     p = json.loads((WORK / "style" / f"{novel}.json").read_text())
     per = lambda rate: max(1, round(rate * words / 1000))
+    contractions = ('No contractions anywhere, in speech or narration: "do not", "cannot", "I am", "it is".'
+                    if p["contractions_per_1k"] < 0.5 else
+                    f"Contractions only in speech, about {per(p['contractions_per_1k'])} in the scene; "
+                    "none in narration.")
     return f"""
 
 **Style targets (measured from the period's own novels; hit these numbers):**
 - Sentences average about {round(p['sentence_mean_words'])} words, and their lengths vary a great deal: about {p['short_sentence_pct']}% are 6 words or fewer and about {p['long_sentence_pct']}% run to 30 words or more. Build the long ones from balanced clauses joined by commas and semicolons.
 - Semicolons: about {per(p['semicolons_per_1k'])} in this scene ({p['semicolons_per_1k']} per 1,000 words), in narration and in speech.
 - Dashes: about {per(p['dashes_per_1k'])} in this scene, written as an em dash (—), where speech breaks off or turns.
-- No contractions anywhere, in speech or narration: "do not", "cannot", "I am", "it is".
+- {contractions}
 - Speech: about {p['speech_word_pct']}% of the scene's words inside quotation marks.
 - "said" for about {round(p['said_share'] * 100)}% of speech tags; otherwise "replied", "cried", "answered" and the like.
 - Avoid "seemed", "felt", "as if", "as though", "suddenly", "somehow": at most {per(p['seemed_felt_per_1k'])} in the whole scene."""
