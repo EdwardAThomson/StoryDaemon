@@ -41,6 +41,10 @@ ARMS = {
     # The DSL arm plus style targets measured from the author's own novel
     # (work/blind/style/<novel>.json, the passage itself left out).
     "dsl_style": {"generation.enable_scene_skeleton": True, "generation.paragraph_plan_by_model": False},
+    # A new incident with no source passage: the sampled skeleton, the model's
+    # own paragraph plan, and the style targets. Tests the style levers where
+    # the model has no text to recall.
+    "free_style": {"generation.enable_scene_skeleton": True, "generation.paragraph_plan_by_model": True},
     "plain": {"generation.enable_scene_skeleton": False, "generation.paragraph_plan_by_model": False},
 }
 COMMON = {
@@ -248,12 +252,17 @@ def write_arm(scene_id, arm, brief, names, foundation, llm_factory):
 
     STATE["arm"], STATE["scene"] = arm, scene_id
     from novel_agent.agent import scene_skeleton as S
-    kinds, notes, targets, _austen = austen_plan(scene_id, brief, names)
-    total = sum(targets)
     original = getattr(S, "_blind_original_targets", S.block_word_targets)
     S._blind_original_targets = original
-    S.block_word_targets = (lambda sk, seed=None: list(targets) if list(sk) == kinds
-                            else original(sk, seed))
+    if (WORK / "plans" / f"{scene_id}.json").exists():
+        kinds, notes, targets, _austen = austen_plan(scene_id, brief, names)
+        total = sum(targets)
+        S.block_word_targets = (lambda sk, seed=None: list(targets) if list(sk) == kinds
+                                else original(sk, seed))
+    else:                      # a new incident: no source plan to follow
+        kinds = notes = None
+        total = round(brief["words"] * 0.85)
+        S.block_word_targets = original
     path, memory, pov_id, lid, ids = make_project(scene_id, arm, brief, names, foundation)
     config = get_project_config(str(path))
     for k, v in {**COMMON, **ARMS[arm],
@@ -272,7 +281,7 @@ def write_arm(scene_id, arm, brief, names, foundation, llm_factory):
         intention += "\n\nWhat happens, in order:\n" + "\n".join(f"- {n}" for n in notes)
     plan = {"scene_intention": intention, "key_change": brief["key_change"],
             "pov_character": pov_id, "target_location": lid, "metadata": {}}
-    if ARMS[arm]["generation.enable_scene_skeleton"]:
+    if ARMS[arm]["generation.enable_scene_skeleton"] and kinds:
         plan["scene_skeleton"] = list(kinds)
 
     llm = llm_factory()
@@ -282,7 +291,7 @@ def write_arm(scene_id, arm, brief, names, foundation, llm_factory):
     # disk; the library's empty-history line would tell the writer otherwise.
     ctx["recent_context"] = ctx["recent_context"].replace(
         "This is the first scene of the novel.", "This scene comes from the middle of the novel.")
-    if ARMS[arm]["generation.enable_scene_skeleton"]:
+    if ARMS[arm]["generation.enable_scene_skeleton"] and kinds:
         old = S.skeleton_prompt_section(kinds)
         if old not in ctx["scene_length_guidance"] or ctx.get("scene_skeleton") != kinds:
             raise StopRun(f"{scene_id}/{arm}: Austen's plan did not reach the writer")
@@ -298,6 +307,8 @@ def write_arm(scene_id, arm, brief, names, foundation, llm_factory):
         if not (ctx.get("paragraph_plan_report") or {}).get("accepted"):
             raise StopRun(f"{scene_id}/{arm}: the paragraph plan was not accepted: "
                           f"{(ctx.get('paragraph_plan_report') or {}).get('problems')}")
+    if arm == "free_style":
+        ctx["scene_length_guidance"] += style_section(brief["novel"], total)
     prompt = writer._format_writer_prompt(ctx)
     out = WORK / "out" / scene_id
     out.mkdir(parents=True, exist_ok=True)
@@ -343,7 +354,9 @@ def check(scene_id, arm, text, meta, memory, state, brief):
     if shared:
         faults.append(f"{len(shared)} eight-word runs shared with Austen, e.g. {shared[0]!r}")
     paras = [len(p.split()) for p in re.split(r"\n\s*\n", text) if p.strip()]
-    _k, _n, _t, austen = austen_plan(scene_id, brief, json.loads((WORK / "names.json").read_text()))
+    austen = []
+    if (WORK / "plans" / f"{scene_id}.json").exists():
+        _k, _n, _t, austen = austen_plan(scene_id, brief, json.loads((WORK / "names.json").read_text()))
     med = lambda xs: sorted(xs)[len(xs) // 2] if xs else 0
     print(f"  {scene_id}/{arm}: {len(paras)} paragraphs (Austen {len(austen)}), median "
           f"{med(paras)} words (Austen {med(austen)})", flush=True)
