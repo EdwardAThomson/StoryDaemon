@@ -191,3 +191,34 @@ def test_each_section_gets_targets_for_its_own_length():
     SceneWriter(llm, Cfg(**ON)).write_scene(ctx)
     assert len(llm.prompts) == 2
     assert all("Style targets" in p for p in llm.prompts)
+
+
+# ---- word choice -----------------------------------------------------------------
+
+def test_long_words_leave_out_names():
+    text = ("Montmorency spoke with considerable indignation. "
+            "Montmorency was there.")
+    m = sp.measure(text)
+    # considerable, indignation; never Montmorency, which is only capitalised
+    words = len(sp._common_words(text))
+    assert m["long_words_per_1k"] == round(1000 * 2 / words, 1)
+
+
+def test_favourite_words_rank_against_modern_use():
+    text = " ".join(["solicitude"] * 6 + ["understand"] * 6 + ["Fitzwilliam"] * 9
+                    + ["lady's"] * 9 + ["the"] * 200)
+    modern = {"solicitude": 2.0, "understand": 5.0}
+    fav = sp.favourite_words(text, lambda w: modern.get(w, 0.0), min_letters=9)
+    assert fav[0] == "solicitude"            # rarer today than "understand"
+    assert "fitzwilliam" not in fav           # a name
+    assert all("'" not in w for w in fav)
+
+
+def test_word_choice_lines_only_for_profiles_that_have_them():
+    p = sp.load_profile("marriage")
+    with_words = sp.style_targets_section(p, 1000)
+    assert "words of ten letters or more" in with_words
+    assert p["favourite_words"][0] in with_words
+    bare = {k: v for k, v in p.items() if k not in ("long_words_per_1k", "favourite_words")}
+    text = sp.style_targets_section(bare, 1000)
+    assert "ten letters" not in text and "favours" not in text

@@ -19,7 +19,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from novel_agent.agent.style_profile import STYLES_DIR, book_chapters, measure  # noqa: E402
+from novel_agent.agent.style_profile import (  # noqa: E402
+    STYLES_DIR, book_chapters, favourite_words, measure)
 
 
 def main():
@@ -38,7 +39,15 @@ def main():
                              args.leave_out, args.drop_indented)
     if not chapters:
         sys.exit("no chapters found: does the book use CHAPTER headings?")
-    profile = measure("\n\n".join(chapters))
+    text = "\n\n".join(chapters)
+    profile = measure(text)
+    try:
+        from wordfreq import zipf_frequency
+        profile["favourite_words"] = favourite_words(
+            text, lambda w: zipf_frequency(w, "en"))
+    except ImportError:
+        print("wordfreq is not installed (pip install wordfreq): "
+              "the profile has no favourite_words list")
     note = f"{len(chapters)} chapters"
     if args.leave_out:
         note += f", leaving out the chapters holding: {'; '.join(args.leave_out)}"
