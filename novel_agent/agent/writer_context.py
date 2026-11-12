@@ -125,6 +125,15 @@ class WriterContextBuilder:
         # and departed entities most relevant to this scene.
         recent_context = self._with_story_and_canon(
             recent_context, plan, full_text_count + summary_count)
+
+        # The novel's genre, setting and tone, from the foundation. Until
+        # 2026-11-09 the writer never saw them: a novel of manners set in 1815
+        # reached the prompt only through whatever the plan happened to say.
+        # It rides the recent_context slot like the synopsis, so every writing
+        # call (single-shot, continuation, sections, revision) carries it.
+        novel_section = self._novel_section(project_state)
+        if novel_section:
+            recent_context = f"{novel_section}\n\n{recent_context}"
         
         # Format tool results
         tool_results_summary = self._format_tool_results(execution_results)
@@ -166,10 +175,10 @@ class WriterContextBuilder:
                 if arc_pressure_section else finale_section
             )
 
-        # Cast roster + a pool of pre-minted names for any new character (Phase 1 grounding)
-        existing_characters, approved_new_names = self._build_cast_and_name_pool(
-            project_state, pov_character_id, pov_people
-        )
+        # The cast, which is every name the writer may use (2026-11-07: the
+        # pool of spare minted names is gone; a name the writer took from it
+        # had no record, and walk-ons now come from character.walk_on).
+        existing_characters = self._build_cast(pov_character_id)
 
         return {
             "novel_name": novel_name,
@@ -196,7 +205,6 @@ class WriterContextBuilder:
             "word_target": word_target,
             "scene_skeleton": scene_skeleton,
             "existing_characters": existing_characters,
-            "approved_new_names": approved_new_names,
             "languages_section": languages_section,
             "languages_imported": languages_imported,
             "language_situation": situation,
@@ -378,40 +386,25 @@ class WriterContextBuilder:
         except Exception:
             return ""
 
-    def _build_cast_and_name_pool(self, project_state: Dict[str, Any],
-                                  pov_character_id: str,
-                                  pov_people: Optional[str] = None) -> tuple[str, str]:
-        """List the existing cast and mint a small pool of unused, grounded names.
-
-        The writer is told to use cast names or, only when a new character truly
-        needs a name, one of the pooled names — so it never invents one. When
-        the POV's people has a language bank, half the pool comes from it, so
-        a walk-on in that realm can carry one of its own names.
-        """
-        cast_lines = []
+    def _build_cast(self, pov_character_id: str) -> str:
+        """The cast list: every character the writer may name, with role,
+        gender and age group, and their personas when those are on. Nobody
+        outside it may be named (see prompts.WRITE_NAMING_RULE)."""
+        cast_lines, cast = [], []
+        personas_on = bool(self.config.get('generation.character_personas', False))
         for cid in sorted(self.memory.list_characters()):
             c = self.memory.load_character(cid)
             if not c:
                 continue
-            self.name_generator.register_used_name(c.full_name)
+            cast.append(c)
             marker = " (POV)" if cid == pov_character_id else ""
-            cast_lines.append(f"- {c.display_name} ({c.role}){marker}{status_note(c)}")
+            tags = ", ".join(t for t in (c.role, c.gender, c.age_group) if t)
+            cast_lines.append(f"- {c.display_name} ({tags}){marker}{status_note(c)}")
         existing_characters = "\n".join(cast_lines) if cast_lines else "(none yet)"
-
-        genre = (project_state.get("story_foundation") or {}).get("genre") or "scifi"
-        people_id = self.name_generator.resolve_people(pov_people) if pov_people else None
-        pool = []
-        for i in range(4):
-            try:
-                gender = "male" if len(pool) % 2 == 0 else "female"
-                affiliation = people_id if (people_id and i < 2) else None
-                minted = self.name_generator.generate_name(
-                    gender=gender, genre=genre, affiliation=affiliation)
-                pool.append(minted["full_name"])
-            except ValueError:
-                break
-        approved_new_names = "\n".join(f"- {n}" for n in pool) if pool else "(use a role descriptor instead)"
-        return existing_characters, approved_new_names
+        if personas_on and cast:
+            from .personas import voices_section
+            existing_characters += voices_section(cast)
+        return existing_characters
     
     def _protagonist_fallback(self, project_state):
         """No longer a fallback: a missing POV character is now an error.
@@ -460,7 +453,17 @@ class WriterContextBuilder:
         
         # Format character details
         details = f"**Name:** {character.display_name} (full name: {character.full_name})\n"
-        details += f"**ID:** {character.id}\n\n"
+        details += f"**ID:** {character.id}\n"
+        if character.pronouns:
+            details += f"**Gender:** {character.gender} ({character.pronouns})\n"
+        if character.age_group:
+            details += f"**Age:** {character.age_group}\n"
+        if character.persona and self.config.get('generation.character_personas', False):
+            from .personas import describe
+            persona_line = describe(character.persona)
+            if persona_line:
+                details += f"**Persona:** {persona_line}\n"
+        details += "\n"
         
         if character.description:
             details += f"**Description:** {character.description}\n\n"
@@ -596,6 +599,21 @@ class WriterContextBuilder:
         
         return "\n".join(context_parts).strip()
     
+    def _novel_section(self, project_state: Optional[Dict[str, Any]]) -> str:
+        """'## The Novel' with the foundation's genre, setting and tone, or ""
+        (gated by generation.writer_foundation; never raises)."""
+        if not self.config.get('generation.writer_foundation', True):
+            return ""
+        try:
+            f = (project_state or {}).get("story_foundation") or {}
+            lines = [f"**{label}:** {str(f.get(key)).strip()}"
+                     for key, label in (("genre", "Genre"), ("setting", "Setting"), ("tone", "Tone"))
+                     if str(f.get(key) or "").strip()]
+            return "## The Novel\n\n" + "\n".join(lines) if lines else ""
+        except Exception as e:  # never cost a scene
+            logger.warning(f"Could not build the novel section: {e}")
+            return ""
+
     def _with_story_and_canon(self, recent_context: str, plan: Dict[str, Any],
                               window: int) -> str:
         """Prefix the story-so-far and canon sections; never raises."""

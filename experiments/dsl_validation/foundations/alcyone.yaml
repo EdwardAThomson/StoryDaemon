@@ -1,11 +1,23 @@
+# Test foundation for the DSL validation runs. People are described by role
+# only: every name in a novel comes from the generator (cli/protagonist.py
+# mints the protagonist with its gender; character.generate mints the rest),
+# and no pronoun here may state a gender the generator did not draw. The ship
+# and the expedition are unnamed for the same reason. The file stem is kept so
+# earlier cells (e1-*/e2-*/e3-*/m1-*-alcyone-*) still map to it; the text they
+# ran on is recorded in each project's state.json.
 genre: historical adventure
 premise: >-
-  In 1871 the survey brig Alcyone is charting a volcanic archipelago while
-  secretly searching for the lost Meridian expedition. Elena Marsh, a
-  naturalist, carries her missing brother's cipher notebook; Captain Reeve owes
-  a debt he will not name; Yusuf, the quartermaster, has sailed these waters
-  before and says little about it.
-protagonist_archetype: Elena Marsh, a determined naturalist searching for her missing brother
+  In 1871 a survey brig is charting a volcanic archipelago while secretly
+  searching for a lost expedition. The ship's naturalist carries a missing
+  sibling's cipher notebook; the captain owes a debt that goes unnamed; the
+  quartermaster has sailed these waters before and says little about it.
+# The protagonist's gender is stated explicitly: it is recorded with the
+# generated name and is never guessed or drawn at random.
+protagonist_gender: female
+# The age group (young | adult | old) is stated the same way: it decides
+# which personas the protagonist can have and is never guessed.
+protagonist_age: adult
+protagonist_archetype: the ship's naturalist, determined and methodical, searching for a missing sibling who sailed with the lost expedition
 setting: a survey brig among uncharted volcanic islands, 1871
 tone: literary, atmospheric, slow-burning suspense
 themes:

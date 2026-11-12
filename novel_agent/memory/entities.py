@@ -217,6 +217,17 @@ class Character:
     family_name: str = ""
     title: str = ""  # Dr., Captain, Lord, etc.
     nicknames: List[str] = field(default_factory=list)  # Informal names
+    # Recorded with the name when the generator mints it (male | female), so
+    # the writer and planner read it as fact. "" on legacy records and on a
+    # name the author typed with nothing saying which.
+    gender: str = ""
+    # How the character speaks: one of agent/personas.py's personas (grumbler,
+    # worrier, ...), picked by Python from the id when the character is
+    # created, never by the model. "" on records made before 2026-11-04.
+    persona: str = ""
+    # young | adult | old, recorded when the character is created (required,
+    # like gender). It decides which personas fit. "" on older records.
+    age_group: str = ""
     
     role: str = ""  # protagonist, antagonist, supporting, minor
     description: str = ""
@@ -250,6 +261,11 @@ class Character:
             parts.append(self.family_name)
         return " ".join(parts) if parts else "Unnamed"
     
+    @property
+    def pronouns(self) -> str:
+        """"he/him", "she/her", or "" when the gender is not recorded."""
+        return {"male": "he/him", "female": "she/her"}.get((self.gender or "").lower(), "")
+
     @property
     def display_name(self) -> str:
         """Get name for prose (first name, or full name if no first name)."""

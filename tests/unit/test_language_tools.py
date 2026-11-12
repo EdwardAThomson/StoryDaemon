@@ -183,7 +183,7 @@ def test_language_tools_are_offered_only_when_languages_were_imported(project):
     for t in tools:
         registry.register(t)
     description = registry.get_tools_description()
-    assert "**language.phrase**" in description and "people (string), kind (string)" in description
+    assert "**language.phrase**" in description and "people (string), kind (string: one of " in description
     assert "**language.word**" in description and "people (string), english (string)" in description
     # the planner is told which peoples it may name
     assert "Vokekuk Principality (Quqo)" in tools[0].parameters["people"]["description"]

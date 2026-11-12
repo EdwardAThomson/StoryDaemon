@@ -137,7 +137,7 @@ def _ctx(skeleton):
         "tool_results_summary": "(none)", "pov_character_id": "C000",
         "pov_character_name": "Mira", "pov_character_details": "an archivist",
         "location_id": "L000", "location_details": "The archive",
-        "existing_characters": "- Mira (POV)", "approved_new_names": "",
+        "existing_characters": "- Mira (POV)",
         "scene_length_guidance": "", "word_target": 1400,
         "scene_skeleton": skeleton,
     }

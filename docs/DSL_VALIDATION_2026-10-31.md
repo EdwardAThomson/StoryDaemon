@@ -121,6 +121,34 @@ Sectioned with the fixes lands on the masters' distribution; single-shot runs sh
 
 Verdict: sectioned now does the structural job it was built for. Its cost is some subtext and pace. It stays off by default until those are worked on. Caveat: the single-shot arm was written before the planner named a key change, so it had the weaker plan; a fair comparison needs that arm re-run on one premise (about 30 cents).
 
+**Fix 1 check (2026-11-02, PR #30, `generation.subblock_event_rules`).** Each planned section was also told how to deliver its event (through action and speech, early, each thing said once). Alcyone, 6 chapters, 36 cents with judging: register fit 3.33 (unchanged), movement 3.17 (unchanged), subtext 2.0 (was 2.17), economy 2.0 (unchanged), voices 2.0. The judge's reasons still say "restated many times" and name duplicated lines. Seams 6 of 26 against 1 of 25 for the control, worse than the 3 of 22 before. Paragraph shape still on the masters' distribution (median 33, 20% under 15 words). One of the six chapters fell back to position jobs. A negative result: three more prompt rules moved nothing the judge can see, which matches what the fork experiment found for tension. Restatement and subtext need a gauge and a code-side fix, not wording.
+
+## 5c. Model check: the same skeleton arm on a stronger writer (2026-11-03)
+
+Section 4 established that skeletons move register fit on gpt-5.6-luna and move no craft mark. Ed's reading was that the remaining gap is the model's, not the method's: Luna writes in a modern register and fills a LORE slot with a block of history where a master would put the history in someone's mouth. The test is the same six-scene skeleton arm on a stronger writer, judged by the same register-anchored judge v2, with a Luna control re-run on the current code so the comparison is like for like. Cells `m1-opus55-alcyone-on` (`openrouter:anthropic/claude-opus-5.5`) and `m1-luna-alcyone-on`, Alcyone, skeleton on, house scene targets.
+
+| | Luna, old arm (8) | Luna control (6) | **Opus 5.5 (6)** | masters (4) |
+|---|---|---|---|---|
+| Register fit | 3.00 | 3.17 | **3.83** | 4.25 |
+| Movement | 3.75 | 3.67 | **4.17** | 4.25 |
+| Voices | 2.12 | 2.33 | **3.50** | 4.50 |
+| Subtext | 2.50 | 2.83 | **4.83** | 3.75 |
+| Economy | 2.50 | 2.33 | **3.00** | 3.00 |
+| Grounding | 3.88 | 3.50 | **4.83** | 3.75 |
+| Worst lapses | packed 5, exposition 3 | packed 4 | exposition 3, fragmented 2, packed 1 | packed 2, fragmented 1 |
+| One speaker per DIALOGUE item | 0.77 | 0.69 | **0.92** | |
+| Mode match / words in range | 0.82 / 0.83 | 0.84 / 0.84 | 0.75 / 0.80 | |
+| Median paragraph, words | 31 | 42 | 44 | 29 |
+| Paragraphs under 15 words | 36% | 29% | 22% | 25% |
+| Words per scene | 1,512 | 1,459 | 1,579 | |
+| Cost per scene | 1.3¢ | 1.2¢ | 36¢ | |
+
+Reading. On Opus the skeleton reaches the technique it only outlined on Luna: register fit is within half a point of the masters chapters, subtext and grounding score above them, economy is level, and the one-speaker rule holds at 0.92 without being enforced in code. The judge's recurring note on Opus is that history is "woven into perception and action"; its remaining lapse is the same single standalone exposition paragraph per scene. Voices rose from 2.1 to 3.5 and is the one mark still a full point short of the masters. The Luna control reproduces the old Luna arm within noise on every mark, so the code changes since (key change, names fix) did not move Luna. Six scenes per cell: the register series are [4,4,3,4,4,4] and [2,2,4,4,4,3], so the register difference is clear and the craft differences on subtext, grounding and voices are larger than scene-to-scene spread; economy and movement are within it.
+
+So the DSL is doing its job and the writer model is the lever. The gap the structural layer cannot close on Luna closes on a model that can carry technique; the next quality question is voices, on Opus, with a gauge first. Opus costs roughly 30x Luna per scene.
+
+Names. The PR #32 hygiene held on Opus (zero foundation-name mentions in six scenes; the quartermaster's record was authored as "the intention refers to him as Yusuf" and the cleaner flagged it). Luna leaked once anyway: scene 2 used "Yusuf" 19 times for a quartermaster the planner named in its intention but never created, so no record existed for the cleaner to clean. The gauge caught it, which is what it is for; it does not yet run on tick 0, and the leak path it exposes is the planner writing a premise name into the intention without a `character.generate` call. Both runs also wrote a male-named protagonist as "she", because the archetype still reads "her missing brother": the test foundations should describe people by role.
+
 ## 6. Two bugs fixed on the way
 
 Both in `writer.py:_write_in_sections`, both found by the fallback printing to the console as designed:

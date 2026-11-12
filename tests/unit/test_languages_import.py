@@ -340,7 +340,7 @@ def test_character_generate_records_the_people(entities, project):
     store = VectorStore(project)
     tool = CharacterGenerateTool(memory, store, gen, genre="fantasy")
     assert "affiliation" in tool.parameters
-    result = tool.execute(role="supporting", description="a ferryman", gender="male",
+    result = tool.execute(role="supporting", description="a ferryman", gender="male", age_group="adult",
                           affiliation="Vokekuk Principality")
     character = memory.load_character(result["character_id"])
     assert character.first_name in {p["name"] for p in entities.languages[0].persons}
@@ -353,6 +353,36 @@ def test_character_generate_records_the_people(entities, project):
     location = memory.load_location(result["location_id"])
     assert location.metadata["worldgen"]["realm_id"] == "R2"
     assert location.name.endswith(" ford")
+
+
+def test_a_walk_on_takes_the_local_peoples_name(entities, project):
+    """Ed, 2026-11-07: walk-ons should come from the local language. One
+    person per role and people: each realm has its own harbour clerk."""
+    from novel_agent.tools.memory_tools import CharacterGenerateTool, WalkOnTool
+
+    class Vec:
+        def index_character(self, c):
+            pass
+
+    memory = MemoryManager(project)
+    persist_languages(memory, entities)
+    gen = NameGenerator(DATA_DIR, languages_file=bank_file_path(project))
+    tool = WalkOnTool(CharacterGenerateTool(memory, Vec(), gen, genre="fantasy"))
+    assert "affiliation" in tool.parameters
+    a = tool.execute(role="harbour clerk", gender="female", age_group="adult",
+                     affiliation="Vokekuk Principality")
+    clerk = memory.load_character(a["character_id"])
+    assert clerk.first_name in {p["name"] for p in entities.languages[0].persons}
+    assert clerk.metadata["worldgen"]["people"] == "R0" and clerk.metadata["walk_on"]
+    # the same role in the same realm is the same person
+    again = tool.execute(role="the harbour clerk", gender="female", age_group="adult",
+                         affiliation="R0")
+    assert again["character_id"] == a["character_id"] and again["existing"]
+    # in another realm it is someone else, named in that realm's tongue
+    b = tool.execute(role="harbour clerk", gender="male", age_group="adult", affiliation="Gaipo")
+    assert b["character_id"] != a["character_id"]
+    assert memory.load_character(b["character_id"]).first_name in {
+        p["name"] for p in entities.languages[1].persons}
 
 
 # ============================================================================
@@ -390,10 +420,6 @@ def test_writer_context_carries_the_pov_language(entities, project):
     text = format_writer_prompt(ctx)
     assert "speaks Gaipo" in text
     assert "LANGUAGE RULES" in text
-    # half the approved pool comes from that people
-    pool = [line[2:] for line in ctx["approved_new_names"].splitlines()]
-    gaipo_names = {p["name"] for p in entities.languages[1].persons}
-    assert len(pool) == 4 and len([n for n in pool if n in gaipo_names]) == 2
 
     # a character with no people falls back to the location's realm
     plan = {"pov_character": "C000", "target_location": "L000", "scene_intention": "x", "key_change": "y"}
@@ -427,7 +453,7 @@ def test_novel_new_auto_detects_languages_beside_the_world():
     runner, app = _cli()
     with tempfile.TemporaryDirectory() as tmpdir:
         result = runner.invoke(app, [
-            "new", "lang-novel", "--dir", tmpdir, "--no-interactive",
+            "new", "lang-novel", "--dir", tmpdir, "--no-interactive", "--protagonist-gender", "female", "--protagonist-age", "adult",
             "--world", str(FIXTURES / "region-small.json"),
         ])
         assert result.exit_code == 0, result.output
@@ -463,7 +489,7 @@ def test_novel_new_with_explicit_languages_file():
         world = Path(tmpdir) / "my-world.json"
         world.write_text((FIXTURES / "region-small.json").read_text(encoding="utf-8"), encoding="utf-8")
         result = runner.invoke(app, [
-            "new", "lang-novel", "--dir", tmpdir, "--no-interactive", "--world", str(world),
+            "new", "lang-novel", "--dir", tmpdir, "--no-interactive", "--protagonist-gender", "female", "--protagonist-age", "adult", "--world", str(world),
             "--languages", str(FIXTURES / "region-small-languages.json"),
             "--setting", "The marches.",
         ])
@@ -476,7 +502,7 @@ def test_novel_new_with_explicit_languages_file():
 
         # without --languages and nothing beside the world: no languages, no complaint
         result = runner.invoke(app, [
-            "new", "plain-novel", "--dir", tmpdir, "--no-interactive", "--world", str(world)])
+            "new", "plain-novel", "--dir", tmpdir, "--no-interactive", "--protagonist-gender", "female", "--protagonist-age", "adult", "--world", str(world)])
         assert result.exit_code == 0, result.output
         assert "Languages" not in result.output
         project = next(Path(tmpdir).glob("plain-novel_*"))
@@ -492,7 +518,7 @@ def test_novel_new_rejects_bad_languages_before_creating_anything(sector_data):
         sector = Path(tmpdir) / "sector.json"
         sector.write_text(json.dumps(sector_data), encoding="utf-8")
         result = runner.invoke(app, [
-            "new", "lang-novel", "--dir", tmpdir, "--no-interactive", "--world", str(sector),
+            "new", "lang-novel", "--dir", tmpdir, "--no-interactive", "--protagonist-gender", "female", "--protagonist-age", "adult", "--world", str(sector),
             "--languages", str(FIXTURES / "region-small-languages.json")])
         assert result.exit_code == 1
         assert "which the world file does not have" in result.output
@@ -501,13 +527,13 @@ def test_novel_new_rejects_bad_languages_before_creating_anything(sector_data):
         bad = Path(tmpdir) / "bad.json"
         bad.write_text(json.dumps({"schema": "worldgen/region@0.1"}), encoding="utf-8")
         result = runner.invoke(app, [
-            "new", "lang-novel", "--dir", tmpdir, "--no-interactive",
+            "new", "lang-novel", "--dir", tmpdir, "--no-interactive", "--protagonist-gender", "female", "--protagonist-age", "adult",
             "--world", str(FIXTURES / "region-small.json"), "--languages", str(bad)])
         assert result.exit_code == 1
         assert "Unknown languages schema" in result.output
         # --languages needs --world
         result = runner.invoke(app, [
-            "new", "lang-novel", "--dir", tmpdir, "--no-interactive",
+            "new", "lang-novel", "--dir", tmpdir, "--no-interactive", "--protagonist-gender", "female", "--protagonist-age", "adult",
             "--languages", str(FIXTURES / "region-small-languages.json")])
         assert result.exit_code == 1
         assert "--languages needs --world" in result.output

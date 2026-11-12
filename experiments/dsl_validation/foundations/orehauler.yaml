@@ -1,10 +1,21 @@
+# Test foundation for the DSL validation runs. People are described by role
+# only: every name in a novel comes from the generator, and no pronoun here
+# may state a gender the generator did not draw. The ship is unnamed for the
+# same reason. The file stem is kept so earlier cells still map to it; the
+# text they ran on is recorded in each project's state.json.
 genre: science fiction thriller
 premise: >-
-  The ore hauler Tamsin Gray is three months from port when its reactor
-  begins to fail. Early in the voyage the captain is found murdered in a
-  sealed compartment, and the ship's engineer, Ilse Varga, must find the killer
-  among a crew of eleven before the reactor or the murderer kills them all.
-protagonist_archetype: Ilse Varga, a pragmatic ship's engineer
+  An ore hauler is three months from port when its reactor begins to fail.
+  Early in the voyage the captain is found murdered in a sealed compartment,
+  and the ship's engineer must find the killer among a crew of eleven before
+  the reactor or the murderer kills them all.
+# The protagonist's gender is stated explicitly: it is recorded with the
+# generated name and is never guessed or drawn at random.
+protagonist_gender: female
+# The age group (young | adult | old) is stated the same way: it decides
+# which personas the protagonist can have and is never guessed.
+protagonist_age: adult
+protagonist_archetype: the ship's engineer, pragmatic and stubborn, trusted by the crew until the murder
 setting: a failing deep-space ore hauler far from any port
 tone: tense, claustrophobic, grounded
 themes:

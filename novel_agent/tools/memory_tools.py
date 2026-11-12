@@ -1,6 +1,7 @@
 """Memory-related tools for the story agent."""
 
 import random
+import re
 from typing import Dict, List, Optional, Any
 from pathlib import Path
 from ..memory.manager import MemoryManager
@@ -94,8 +95,12 @@ class CharacterGenerateTool(Tool):
                 "gender": {
                     "type": "string",
                     "enum": ["male", "female"],
-                    "description": "Hint for name generation (defaults to random 50/50 if not specified)",
-                    "optional": True
+                    "description": "REQUIRED. The character's gender, recorded with the generated name. Never omitted; a call without it fails."
+                },
+                "age_group": {
+                    "type": "string",
+                    "enum": ["young", "adult", "old"],
+                    "description": "REQUIRED. young (a child or young adult, up to about 30), adult (about 30 to 60) or old (over about 60). Recorded on the character; a call without it fails."
                 },
                 "title": {
                     "type": "string",
@@ -120,6 +125,25 @@ class CharacterGenerateTool(Tool):
                         "Optional realm or faction the character belongs to, by name. "
                         "When the world's languages were imported, the name is drawn "
                         "from that people's own tongue."
+                    ),
+                    "optional": True
+                },
+                "kin_of": {
+                    "type": "string",
+                    "description": (
+                        "For a blood relative of an existing character (a brother, "
+                        "mother, son), that character's id, e.g. C000. The new "
+                        "character takes the same family name and the family "
+                        "relationship is recorded. Give kinship with it."
+                    ),
+                    "optional": True
+                },
+                "kinship": {
+                    "type": "string",
+                    "enum": list(KINSHIPS),
+                    "description": (
+                        "With kin_of: what the NEW character is to that one "
+                        "(sibling, parent or child)."
                     ),
                     "optional": True
                 }
@@ -147,7 +171,10 @@ class CharacterGenerateTool(Tool):
                 title: Optional[str] = None,
                 traits: Optional[List[str]] = None,
                 goals: Optional[List[str]] = None,
-                affiliation: Optional[str] = None) -> Dict[str, Any]:
+                affiliation: Optional[str] = None,
+                age_group: Optional[str] = None,
+                kin_of: Optional[str] = None,
+                kinship: Optional[str] = None) -> Dict[str, Any]:
         """Create a new character.
 
         The canonical name is always system-generated. ``gender`` and ``title``
@@ -176,9 +203,24 @@ class CharacterGenerateTool(Tool):
         if affiliation:
             metadata["affiliation"] = affiliation
 
+        # The gender is a fact recorded with the name (2026-11-04). It must be
+        # given; it is never guessed from the description or drawn at random,
+        # and a description that states the other gender is refused. Both
+        # raise, which halts the tick: ambiguity here is not acceptable.
+        from novel_agent.agent.name_hygiene import (require_age_group, require_consistent,
+                                                    require_gender)
+        char_gender = require_gender(gender, "character.generate")
+        char_age = require_age_group(age_group, "character.generate")
+        require_consistent(description, char_gender, "The new character", "description")
+        # A blood relative shares the family name, and the link is recorded
+        # with real ids. Before this the planner wrote the brother as a
+        # stranger and then relationship.create(character_b="<brother_id>"),
+        # a placeholder no record answers to, so the siblings got unrelated
+        # surnames and a relationship to nobody (live Opus run, 2026-11-05).
+        kin = self._require_kin(kin_of, kinship)
+        if kin is not None:
+            metadata["kin"] = {"of": kin.id, "kinship": kinship.strip().lower()}
         if self.name_generator:
-            # Random 50/50 if gender not specified (to avoid LLM bias)
-            char_gender = gender or random.choice(["male", "female"])
             # Passed only when given, so a generator without the keyword
             # (an older fake, a custom one) keeps working.
             extra = {"affiliation": affiliation} if affiliation else {}
@@ -187,6 +229,19 @@ class CharacterGenerateTool(Tool):
             )
             first_name = name_result["first_name"]
             family_name = name_result["last_name"]
+            if kin is not None and kin.family_name:
+                family_name = kin.family_name
+                taken_names = {c.full_name.lower() for c in self._characters()}
+                for _ in range(20):  # a sibling never shares the whole name
+                    if f"{first_name} {family_name}".lower() not in taken_names:
+                        break
+                    first_name = self.name_generator.generate_name(
+                        gender=char_gender, genre=self.genre, **extra)["first_name"]
+                else:
+                    raise ValueError(
+                        f"No first name could be drawn for a relative of {kin.id} "
+                        "that is not already taken in the family.")
+            char_gender = name_result.get("gender", char_gender) or char_gender
             gen_title = name_result.get("title", "") or (title or "")
             if name_result.get("people"):
                 metadata["worldgen"] = {
@@ -238,8 +293,44 @@ class CharacterGenerateTool(Tool):
                         "existing_role": existing_role
                     }
         
+        # Hold the LLM-authored description to the roster. The planner reads
+        # the premise and writes "Yusuf is an experienced quartermaster" for a
+        # character the generator is about to call Richard Huntington; the
+        # record then carries the premise name and so does the prose
+        # (2026-11-02 diagnosis). The subject of the description becomes the
+        # minted name; any other unminted name is reported, never guessed at.
+        foreign_names_left: List[str] = []
+        try:
+            from novel_agent.agent.name_hygiene import clean_description
+            roster = []
+            for cid in existing_chars:
+                existing = self.memory_manager.load_character(cid)
+                if existing:
+                    roster.append(existing.full_name)
+            from novel_agent.agent.name_hygiene import foreign_names
+            before = foreign_names(description, roster + [f"{first_name} {family_name}"])
+            description, foreign_names_left = clean_description(
+                description, first_name, family_name, roster)
+            replaced = [n for n in before if n not in foreign_names_left]
+            if replaced:
+                # The planner's name for this person; the plan text that still
+                # says it is pointed at this record, not minted again.
+                metadata["replaced_names"] = replaced
+            if foreign_names_left:
+                metadata["unminted_names_in_description"] = foreign_names_left
+        except Exception:
+            pass  # hygiene must never cost a character
+
         # Generate ID for new character
         character_id = self.memory_manager.generate_id("character")
+        from novel_agent.agent.personas import persona_for
+        taken = []
+        for cid in self.memory_manager.list_characters():
+            other = self.memory_manager.load_character(cid)
+            if other is not None and other.id != character_id and other.persona:
+                taken.append(other.persona)
+        persona = persona_for(self.memory_manager.project_path.name, character_id, char_age,
+                              taken)
         
         # Create character entity
         character = Character(
@@ -247,6 +338,9 @@ class CharacterGenerateTool(Tool):
             first_name=first_name,
             family_name=family_name,
             title=title,
+            gender=char_gender,
+            age_group=char_age,
+            persona=persona,
             role=role,
             description=description,
             personality=Personality(core_traits=traits or []),
@@ -256,6 +350,8 @@ class CharacterGenerateTool(Tool):
         
         # Save to disk
         self.memory_manager.save_character(character)
+        if kin is not None:
+            self._record_kinship(kin, character, kinship)
         
         # Index in vector store
         self.vector_store.index_character(character)
@@ -264,11 +360,169 @@ class CharacterGenerateTool(Tool):
         if self.memory_manager.get_active_character() is None:
             self.memory_manager.set_active_character(character_id)
         
-        return {
+        result = {
             "success": True,
             "character_id": character_id,
-            "name": character.full_name
+            "name": character.full_name,
+            "gender": character.gender,
+            "age_group": character.age_group,
         }
+        if kin is not None:
+            result["kin_of"] = kin.id
+            result["kinship"] = metadata["kin"]["kinship"]
+        if foreign_names_left:
+            result["note"] = (
+                "The description names people who do not exist in this story: "
+                + ", ".join(foreign_names_left)
+                + ". Only generated names exist; refer to characters by their ids.")
+        return result
+
+
+    def _characters(self):
+        out = []
+        for cid in self.memory_manager.list_characters():
+            c = self.memory_manager.load_character(cid)
+            if c is not None:
+                out.append(c)
+        return out
+
+    def _require_kin(self, kin_of, kinship):
+        """The existing character a new relative belongs to, or None. A half
+        given link (one without the other, an id with no record, an unknown
+        kinship) is refused: kinship is a recorded fact, never guessed."""
+        kin_of = (kin_of or "").strip()
+        kinship = (kinship or "").strip().lower()
+        if not kin_of and not kinship:
+            return None
+        if not kin_of or not kinship:
+            raise ValueError("character.generate: kin_of and kinship go together; "
+                             "give both or neither.")
+        if kinship not in KINSHIPS:
+            raise ValueError(f"character.generate: kinship must be one of "
+                             f"{' | '.join(KINSHIPS)}, not {kinship!r}.")
+        kin = self.memory_manager.load_character(kin_of)
+        if kin is None:
+            raise ValueError(f"character.generate: kin_of {kin_of!r} is not an existing "
+                             "character id; a relative can only be made of someone "
+                             "who already has a record.")
+        return kin
+
+    def _record_kinship(self, kin, new, kinship):
+        """The family relationship, with both real ids, unless one exists."""
+        if self.memory_manager.get_relationship_between(kin.id, new.id):
+            return
+        kinship = kinship.strip().lower()
+        self.memory_manager.add_relationship(RelationshipGraph(
+            id=self.memory_manager.generate_id("relationship"),
+            character_a=kin.id,
+            character_b=new.id,
+            relationship_type=KINSHIP_LABELS[kinship],
+            perspective_a="",
+            perspective_b="",
+            status="family",
+            intensity=5,
+            metadata={"kinship": {"of": kin.id, "new": new.id, "new_is": kinship}},
+        ))
+
+
+class WalkOnTool(Tool):
+    """A walk-on: a minor person the scene needs (a leadsman, a clerk), with a
+    name minted in Python and a record on disk, so the prose never has to
+    invent one. A live Opus run (2026-11-06) named three walk-ons the
+    generator never minted ("Mr Harker's at his figures"). One person per
+    role: asking again for a role the story already has returns that person,
+    so the same leadsman comes back in every scene."""
+
+    def __init__(self, character_tool: "CharacterGenerateTool"):
+        super().__init__(
+            name="character.walk_on",
+            description=(
+                "Get a walk-on for this scene: a minor person who speaks, is "
+                "addressed or is named (a leadsman, a clerk, a guard). The name "
+                "is generated and the person is saved. A role the story already "
+                "has returns that same person, so call it again whenever that "
+                "role appears."
+            ),
+            parameters={
+                "role": {
+                    "type": "string",
+                    "description": "The walk-on's job or place in the scene, e.g. 'leadsman', 'master's mate', 'harbour clerk'",
+                },
+                "gender": {
+                    "type": "string",
+                    "enum": ["male", "female"],
+                    "description": "REQUIRED. Recorded with the generated name.",
+                },
+                "age_group": {
+                    "type": "string",
+                    "enum": ["young", "adult", "old"],
+                    "description": "REQUIRED. young (up to about 30), adult (about 30 to 60) or old (over about 60).",
+                },
+                "affiliation": {
+                    "type": "string",
+                    "description": (
+                        "The realm or people of the place the scene happens, by "
+                        "name. When the world's languages were imported, the "
+                        "walk-on's name comes from that people's own tongue."
+                    ),
+                    "optional": True,
+                },
+            },
+        )
+        self.character_tool = character_tool
+        self.memory_manager = character_tool.memory_manager
+
+    @staticmethod
+    def _role_key(role: str) -> str:
+        key = re.sub(r"[^a-z' ]+", " ", (role or "").lower())
+        key = re.sub(r"^(?:the|a|an)\s+", "", key.strip())
+        return re.sub(r"\s+", " ", key).strip()
+
+    def _people_of(self, affiliation: Optional[str]) -> str:
+        gen = getattr(self.character_tool, "name_generator", None)
+        if not gen or not (affiliation or "").strip():
+            return ""
+        return gen.resolve_people(affiliation) or ""
+
+    def execute(self, role: str, gender: Optional[str] = None,
+                age_group: Optional[str] = None,
+                affiliation: Optional[str] = None) -> Dict[str, Any]:
+        from novel_agent.agent.name_hygiene import require_age_group, require_gender
+        key = self._role_key(role)
+        if not key:
+            raise ValueError("character.walk_on: a walk-on needs a role, e.g. 'leadsman'.")
+        # One person per role and people: the harbour clerk of one realm is
+        # not the harbour clerk of another (2026-11-07, Ed: walk-ons should
+        # come from the local language).
+        people = self._people_of(affiliation)
+        for cid in sorted(self.memory_manager.list_characters()):
+            c = self.memory_manager.load_character(cid)
+            c_people = ((c.metadata or {}).get("worldgen") or {}).get("people", "") if c else ""
+            if (c and (c.metadata or {}).get("walk_on") and self._role_key(c.role) == key
+                    and c_people == people):
+                return {"success": True, "character_id": c.id, "name": c.full_name,
+                        "gender": c.gender, "age_group": c.age_group, "role": c.role,
+                        "existing": True}
+        # A walk-on's facts are required exactly like any character's.
+        require_gender(gender, "character.walk_on")
+        require_age_group(age_group, "character.walk_on")
+        extra = {"affiliation": affiliation.strip()} if (affiliation or "").strip() else {}
+        out = self.character_tool.execute(
+            role=role.strip(), description=f"A walk-on: the {key}.",
+            gender=gender, age_group=age_group, **extra)
+        c = self.memory_manager.load_character(out["character_id"])
+        if c is not None and not out.get("duplicate"):
+            c.metadata = dict(c.metadata or {}, walk_on=True)
+            self.memory_manager.save_character(c)
+        out["role"] = role.strip()
+        out["existing"] = False
+        return out
+
+
+# What a new character can be to an existing one. Each shares the family name.
+KINSHIPS = ("sibling", "parent", "child")
+KINSHIP_LABELS = {"sibling": "siblings", "parent": "parent and child",
+                  "child": "parent and child"}
 
 
 class LocationGenerateTool(Tool):
@@ -400,11 +654,11 @@ class RelationshipCreateTool(Tool):
             parameters={
                 "character_a": {
                     "type": "string",
-                    "description": "First character ID"
+                    "description": "First character's exact id (e.g. C000), an existing character"
                 },
                 "character_b": {
                     "type": "string",
-                    "description": "Second character ID"
+                    "description": "Second character's exact id, an existing character; a character created in this same plan has no id yet, so it cannot be named here"
                 },
                 "relationship_type": {
                     "type": "string",
@@ -449,6 +703,22 @@ class RelationshipCreateTool(Tool):
         Returns:
             Success status and relationship ID
         """
+        # Both ends must be real characters. Planners write placeholders for
+        # characters created in the same plan ("<brother_id>", "{captain_id}",
+        # "Yusuf"): seven runs out of thirty stored relationships to nobody
+        # (2026-11-05). Nothing is saved for an id with no record.
+        missing = [c for c in (character_a, character_b)
+                   if not re.fullmatch(r"C\d{3,}", str(c or ""))
+                   or self.memory_manager.load_character(str(c)) is None]
+        if missing:
+            return {
+                "success": False,
+                "error": (f"No character has the id {', '.join(map(repr, missing))}; "
+                          "nothing was recorded. Use the exact id of an existing "
+                          "character. For a relative, pass kin_of and kinship to "
+                          "character.generate instead."),
+            }
+
         # Check if relationship already exists
         existing = self.memory_manager.get_relationship_between(character_a, character_b)
         if existing:
@@ -681,9 +951,10 @@ class FactionGenerateTool(Tool):
         # Faction_<id> pattern if no generator is available.
         final_name = name
         if not final_name and self.name_generator:
-            gender = random.choice(["male", "female"])
-            name_result = self.name_generator.generate_name(gender=gender, genre=self.genre)
-            final_name = name_result.get("full_name") or name_result.get("first_name")
+            # A faction is not a person: its name is a family name from the
+            # story's bank ("Ashford"), with no gender asked for or recorded.
+            # It used to mint a whole person's name for a random gender.
+            final_name = self.name_generator.generate_surname(genre=self.genre)
 
         if not final_name:
             final_name = f"Faction_{faction_id}"

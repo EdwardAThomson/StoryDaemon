@@ -151,6 +151,11 @@ class StoryAgent:
 
         # Use two-phase execution for first tick only
         try:
+            # Characters recorded before gender was stored get it from the
+            # name bank their name was drawn from; any that cannot be settled
+            # that way stop the tick here, before anything is written.
+            self._backfill_character_genders()
+            self._backfill_character_personas()
             if tick == 0:
                 result = self._first_tick()
             else:
@@ -162,6 +167,72 @@ class StoryAgent:
             raise
         self._record_history(tick, result=result)
         return result
+
+    def _backfill_character_genders(self):
+        """Give every character without a recorded gender the gender of its name.
+
+        Names were drawn from gendered lists, but until 2026-11-04 the gender
+        was not stored. The list a first name appears in is its gender, and
+        that is recorded (``metadata.gender_source = "name_bank"``). A name
+        that appears under both genders, or in no gendered list (an imported
+        language's names carry no gender; an author-typed name was never
+        drawn), cannot be settled from the name, and nothing guesses: the
+        tick fails and names each character, so the gender can be set by hand
+        in its memory/characters/<id>.json.
+        """
+        from ..tools.name_generator import NameGenerator
+        generator = None
+        tool = self.tools.get_tool("name.generate") if self.tools else None
+        if tool is not None:
+            generator = getattr(tool, "generator", None)
+        if generator is None:
+            generator = NameGenerator(Path(__file__).resolve().parent.parent / "data" / "names")
+        genre = (self.state.get("story_foundation") or {}).get("genre") or None
+        unresolved = []
+        for cid in self.memory.list_characters():
+            c = self.memory.load_character(cid)
+            if not c or c.gender in ("male", "female"):
+                continue
+            found = generator.genders_of_first_name(c.first_name, genre)
+            if len(found) == 1:
+                c.gender = found[0]
+                c.metadata = dict(c.metadata or {})
+                c.metadata["gender_source"] = "name_bank"
+                self.memory.save_character(c)
+                print(f"   Recorded {c.full_name} ({cid}) as {c.gender}, from the name bank")
+            else:
+                why = "listed under both genders" if found else "in no gendered name list"
+                unresolved.append(f"{cid} {c.full_name} ({why})")
+        if unresolved:
+            raise ValueError(
+                "These characters have no recorded gender and their names cannot "
+                "settle it: " + "; ".join(unresolved) + ". Set \"gender\": \"male\" or "
+                "\"female\" in each memory/characters/<id>.json. A gender is never guessed.")
+
+    def _backfill_character_personas(self):
+        """Give a persona to every character made before personas existed.
+
+        Only when ``generation.character_personas`` is on. The persona is the
+        same fixed function of the novel and the id that creation uses
+        (agent/personas.py), recorded with ``metadata.persona_source =
+        "backfill"``. A record with no age group is never given an age-bound
+        persona (the old-timer), since its age is not known.
+        """
+        if not self.config.get('generation.character_personas', False):
+            return
+        from .personas import persona_for
+        seed = self.memory.project_path.name
+        cast = [self.memory.load_character(cid) for cid in sorted(self.memory.list_characters())]
+        cast = [c for c in cast if c is not None]
+        taken = [c.persona for c in cast if c.persona]
+        for c in cast:
+            if c.persona:
+                continue
+            c.persona = persona_for(seed, c.id, c.age_group, taken)
+            taken.append(c.persona)
+            c.metadata = dict(c.metadata or {})
+            c.metadata["persona_source"] = "backfill"
+            self.memory.save_character(c)
 
     def _record_history(self, tick, result=None, error=None):
         """Commit this tick to the novel's own git history (novel_agent/history.py).
@@ -293,6 +364,11 @@ class StoryAgent:
             # Resolve planner POV/location refs (name/nickname/ID) to canonical IDs
             self._resolve_plan_entities(plan)
 
+            # Step 4.6: the plan's text is held to the roster. A name a record
+            # answers to is replaced by the minted one; a person with no
+            # record fails the tick (never minted with a guessed gender).
+            self._hold_plan_to_roster(plan, execution_results, tick)
+
             # Step 5: Store plan and results
             print("   5. Storing plan...")
             plan_file = self.plan_manager.save_plan(
@@ -335,6 +411,7 @@ class StoryAgent:
                 execution_results,
                 self.state
             )
+            writer_context = self._plan_paragraphs(writer_context)
             
             scene_data = self.writer.write_scene(writer_context)
             
@@ -396,6 +473,17 @@ class StoryAgent:
 
 
             # Step 8.6: Detect new characters (Phase 6)
+            # Names gauge (instrument only, 2026-11-02): which names the prose
+            # uses that the generator never minted, and how many of them came
+            # in through the foundation text. Recorded in metrics, read by
+            # nothing. Never breaks the tick.
+            names_gauge = self._names_gauge(scene_data.get("text", ""))
+            if names_gauge:
+                scene_data["names_gauge"] = names_gauge
+                if names_gauge.get("foundation_names_in_prose"):
+                    print(f"        ⚠️  Unminted names from the foundation in this scene: "
+                          f"{', '.join(names_gauge['foundation_names_in_prose'])} "
+                          f"({names_gauge['foundation_name_mentions']} mentions)")
             if self.config.get('generation.auto_detect_characters', True):
                 print("   8.6. Detecting new characters...")
                 new_characters = self.character_detector.find_new_characters(scene_data["text"])
@@ -673,6 +761,10 @@ class StoryAgent:
             
             # Merge results
             execution_results = self._merge_execution_results(entity_results, remaining_results)
+
+            # Same as step 4.6 on a normal tick: hold the plan's text to the
+            # roster before the writer sees it.
+            self._hold_plan_to_roster(plan, execution_results, tick)
             
             # Step 8: Store plan
             print("   7. Storing plan...")
@@ -685,6 +777,7 @@ class StoryAgent:
                 execution_results,
                 self.state
             )
+            writer_context = self._plan_paragraphs(writer_context)
             scene_data = self.writer.write_scene(writer_context)
             
             print("   9. Evaluating scene...")
@@ -702,6 +795,11 @@ class StoryAgent:
 
             print("   10. Committing scene...")
             scene_id = self.committer.commit_scene(scene_data, tick, plan)
+
+            # Names gauge (instrument only), as at step 8.6 of a normal tick.
+            names_gauge = self._names_gauge(scene_data.get("text", ""))
+            if names_gauge:
+                scene_data["names_gauge"] = names_gauge
 
             if eval_result:
                 try:
@@ -1783,9 +1881,183 @@ class StoryAgent:
                 thread_result=thread_result,
                 construction_result=construction_result,
                 loop_ids_shown=loop_ids_shown,
+                names_gauge=scene_data.get("names_gauge"),
             )
         except Exception as e:
             logging.getLogger(__name__).warning(f"Coherence metrics failed (tick {tick}): {e}")
+            return None
+
+    def _hold_plan_to_roster(self, plan, execution_results, tick):
+        """Hold the plan's text to the roster before the writer sees it.
+
+        Names and genders come from the generator, recorded on a character,
+        and from nowhere else. A planner reading a premise wrote "obtains the
+        log from Yusuf, who warns..." with no character.generate call, so no
+        record existed and the prose used the premise's name 19 times
+        (2026-11-03).
+
+        Two outcomes, and nothing in between:
+        - the name is one a record already answers to (character.generate
+          minted the quartermaster this tick, and its description cleaner
+          recorded the planner's name for him in ``replaced_names`` /
+          ``unminted_names_in_description``): the plan is pointed at that
+          record and its minted name replaces the planner's;
+        - otherwise the tick fails. Minting the person here would need a
+          gender nobody stated, and a gender is never guessed or drawn at
+          random (2026-11-04), so the planner must create them with
+          character.generate, gender included. The run loop's retry
+          replans.
+
+        Detection failures are logged and skipped (an instrument must not
+        invent a crash); the refusal itself always raises.
+        """
+        done = []
+        try:
+            from .name_hygiene import (PLAN_TEXT_FIELDS, replace_name,
+                                       unminted_people_in_plan)
+            roster, claimed, ignore = self._known_names()
+            found = unminted_people_in_plan(plan, roster, ignore)
+        except Exception as e:
+            logging.getLogger(__name__).warning("Plan name check skipped: %s", e)
+            return done
+
+        unowned = []
+        for name, sentence in found:
+            owner = claimed.get(name)
+            if owner is None:
+                unowned.append((name, sentence))
+                continue
+            for key in PLAN_TEXT_FIELDS:
+                if isinstance(plan.get(key), str):
+                    plan[key] = replace_name(plan[key], name, owner.first_name, owner.family_name)
+            left = list((owner.metadata or {}).get("unminted_names_in_description") or [])
+            if name in left:
+                owner.description = replace_name(owner.description, name, owner.first_name, owner.family_name)
+                left.remove(name)
+                owner.metadata["unminted_names_in_description"] = left
+                owner.metadata.setdefault("replaced_names", []).append(name)
+                self.memory.save_character(owner)
+            done.append({"named_in_plan": name, "character_id": owner.id,
+                         "minted": owner.full_name, "gender": owner.gender})
+        if done:
+            plan["plan_names_resolved"] = done
+        if unowned:
+            listed = "; ".join(f"{n!r} in {s!r}" for n, s in unowned)
+            raise ValueError(
+                f"The plan names people who have no character record: {listed}. "
+                f"Every name comes from the generator: the planner must create each "
+                f"person with character.generate (gender included) and refer to them "
+                f"by the minted name.")
+        return done
+
+    def _known_names(self):
+        """(roster, claimed, ignore) for holding text to the records: every
+        name and nickname a character answers to; the names a record has
+        claimed from the planner (``replaced_names`` and
+        ``unminted_names_in_description``); and the world nouns, location and
+        faction names that are not people."""
+        from .name_hygiene import world_words
+        roster = []
+        claimed = {}
+        for cid in self.memory.list_characters():
+            c = self.memory.load_character(cid)
+            if not c:
+                continue
+            roster.append(c.full_name)
+            roster.extend(c.nicknames or [])
+            meta = c.metadata or {}
+            for n in list(meta.get("replaced_names") or []) + list(meta.get("unminted_names_in_description") or []):
+                claimed.setdefault(n, c)
+        ignore = set()
+        foundation = self.state.get("story_foundation") or {}
+        ignore |= world_words(" ".join(str(foundation.get(k) or "") for k in ("premise", "setting")))
+        for lid in self.memory.list_locations():
+            loc = self.memory.load_location(lid)
+            if loc and getattr(loc, "name", ""):
+                ignore.add(loc.name)
+                ignore.update(loc.name.split())
+        for fid in self.memory.list_factions():
+            fac = self.memory.load_faction(fid)
+            if fac and getattr(fac, "name", ""):
+                ignore.add(fac.name)
+                ignore.update(fac.name.split())
+        return roster, claimed, ignore
+
+    def _plan_paragraphs(self, writer_context):
+        """The model plans the scene's paragraphs; Python checks the plan
+        (agent/paragraph_plan.py). Gated by generation.paragraph_plan_by_model
+        and only with a sampled skeleton. On acceptance the writer context's
+        skeleton becomes the planned kinds, each item gains a line saying what
+        happens, and the plan section of the length guidance is re-rendered.
+        Otherwise everything is left as it was. Never raises (a refused or
+        failed plan costs the plan, not the scene)."""
+        if not self.config.get('generation.paragraph_plan_by_model', False):
+            return writer_context
+        skeleton = writer_context.get("scene_skeleton")
+        if not skeleton:
+            return writer_context
+        try:
+            from .name_hygiene import unminted_people_in_plan
+            from .paragraph_plan import plan_paragraphs
+            from .prompts import story_context_section
+            from .scene_skeleton import skeleton_prompt_section
+
+            roster = []
+            for cid in sorted(self.memory.list_characters()):
+                c = self.memory.load_character(cid)
+                if c:
+                    desc = ", ".join(t for t in (c.role, c.gender, c.age_group) if t)
+                    roster.append((cid, c.display_name, desc))
+            known, _claimed, ignore = self._known_names()
+
+            def name_check(text):
+                return [n for n, _s in unminted_people_in_plan(
+                    {"scene_intention": text}, known, ignore)]
+
+            budget = int(self.config.get('generation.paragraph_plan_max_tokens', 4000) or 4000)
+
+            def generate(prompt):
+                return self.writer._generate_segment(prompt, budget)[0] or ""
+
+            kinds, notes, report = plan_paragraphs(
+                generate, story_context_section(writer_context, task="write"),
+                skeleton, roster, name_check)
+            writer_context["paragraph_plan_report"] = report
+            if not kinds:
+                print(f"        ⚠️  Paragraph plan refused twice; using the sampled "
+                      f"plan. Last problems: {'; '.join(report['problems'][-1][:4])}")
+                return writer_context
+            old = skeleton_prompt_section(skeleton)
+            guidance = writer_context.get("scene_length_guidance") or ""
+            if old not in guidance:
+                logging.getLogger(__name__).warning(
+                    "Paragraph plan: sampled plan section not found; keeping it")
+                return writer_context
+            writer_context["scene_length_guidance"] = guidance.replace(
+                old, skeleton_prompt_section(kinds, notes))
+            writer_context["scene_skeleton"] = kinds
+            writer_context["paragraph_notes"] = notes
+            print(f"        paragraph plan by the model: {len(kinds)} paragraphs "
+                  f"(sampled {len(skeleton)}), accepted on attempt "
+                  f"{report['attempts']}")
+        except Exception as e:  # noqa: BLE001
+            logging.getLogger(__name__).warning(
+                f"Paragraph plan failed; using the sampled plan: {e}")
+        return writer_context
+
+    def _names_gauge(self, scene_text):
+        """Per-scene names gauge (step 8.6), or None. Thin wrapped hook over the
+        pure ``name_hygiene.prose_gauge``; a failure costs the gauge, not the tick."""
+        try:
+            from .name_hygiene import prose_gauge
+            roster = []
+            for cid in self.memory.list_characters():
+                c = self.memory.load_character(cid)
+                if c:
+                    roster.append(c.full_name)
+            return prose_gauge(scene_text or "", roster, self.state.get("story_foundation") or {})
+        except Exception as e:
+            logging.getLogger(__name__).debug("Names gauge skipped: %s", e)
             return None
 
     def _loop_ids_shown(self):

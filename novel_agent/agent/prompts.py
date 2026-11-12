@@ -139,7 +139,7 @@ Then emit the JSON object below:
 
 - Keep actions focused (2-4 tools maximum per plan)
 - Use memory.search to recall relevant context
-- Use character.generate to create characters - names will be auto-generated uniquely
+- Use character.generate to create characters - names will be auto-generated uniquely; always pass gender ('male' or 'female') and age_group ('young', 'adult' or 'old'), and create every person the scene names who is not already a character; for a blood relative of an existing character pass kin_of (that id) and kinship ('sibling', 'parent' or 'child'); for a minor person the scene needs (a leadsman, a clerk) who speaks or is named, call character.walk_on (role, gender, age_group)
 - Use location.generate to create locations as needed
 - Use relationship.create when characters first interact significantly
 - Use relationship.update to track relationship changes
@@ -175,9 +175,8 @@ CONTRACT_FIELDS = {
     "pov_character_name": "whose head the prose is in",
     "pov_character_details": "how that character reads on the page",
     "location_details": "where the scene happens",
-    "existing_characters": "the cast, so the writer refers to them correctly",
-    "approved_new_names": "Phase 1 grounded identity: names are minted in "
-                          "Python and selected, never invented",
+    "existing_characters": "the cast, so the writer refers to them correctly "
+                           "and names no one outside it",
     "recent_context": "continuity with the scenes before this one",
     "plot_beat_section": "the beat this scene must execute in plot-first mode",
     "arc_pressure_section": "the tension target the arc system exists to set",
@@ -185,12 +184,7 @@ CONTRACT_FIELDS = {
 
 # A field a task may omit, with the reason. Anything not listed here is
 # required: an omission has to be argued for, not assumed.
-CONTRACT_EXEMPTIONS = {
-    ("revise", "approved_new_names"):
-        "a revision must introduce no new named entities at all, so the pool "
-        "of approved-but-unused names is withheld rather than offered; the "
-        "cast is fixed and comes from existing_characters",
-}
+CONTRACT_EXEMPTIONS: dict = {}
 
 
 def contract_fields_for(task: str) -> dict:
@@ -206,7 +200,7 @@ CRAFT_RULES_TEMPLATE = """**WRITING RULES:**
    - Use "{pov_character_name}" when introducing the character or for clarity
    - After introduction, you can vary between the name and pronouns naturally
    - NEVER invent nicknames or alternate names not provided
-   - NEVER invent a NEW character's name: use the cast or an approved name from "Cast & Naming" above (unnamed walk-ons may stay unnamed)
+   - NEVER invent a NEW character's name: name only people in the cast in "Cast & Naming" above; anyone else stays unnamed, by role
 2. **Third-person POV** - Write in third person using "{pov_character_name}" or pronouns (he/she/they)
    - NEVER use first person ("I", "my", "me") unless in dialogue
    - Example: "{pov_character_name} pressed a palm against..." NOT "I pressed my palm against..."
@@ -300,14 +294,11 @@ perceive, know or infer, in their register.
 
 
 WRITE_NAMING_RULE = """
-Names are minted in Python and SELECTED, never invented. If this scene needs a
-character, place or faction that does not exist yet, use one of these approved
-names exactly as written:
-
-{approved_new_names}
-
-Never invent a name that is not listed above, and never write a raw entity ID
-(C000, L000) into the prose."""
+Names come from the story's records and from nowhere else. Name only the people,
+places and factions given above. A walk-on in the cast (a leadsman, a clerk)
+goes by exactly that name. Anyone else stays unnamed: refer to them by role
+("the bosun", "a clerk"), and never give them a name, a surname or a "Mr" of
+your own. Never write a raw entity ID (C000, L000) into the prose."""
 
 
 REVISE_NAMING_RULE = """
@@ -324,9 +315,8 @@ def story_context_section(context: dict, task: str = "write") -> str:
     this and between them dropped four contracts (see CONTRACT_FIELDS), which
     is what a single renderer prevents.
 
-    ``task`` selects the naming directive, and only that. Writing offers the
-    approved-name pool; revision withholds it and forbids new names outright,
-    because the same data needs the opposite instruction in the two cases.
+    ``task`` selects the naming directive, and only that. Writing may name
+    anyone in the cast; revision may add no named entity at all.
     """
     ctx = dict(context or {})
     ctx.setdefault("novel_name", "(untitled)")
@@ -342,9 +332,7 @@ def story_context_section(context: dict, task: str = "write") -> str:
     if task == "revise":
         ctx["naming_rule"] = REVISE_NAMING_RULE
     else:
-        pool = str(ctx.get("approved_new_names") or "").strip()
-        ctx["naming_rule"] = WRITE_NAMING_RULE.format(
-            approved_new_names=pool or "(none available this tick)")
+        ctx["naming_rule"] = WRITE_NAMING_RULE
     return STORY_CONTEXT_TEMPLATE.format(**ctx)
 
 
@@ -393,9 +381,8 @@ Existing characters — refer to them by these exact names; never rename them:
 {existing_characters}
 
 NAMING RULE — you must never invent a character name:
-- Incidental walk-ons (a guard, a clerk, a passerby) should stay unnamed — refer to them by role.
-- If a NEW character genuinely needs a name for dialogue or continuity, use one of these pre-approved names (top of list first), not one you make up:
-{approved_new_names}
+- Name only the people listed above. A walk-on in the list (a leadsman, a clerk) goes by exactly that name.
+- Anyone else (a guard, a passerby) stays unnamed: refer to them by role, and never give them a name, a surname or a "Mr" of your own.
 
 ## Your Task
 

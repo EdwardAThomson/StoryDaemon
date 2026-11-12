@@ -111,6 +111,7 @@ class CoherenceMetrics:
         thread_result: Optional[Dict[str, Any]] = None,
         construction_result: Optional[Dict[str, Any]] = None,
         loop_ids_shown: Optional[List[str]] = None,
+        names_gauge: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Compute one coherence record, append it to the JSONL log, and return it."""
         loops = self.memory.load_open_loops()
@@ -256,6 +257,16 @@ class CoherenceMetrics:
             # via construction_would_fire (None vs False).
             "construction_would_fire": (construction_result or {}).get("would_fire"),
             "construction_trigger": (construction_result or {}).get("trigger"),
+            # Names gauge (instrument only, 2026-11-02): names the prose uses
+            # that the generator never minted, and how many of them came in
+            # through the foundation text (the diagnosed leak). None when the
+            # gauge did not run, the None-when-unavailable convention.
+            "unregistered_names": (
+                len(names_gauge.get("unregistered_names") or []) if names_gauge else None),
+            "foundation_names_in_prose": (
+                names_gauge.get("foundation_names_in_prose") if names_gauge else None),
+            "foundation_name_mentions": (
+                names_gauge.get("foundation_name_mentions") if names_gauge else None),
             # Loop-aging gauge (Phase 3, loop-aging Slice L1, instrument-only).
             # Scalars are flattened for plotting, following this file's
             # convention; the id lists ride in loop_shown / loop_overdue_ids so a

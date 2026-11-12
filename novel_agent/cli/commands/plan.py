@@ -23,6 +23,7 @@ def preview_plan(project_dir: Path, save: Optional[Path] = None, verbose: bool =
     from ...tools.memory_tools import (
         MemorySearchTool,
         CharacterGenerateTool,
+        WalkOnTool,
         LocationGenerateTool,
         RelationshipCreateTool,
         RelationshipUpdateTool,
@@ -67,7 +68,9 @@ def preview_plan(project_dir: Path, save: Optional[Path] = None, verbose: bool =
         tool_registry = ToolRegistry()
         beat_mode = config.get('plot.beat_mode', 'soft_hint')
         tool_registry.register(MemorySearchTool(memory_manager, vector_store))
-        tool_registry.register(CharacterGenerateTool(memory_manager, vector_store, beat_mode=beat_mode))
+        character_tool = CharacterGenerateTool(memory_manager, vector_store, beat_mode=beat_mode)
+        tool_registry.register(character_tool)
+        tool_registry.register(WalkOnTool(character_tool))
         tool_registry.register(LocationGenerateTool(memory_manager, vector_store))
         tool_registry.register(RelationshipCreateTool(memory_manager))
         tool_registry.register(RelationshipUpdateTool(memory_manager))

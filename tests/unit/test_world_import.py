@@ -495,7 +495,7 @@ def test_novel_new_with_world_non_interactive():
     runner = CliRunner()
     with tempfile.TemporaryDirectory() as tmpdir:
         result = runner.invoke(cli_main.app, [
-            "new", "world-novel", "--dir", tmpdir, "--no-interactive",
+            "new", "world-novel", "--dir", tmpdir, "--no-interactive", "--protagonist-gender", "female", "--protagonist-age", "adult",
             "--world", str(FIXTURES / "sector-small.json"),
             "--premise", "A courier carries a secret through the chokepoint.",
         ])
@@ -534,6 +534,7 @@ def test_novel_new_with_user_genre_and_setting_keeps_them():
             "--world", str(FIXTURES / "region-small.json"),
             "--genre", "grimdark fantasy", "--setting", "The border marches.",
             "--premise", "p", "--protagonist", "a", "--tone", "t",
+            "--protagonist-gender", "male", "--protagonist-age", "adult",
         ])
         assert result.exit_code == 0, result.output
         project = next(Path(tmpdir).glob("world-novel_*"))
@@ -553,12 +554,12 @@ def test_novel_new_rejects_unknown_world_before_creating_anything():
         bad = Path(tmpdir) / "bad.json"
         bad.write_text(json.dumps({"schema": "worldgen/nebula@9"}), encoding="utf-8")
         result = runner.invoke(cli_main.app, [
-            "new", "world-novel", "--dir", tmpdir, "--no-interactive", "--world", str(bad)])
+            "new", "world-novel", "--dir", tmpdir, "--no-interactive", "--protagonist-gender", "female", "--protagonist-age", "adult", "--world", str(bad)])
         assert result.exit_code == 1
         assert "Unknown world schema" in result.output
         assert not list(Path(tmpdir).glob("world-novel_*"))
         result = runner.invoke(cli_main.app, [
-            "new", "world-novel", "--dir", tmpdir, "--no-interactive",
+            "new", "world-novel", "--dir", tmpdir, "--no-interactive", "--protagonist-gender", "female", "--protagonist-age", "adult",
             "--world", str(Path(tmpdir) / "missing.json")])
         assert result.exit_code == 1
         assert "not found" in result.output

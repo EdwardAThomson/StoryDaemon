@@ -248,3 +248,28 @@ def test_failed_shortening_keeps_the_original(project):
     cfg.set("generation.synopsis_max_words", 100)
     assert update_synopsis(mm, NoShorten(), cfg)["arcs_closed"] == 1
     assert len(load_synopsis(mm)["arcs"][0]["summary"].split()) == 400
+
+
+def test_writer_gets_the_novels_genre_setting_and_tone(project):
+    """The foundation reached the planner but never the writer (2026-11-09):
+    a novel of manners set in 1815 was written blind to both."""
+    _, mm = project
+    foundation = {"genre": "novel of manners", "setting": "England, about 1815",
+                  "tone": "ironic and warm", "premise": "not for the writer"}
+    plan = {"pov_character": "C000", "scene_intention": "x", "key_change": "y"}
+    cfg = Config()
+    ctx = WriterContextBuilder(mm, StubVector(mm), cfg).build_writer_context(
+        plan, {}, {"current_tick": 12, "story_foundation": foundation})
+    recent = ctx["recent_context"]
+    assert recent.startswith("## The Novel")
+    assert "**Genre:** novel of manners" in recent and "**Setting:** England, about 1815" in recent
+    assert "**Tone:** ironic and warm" in recent and "not for the writer" not in recent
+    assert recent.index("## The Novel") < recent.index("## Story So Far")
+
+    cfg.set("generation.writer_foundation", False)
+    off = WriterContextBuilder(mm, StubVector(mm), cfg).build_writer_context(
+        plan, {}, {"current_tick": 12, "story_foundation": foundation})
+    assert "## The Novel" not in off["recent_context"]
+    empty = WriterContextBuilder(mm, StubVector(mm), Config()).build_writer_context(
+        plan, {}, {"current_tick": 12, "story_foundation": {}})
+    assert "## The Novel" not in empty["recent_context"]

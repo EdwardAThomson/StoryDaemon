@@ -63,6 +63,10 @@ DEFAULT_CONFIG = {
         # Established canon in the writer prompt: the lore and open loops most
         # relevant to this scene, plus any confirmed deaths/destruction.
         'writer_canon': True,
+        # The foundation's genre, setting and tone in every writing call
+        # (agent/writer_context.py:_novel_section). Before 2026-11-09 the
+        # writer never saw them.
+        'writer_foundation': True,
         'writer_canon_lore': 4,
         'writer_canon_loops': 4,
         'enable_fact_extraction': True,
@@ -119,6 +123,15 @@ DEFAULT_CONFIG = {
         # sketch's literal per-sub-block mode.
         'subblock_generation': False,
         'subblock_section_blocks': 10,
+        # The model plans the scene's paragraphs (agent/paragraph_plan.py):
+        # Python's sampled skeleton sets how many of each kind, the model
+        # orders them by what happens and picks dialogue speakers from the
+        # cast by id, and Python checks the plan (shares, speakers, unrecorded
+        # names) before any prose; one retry, then the sampled skeleton as
+        # before. Needs enable_scene_skeleton. 4000 tokens: the plan is one
+        # line per paragraph, and a thinking model reasons first.
+        'paragraph_plan_by_model': False,
+        'paragraph_plan_max_tokens': 4000,
         # One cheap planning call per sectioned scene splits the intention
         # into one job per section, so a middle section advances the scene by
         # a step instead of re-delivering the whole scene (the 2026-10-31
@@ -147,6 +160,15 @@ DEFAULT_CONFIG = {
         # prose and compliance is recorded on the scene result. Off = the
         # pipeline is byte-identical to before.
         'enable_scene_skeleton': False,
+
+        # Character personas (voices). Every character is given a persona when
+        # it is created (agent/personas.py: grumbler, worrier, gossip, dreamer,
+        # old-timer, each with one manner, from Voxelholm's townsfolk design),
+        # picked by Python from its id. When on, the writer sees each speaker's
+        # persona with a rule that it shows in what they say, never in dialect
+        # spellings or catchphrases, and older records without one are given
+        # one at the start of a tick. Off = the writer prompt is unchanged.
+        'character_personas': False,
 
         # Beat-level dedup at authoring time (Phase 3 hardening,
         # docs/progress_report_20260712.md section 8.2): a freshly authored beat

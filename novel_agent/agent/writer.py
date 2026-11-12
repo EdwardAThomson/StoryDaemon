@@ -160,7 +160,9 @@ class SceneWriter:
                 words = section_word_target(skeleton, first, last, mode_words)
                 prompt = format_scene_section_prompt(
                     writer_context,
-                    plan_lines=skeleton_lines(skeleton, first, last),
+                    plan_lines=skeleton_lines(
+                        skeleton, first, last,
+                        notes=writer_context.get("paragraph_notes")),
                     plan_rules=plan_rules(sectioned=True),
                     item_count=last - first + 1,
                     section_words=words,

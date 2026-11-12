@@ -1,0 +1,186 @@
+"""Personas: picked by Python from the id, shown to the writer only when on."""
+
+import json
+from pathlib import Path
+
+import pytest
+
+from novel_agent.agent import personas
+from novel_agent.configs.config import Config
+from novel_agent.memory.entities import Character
+from novel_agent.memory.manager import MemoryManager
+
+NAMES = Path(__file__).parent.parent.parent / "novel_agent" / "data" / "names"
+
+
+@pytest.fixture
+def memory(tmp_path):
+    d = tmp_path / "alcyone_1a2b3c4d"
+    d.mkdir()
+    (d / "state.json").write_text(json.dumps({"current_tick": 1}))
+    return MemoryManager(d)
+
+
+def test_every_persona_has_one_known_manner():
+    t = personas.table()
+    assert set(personas.names()) == {"grumbler", "worrier", "gossip", "dreamer", "oldtimer"}
+    for name, p in t["personas"].items():
+        assert p["manner"] in t["manners"]
+        assert personas.describe(name).startswith(personas.label(name))
+
+
+def test_the_persona_is_a_fixed_function_of_the_novel_and_the_id():
+    a = personas.persona_for("alcyone_1a2b3c4d", "C001")
+    assert all(personas.persona_for("alcyone_1a2b3c4d", "C001") == a for _ in range(5))
+    picks = {personas.persona_for(f"novel_{i}", "C000", "old") for i in range(40)}
+    assert picks == set(personas.names())  # novels differ, and every persona is reachable
+    with pytest.raises(ValueError):
+        personas.persona_for("alcyone", "")
+
+
+def test_a_generated_character_is_given_its_persona(memory):
+    from novel_agent.tools.memory_tools import CharacterGenerateTool
+    from novel_agent.tools.name_generator import NameGenerator
+
+    class Vec:
+        def index_character(self, c):
+            pass
+
+    tool = CharacterGenerateTool(memory, Vec(), NameGenerator(NAMES), genre="historical")
+    out = tool.execute(role="minor", description="a quartermaster", gender="male", age_group="adult")
+    c = memory.load_character(out["character_id"])
+    assert c.persona == personas.persona_for(memory.project_path.name, c.id, "adult")
+
+
+def test_the_protagonist_is_given_its_persona(memory):
+    from novel_agent.cli.protagonist import create_protagonist
+    from novel_agent.cli.foundation import StoryFoundation
+    from novel_agent.tools.name_generator import NameGenerator
+    f = StoryFoundation(genre="historical adventure", premise="p",
+                        protagonist_archetype="a junior surveyor", setting="s",
+                        tone="t", protagonist_gender="female", protagonist_age="young")
+    cid = create_protagonist(memory, f, NameGenerator(NAMES))
+    c = memory.load_character(cid)
+    assert c.persona == personas.persona_for(memory.project_path.name, cid, "young")
+
+
+def _cast(memory):
+    memory.save_character(Character(id="C000", first_name="Ada", family_name="Vane",
+                                    gender="female", age_group="young", role="protagonist", persona="worrier"))
+    memory.save_character(Character(id="C001", first_name="Tom", family_name="Hale",
+                                    gender="male", role="supporting", persona="grumbler"))
+
+
+def test_the_writer_sees_personas_only_when_they_are_on(memory):
+    from novel_agent.agent.writer_context import WriterContextBuilder
+    _cast(memory)
+    off = WriterContextBuilder(memory, None, Config())
+    cast = off._build_cast("C000")
+    _, details = off._get_character_details("C000")
+    assert "persona" not in cast.lower() and "Persona" not in details
+
+    cfg = Config()
+    cfg.set("generation.character_personas", True)
+    on = WriterContextBuilder(memory, None, cfg)
+    cast = on._build_cast("C000")
+    _, details = on._get_character_details("C000")
+    assert "- Tom: grumbler, plain manner" in cast
+    assert "- Ada: worrier, plain manner" in cast
+    assert "never through misspelt or dialect words, a catchphrase" in cast
+    assert "**Persona:** worrier, plain manner" in details
+    assert "**Age:** young" in details and "- Ada (protagonist, female, young) (POV)" in cast
+
+
+def test_older_records_get_their_persona_at_the_start_of_a_tick(memory):
+    from novel_agent.agent.agent import StoryAgent
+    memory.save_character(Character(id="C000", first_name="Ada", gender="female"))
+    agent = StoryAgent.__new__(StoryAgent)
+    agent.memory = memory
+    agent.config = Config()
+    agent._backfill_character_personas()
+    assert memory.load_character("C000").persona == ""  # off: untouched
+
+    agent.config.set("generation.character_personas", True)
+    agent._backfill_character_personas()
+    c = memory.load_character("C000")
+    assert c.persona == personas.persona_for(memory.project_path.name, "C000")
+    assert c.metadata["persona_source"] == "backfill"
+
+
+def test_an_old_timer_is_always_old():
+    for age in ("young", "adult", ""):
+        picks = {personas.persona_for(f"novel_{i}", "C000", age) for i in range(60)}
+        assert "oldtimer" not in picks and len(picks) == 4
+    assert personas.fits("oldtimer", "old") and not personas.fits("oldtimer", "")
+
+
+def test_a_character_without_an_age_group_is_a_hard_failure(memory):
+    from novel_agent.tools.memory_tools import CharacterGenerateTool
+    from novel_agent.tools.name_generator import NameGenerator
+
+    class Vec:
+        def index_character(self, c):
+            pass
+
+    tool = CharacterGenerateTool(memory, Vec(), NameGenerator(NAMES), genre="historical")
+    with pytest.raises(ValueError, match="never guessed"):
+        tool.execute(role="minor", description="a quartermaster", gender="male")
+    assert memory.list_characters() == []
+    out = tool.execute(role="minor", description="a quartermaster", gender="male",
+                       age_group="old")
+    assert memory.load_character(out["character_id"]).age_group == "old"
+    assert out["age_group"] == "old"
+
+
+def test_a_protagonist_without_an_age_group_is_a_hard_failure(memory):
+    from novel_agent.cli.protagonist import create_protagonist
+    from novel_agent.cli.foundation import StoryFoundation
+    from novel_agent.tools.name_generator import NameGenerator
+    f = StoryFoundation(genre="historical adventure", premise="p",
+                        protagonist_archetype="a junior surveyor", setting="s",
+                        tone="t", protagonist_gender="female")
+    with pytest.raises(ValueError, match="never guessed"):
+        create_protagonist(memory, f, NameGenerator(NAMES))
+    assert memory.list_characters() == []
+
+
+def test_the_planner_sees_the_allowed_age_groups(memory):
+    """The planner reads only the tools description; a live Opus plan passed
+    "middle-aged" when the values were not shown there (2026-11-04)."""
+    from novel_agent.tools.memory_tools import CharacterGenerateTool
+    from novel_agent.tools.registry import ToolRegistry
+    registry = ToolRegistry()
+    registry.register(CharacterGenerateTool(memory, None, None))
+    text = registry.get_tools_description()
+    assert "age_group (string: one of young | adult | old)" in text
+    assert "gender (string: one of male | female)" in text
+
+
+def test_a_persona_the_cast_lacks_is_preferred_while_one_fits():
+    keys = set(personas.names()) - {"oldtimer"}
+    for i in range(30):
+        taken = []
+        for n in range(4):  # four adults take the four adult personas, no repeats
+            taken.append(personas.persona_for(f"novel_{i}", f"C{n:03d}", "adult", taken))
+        assert set(taken) == keys
+        # a fifth adult must repeat one, and still gets a fitting persona
+        assert personas.persona_for(f"novel_{i}", "C004", "adult", taken) in keys
+
+
+def test_a_new_character_avoids_the_casts_personas(memory):
+    from novel_agent.tools.memory_tools import CharacterGenerateTool
+    from novel_agent.tools.name_generator import NameGenerator
+
+    class Vec:
+        def index_character(self, c):
+            pass
+
+    tool = CharacterGenerateTool(memory, Vec(), NameGenerator(NAMES), genre="historical")
+    got = [memory.load_character(tool.execute(role="minor", description="a sailor",
+                                              gender="male", age_group="adult")["character_id"]).persona
+           for _ in range(4)]
+    assert len(set(got)) == 4
+
+
+def test_the_writer_is_told_a_persona_is_not_every_line():
+    assert "a worrier does not ask a question in every line" in personas.VOICE_RULES
