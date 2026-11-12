@@ -156,6 +156,16 @@ class WriterContextBuilder:
                 scene_length_guidance + skeleton_prompt_section(scene_skeleton)
             )
 
+        # Style targets (generation.style_profile, default unset): an author's
+        # measured habits as counts for this scene's length. They follow the
+        # paragraph plan in the same slot; sectioned writing scales them per
+        # section from writer_context["style_profile"]. An unknown profile name
+        # raises, like a pinned name bank.
+        from .style_profile import profile_from_config, style_targets_section
+        style_profile = profile_from_config(self.config)
+        if style_profile:
+            scene_length_guidance += style_targets_section(style_profile, word_target)
+
         # Format plot beat section (Phase 5)
         plot_beat_section = self._format_plot_beat_section(plan)
 
@@ -204,6 +214,7 @@ class WriterContextBuilder:
             "scene_length_guidance": scene_length_guidance,
             "word_target": word_target,
             "scene_skeleton": scene_skeleton,
+            "style_profile": style_profile,
             "existing_characters": existing_characters,
             "languages_section": languages_section,
             "languages_imported": languages_imported,

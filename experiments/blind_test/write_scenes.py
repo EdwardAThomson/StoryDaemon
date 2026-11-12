@@ -235,23 +235,12 @@ def austen_plan(scene_id, brief, names):
 
 def style_section(novel, words):
     """Style targets from the author's measured profile, turned into counts
-    for a scene of this length. Plain English, one line per measure."""
-    p = json.loads((WORK / "style" / f"{novel}.json").read_text())
-    per = lambda rate: max(1, round(rate * words / 1000))
-    contractions = ('No contractions anywhere, in speech or narration: "do not", "cannot", "I am", "it is".'
-                    if p["contractions_per_1k"] < 0.5 else
-                    f"Contractions only in speech, about {per(p['contractions_per_1k'])} in the scene; "
-                    "none in narration.")
-    return f"""
-
-**Style targets (measured from the period's own novels; hit these numbers):**
-- Sentences average about {round(p['sentence_mean_words'])} words, and their lengths vary a great deal: about {p['short_sentence_pct']}% are 6 words or fewer and about {p['long_sentence_pct']}% run to 30 words or more. Build the long ones from balanced clauses joined by commas and semicolons.
-- Semicolons: about {per(p['semicolons_per_1k'])} in this scene ({p['semicolons_per_1k']} per 1,000 words), in narration and in speech.
-- Dashes: about {per(p['dashes_per_1k'])} in this scene, written as an em dash (—), where speech breaks off or turns.
-- {contractions}
-- Speech: about {p['speech_word_pct']}% of the scene's words inside quotation marks.
-- "said" for about {round(p['said_share'] * 100)}% of speech tags; otherwise "replied", "cried", "answered" and the like.
-- Avoid "seemed", "felt", "as if", "as though", "suddenly", "somehow": at most {per(p['seemed_felt_per_1k'])} in the whole scene."""
+    for a scene of this length. The profiles and the wording now live in
+    StoryDaemon (agent/style_profile.py, data/styles/); until 2026-11-12 they
+    were here, read from work/blind/style/ (the shipped numbers differ from
+    those by 0.3 or less, from cleaning the book the same way for both)."""
+    from novel_agent.agent.style_profile import load_profile, style_targets_section
+    return style_targets_section(load_profile(novel), words)
 
 
 def write_arm(scene_id, arm, brief, names, foundation, llm_factory):

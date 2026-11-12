@@ -158,12 +158,17 @@ class SceneWriter:
             sections_trimmed = 0
             for i, (first, last) in enumerate(bounds):
                 words = section_word_target(skeleton, first, last, mode_words)
+                rules = plan_rules(sectioned=True)
+                if writer_context.get("style_profile"):
+                    from .style_profile import style_targets_section
+                    rules += style_targets_section(
+                        writer_context["style_profile"], words)
                 prompt = format_scene_section_prompt(
                     writer_context,
                     plan_lines=skeleton_lines(
                         skeleton, first, last,
                         notes=writer_context.get("paragraph_notes")),
-                    plan_rules=plan_rules(sectioned=True),
+                    plan_rules=rules,
                     item_count=last - first + 1,
                     section_words=words,
                     first=first, last=last,
