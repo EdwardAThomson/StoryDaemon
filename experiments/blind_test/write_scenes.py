@@ -45,6 +45,9 @@ ARMS = {
     # author's favourite long words, from the word gauge's finding that the
     # real passages use two to three times as many words of 10+ letters.
     "dsl_words": {"generation.enable_scene_skeleton": True, "generation.paragraph_plan_by_model": False},
+    # dsl_style plus the long-word target only, no word list (2026-11-13):
+    # the list was overused and seemed to remind Opus which book it was.
+    "dsl_rate": {"generation.enable_scene_skeleton": True, "generation.paragraph_plan_by_model": False},
     # A new incident with no source passage: the sampled skeleton, the model's
     # own paragraph plan, and the style targets. Tests the style levers where
     # the model has no text to recall.
@@ -237,7 +240,7 @@ def austen_plan(scene_id, brief, names):
     return kinds, notes, targets, [it["words"] for it in items]
 
 
-def style_section(novel, words, word_choice=False):
+def style_section(novel, words, word_choice=None):
     """Style targets from the author's measured profile, turned into counts
     for a scene of this length. The profiles and the wording now live in
     StoryDaemon (agent/style_profile.py, data/styles/); until 2026-11-12 they
@@ -245,9 +248,11 @@ def style_section(novel, words, word_choice=False):
     those by 0.3 or less, from cleaning the book the same way for both)."""
     from novel_agent.agent.style_profile import load_profile, style_targets_section
     profile = load_profile(novel)
-    if not word_choice:   # the 2026-11-11 targets, before the word lever
-        profile = {k: v for k, v in profile.items()
-                   if k not in ("long_words_per_1k", "favourite_words")}
+    # word_choice: None = the 2026-11-11 targets, before the word lever;
+    # "rate" = plus the long-word target; "full" = plus the word list too.
+    drop = {None: ("long_words_per_1k", "favourite_words"),
+            "rate": ("favourite_words",), "full": ()}[word_choice]
+    profile = {k: v for k, v in profile.items() if k not in drop}
     return style_targets_section(profile, words)
 
 
@@ -305,9 +310,10 @@ def write_arm(scene_id, arm, brief, names, foundation, llm_factory):
         ctx["scene_length_guidance"] = ctx["scene_length_guidance"].replace(
             old, S.skeleton_prompt_section(kinds, notes))
         ctx["paragraph_notes"] = notes
-        if arm in ("dsl_style", "dsl_words"):
+        if arm in ("dsl_style", "dsl_words", "dsl_rate"):
             ctx["scene_length_guidance"] += style_section(
-                brief["novel"], total, word_choice=(arm == "dsl_words"))
+                brief["novel"], total,
+                word_choice={"dsl_words": "full", "dsl_rate": "rate"}.get(arm))
     if ARMS[arm]["generation.paragraph_plan_by_model"]:
         stub = SimpleNamespace(config=config, memory=memory, writer=writer, state=state)
         stub._known_names = lambda: StoryAgent._known_names(stub)
