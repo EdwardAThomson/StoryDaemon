@@ -67,6 +67,11 @@ DEFAULT_CONFIG = {
         # (agent/writer_context.py:_novel_section). Before 2026-11-09 the
         # writer never saw them.
         'writer_foundation': True,
+        # Style targets from an author's measured habits
+        # (agent/style_profile.py): a profile name from
+        # novel_agent/data/styles/ (e.g. 'marriage') or a path to one.
+        # None = no targets. Measure a new one with scripts/style_profile.py.
+        'style_profile': None,
         'writer_canon_lore': 4,
         'writer_canon_loops': 4,
         'enable_fact_extraction': True,
