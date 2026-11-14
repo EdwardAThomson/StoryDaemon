@@ -1,7 +1,7 @@
 {
  "name": "marriage",
  "source": "Susan Ferrier, Marriage (1818), Project Gutenberg 12669; 66 chapters, leaving out the chapters holding: put on your Lennox face; Poor Mary was indeed shocked, epigraphs removed",
- "measured": "2026-11-12",
+ "measured": "2026-11-14",
  "sentence_mean_words": 24.7,
  "sentence_spread": 17.9,
  "short_sentence_pct": 11,
@@ -15,6 +15,8 @@
  "ly_per_1k": 14.4,
  "paragraph_median_words": 42.5,
  "long_words_per_1k": 38.1,
+ "latinate_pct": 19.5,
+ "latinate_content_pct": 45.5,
  "favourite_words": [
   "equipages",
   "spinsters",
@@ -56,5 +58,67 @@
   "confounded",
   "propriety",
   "attentions"
- ]
+ ],
+ "ranges": {
+  "sentence_mean_words": [
+   20.3,
+   32.3
+  ],
+  "sentence_spread": [
+   14.0,
+   20.8
+  ],
+  "short_sentence_pct": [
+   3.0,
+   16.0
+  ],
+  "long_sentence_pct": [
+   21.0,
+   48.6
+  ],
+  "speech_word_pct": [
+   24.0,
+   65.0
+  ],
+  "semicolons_per_1k": [
+   11.9,
+   20.4
+  ],
+  "dashes_per_1k": [
+   2.8,
+   13.8
+  ],
+  "said_share": [
+   0.3,
+   0.9
+  ],
+  "contractions_per_1k": [
+   0.0,
+   8.8
+  ],
+  "seemed_felt_per_1k": [
+   0.6,
+   5.8
+  ],
+  "ly_per_1k": [
+   9.2,
+   19.9
+  ],
+  "paragraph_median_words": [
+   30.1,
+   133.4
+  ],
+  "long_words_per_1k": [
+   30.6,
+   47.1
+  ],
+  "latinate_pct": [
+   17.2,
+   22.0
+  ],
+  "latinate_content_pct": [
+   40.7,
+   51.3
+  ]
+ }
 }

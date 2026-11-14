@@ -1,7 +1,7 @@
 {
  "name": "pride",
  "source": "Jane Austen, Pride and Prejudice (1813), Project Gutenberg 1342; 58 chapters, leaving out the chapters holding: fifty miles of good road",
- "measured": "2026-11-12",
+ "measured": "2026-11-14",
  "sentence_mean_words": 18.2,
  "sentence_spread": 15.0,
  "short_sentence_pct": 20,
@@ -15,6 +15,8 @@
  "ly_per_1k": 16.9,
  "paragraph_median_words": 38.0,
  "long_words_per_1k": 42.1,
+ "latinate_pct": 18.7,
+ "latinate_content_pct": 45.8,
  "favourite_words": [
   "gentlemanlike",
   "complaisance",
@@ -56,5 +58,67 @@
   "forbearance",
   "acquaintance",
   "earnestly"
- ]
+ ],
+ "ranges": {
+  "sentence_mean_words": [
+   15.1,
+   23.2
+  ],
+  "sentence_spread": [
+   12.1,
+   18.9
+  ],
+  "short_sentence_pct": [
+   13.0,
+   26.5
+  ],
+  "long_sentence_pct": [
+   11.0,
+   28.0
+  ],
+  "speech_word_pct": [
+   10.5,
+   70.0
+  ],
+  "semicolons_per_1k": [
+   9.8,
+   17.1
+  ],
+  "dashes_per_1k": [
+   1.8,
+   6.2
+  ],
+  "said_share": [
+   0.3,
+   0.8
+  ],
+  "contractions_per_1k": [
+   0.0,
+   0.4
+  ],
+  "seemed_felt_per_1k": [
+   1.1,
+   4.5
+  ],
+  "ly_per_1k": [
+   13.5,
+   20.9
+  ],
+  "paragraph_median_words": [
+   29.2,
+   87.0
+  ],
+  "long_words_per_1k": [
+   32.0,
+   52.5
+  ],
+  "latinate_pct": [
+   16.0,
+   21.4
+  ],
+  "latinate_content_pct": [
+   39.0,
+   51.5
+  ]
+ }
 }

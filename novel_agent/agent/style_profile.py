@@ -23,6 +23,8 @@ import statistics
 from pathlib import Path
 from typing import Callable, Iterable, Optional
 
+from novel_agent.agent.word_origin import origin_shares
+
 STYLES_DIR = Path(__file__).resolve().parent.parent / "data" / "styles"
 
 # The counts the writer is given, in the order the section states them.
@@ -93,6 +95,11 @@ def measure(text: str) -> dict:
         # long abstract words (indelicacy, injudicious) where Opus writes the
         # period with short concrete ones. Ferrier 38 per 1,000, Opus 13-26.
         "long_words_per_1k": _long_words_per_1k(text),
+        # Word origin (2026-11-14): share of words from French or Latin, counted
+        # over every word as the Legendarium table counts it (Tolkien 8%,
+        # Ferrier about 20%), and over content words only.
+        **{k: v for k, v in origin_shares(text).items()
+           if k in ("latinate_pct", "latinate_content_pct")},
     }
 
 
@@ -125,12 +132,17 @@ def favourite_words(text: str, modern_zipf: Callable[[str], float],
     return [w for _, w in sorted(scored, reverse=True)[:count]]
 
 
+CHAPTER_HEADING = r"^\s*CHAPTER\s+[IVXLCl0-9]+\.?[^\n]*$"
+
+
 def book_chapters(text: str, leave_out: Iterable[str] = (),
-                  drop_indented: bool = False) -> list:
+                  drop_indented: bool = False, heading: str = CHAPTER_HEADING) -> list:
     """A Project Gutenberg novel cut into cleaned chapters.
 
     Keeps what lies between the Gutenberg start and end markers, removes
-    illustration captions and _italic_ marks, splits on CHAPTER headings and
+    illustration captions and _italic_ marks, splits on CHAPTER headings (or
+    the ``heading`` pattern, a multiline regex for books that head chapters
+    another way, such as "I: THE CASTLE OF LORD JUSS") and
     drops what comes before the first heading (title page, preface, contents)
     and any piece under 200 words. A chapter holding
     any phrase in ``leave_out`` is dropped: that is how a test passage is kept
@@ -142,7 +154,7 @@ def book_chapters(text: str, leave_out: Iterable[str] = (),
     end = re.search(r"\*\*\* ?END OF", text)
     text = text[start.end() if start else 0:end.start() if end else len(text)]
     text = re.sub(r"\[Illustration[^\]]*\]", "", text, flags=re.S)
-    parts = re.split(r"^\s*CHAPTER\s+[IVXLCl0-9]+\.?[^\n]*$", text, flags=re.M)
+    parts = re.split(heading, text, flags=re.M)
     if len(parts) > 1:
         parts = parts[1:]          # what comes before the first chapter is front matter
     chapters = []
@@ -221,6 +233,23 @@ def _word_choice_lines(profile: dict, count) -> str:
                   "(each at most once, and never strung together): "
                   + ", ".join(profile["favourite_words"]) + ".")
     return lines
+
+
+def chapter_ranges(chapters: list, low: int = 10, high: int = 90,
+                   min_words: int = 800) -> dict:
+    """The p10-p90 range of each numeric count across a book's chapters:
+    what a scene can vary within and still read like the book. Chapters under
+    ``min_words`` are skipped (too short for stable counts)."""
+    per = [measure(c) for c in chapters if len(c.split()) >= min_words]
+    if len(per) < 3:
+        return {}
+    out = {}
+    for key, value in per[0].items():
+        if not isinstance(value, (int, float)):
+            continue
+        cuts = statistics.quantiles([m[key] for m in per], n=100, method="inclusive")
+        out[key] = [round(cuts[low - 1], 1), round(cuts[high - 1], 1)]
+    return out
 
 
 def profile_from_config(config) -> Optional[dict]:
