@@ -266,6 +266,39 @@ def chapter_ranges(chapters: list, low: int = 10, high: int = 90,
     return out
 
 
+def profile_check(text: str, profile: dict, min_words: int = 800) -> dict:
+    """How a written scene sits against a profile's chapter ranges. Gauge only.
+
+    Each count the profile has a range for is measured on the scene and marked
+    ``above`` or ``below`` when it falls outside the book's p10-p90 chapter
+    range. A range is how far the author's own chapters vary, so one count
+    outside it is a hint, not a fault; the record is for reading across a run
+    which counts the writer misses again and again. A scene under
+    ``min_words`` (the shortest chapter the ranges were taken from) is still
+    checked but marked ``short``, since its counts are less stable.
+    """
+    ranges = profile.get("ranges") or {}
+    counts = measure(text)
+    outside = {}
+    for key, (low, high) in ranges.items():
+        value = counts.get(key)
+        if not isinstance(value, (int, float)):
+            continue
+        if value < low:
+            outside[key] = {"value": value, "range": [low, high], "side": "below"}
+        elif value > high:
+            outside[key] = {"value": value, "range": [low, high], "side": "above"}
+    words = len(_words(text))
+    return {
+        "profile": profile.get("name"),
+        "words": words,
+        "short": words < min_words,
+        "checked": sum(1 for k in ranges if isinstance(counts.get(k), (int, float))),
+        "outside": outside,
+        "counts": counts,
+    }
+
+
 def profile_from_config(config) -> Optional[dict]:
     """The profile ``generation.style_profile`` names, or None when unset."""
     name = config.get("generation.style_profile") if config is not None else None

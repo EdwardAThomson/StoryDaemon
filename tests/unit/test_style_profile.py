@@ -248,3 +248,45 @@ def test_no_profile_sends_its_word_list_to_the_writer():
         p = sp.load_profile(name)
         text = sp.style_targets_section(p, 1500)
         assert not any(w in text for w in p.get("favourite_words", []))
+
+
+# ---- the after-writing check (gauge only) ---------------------------------------
+
+def _plain_scene(n=900):
+    # Short, even sentences with no semicolons: well below Ferrier's ranges.
+    return " ".join("She sat by the door and looked at the fire." for _ in range(n // 10))
+
+
+def test_profile_check_marks_counts_outside_the_chapter_ranges():
+    profile = sp.load_profile("marriage")
+    r = sp.profile_check(_plain_scene(), profile)
+    assert r["profile"] == "marriage"
+    assert r["checked"] == len(profile["ranges"])
+    assert r["outside"]["semicolons_per_1k"]["side"] == "below"
+    assert r["outside"]["sentence_mean_words"]["side"] == "below"
+    assert r["outside"]["semicolons_per_1k"]["range"] == profile["ranges"]["semicolons_per_1k"]
+    assert not r["short"]
+
+
+def test_profile_check_leaves_counts_inside_the_range_unmarked():
+    profile = {"name": "t", "ranges": {"semicolons_per_1k": [0.0, 100.0], "dashes_per_1k": [5.0, 9.0]}}
+    r = sp.profile_check(_plain_scene(), profile)
+    assert "semicolons_per_1k" not in r["outside"]
+    assert r["outside"]["dashes_per_1k"]["side"] == "below"
+    assert r["checked"] == 2
+
+
+def test_profile_check_marks_a_short_scene():
+    assert sp.profile_check(_plain_scene(200), sp.load_profile("marriage"))["short"]
+
+
+def test_agent_style_check_is_none_without_a_profile_and_never_raises():
+    from novel_agent.agent.agent import StoryAgent
+    agent = StoryAgent.__new__(StoryAgent)
+    agent.config = Cfg(**{"generation.style_profile": None})
+    assert agent._style_check(_plain_scene()) is None
+    agent.config = Cfg(**{"generation.style_profile": "marriage"})
+    assert agent._style_check(_plain_scene())["outside"]
+    assert agent._style_check("") is None
+    agent.config = Cfg(**{"generation.style_profile": "no_such_profile"})
+    assert agent._style_check(_plain_scene()) is None
