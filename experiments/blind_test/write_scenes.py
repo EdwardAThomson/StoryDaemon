@@ -48,6 +48,10 @@ ARMS = {
     # dsl_style plus the long-word target only, no word list (2026-11-13):
     # the list was overused and seemed to remind Opus which book it was.
     "dsl_rate": {"generation.enable_scene_skeleton": True, "generation.paragraph_plan_by_model": False},
+    # dsl_rate plus two lines under test (2026-11-19): sentence targets as
+    # counts for the scene, and the French/Latin share. The after-writing
+    # check found every styled Ferrier scene short on both.
+    "dsl_shape": {"generation.enable_scene_skeleton": True, "generation.paragraph_plan_by_model": False},
     # A new incident with no source passage: the sampled skeleton, the model's
     # own paragraph plan, and the style targets. Tests the style levers where
     # the model has no text to recall.
@@ -240,7 +244,7 @@ def austen_plan(scene_id, brief, names):
     return kinds, notes, targets, [it["words"] for it in items]
 
 
-def style_section(novel, words, word_choice=None):
+def style_section(novel, words, word_choice=None, shape=False):
     """Style targets from the author's measured profile, turned into counts
     for a scene of this length. The profiles and the wording now live in
     StoryDaemon (agent/style_profile.py, data/styles/); until 2026-11-12 they
@@ -253,7 +257,8 @@ def style_section(novel, words, word_choice=None):
     drop = {None: ("long_words_per_1k", "favourite_words"),
             "rate": ("favourite_words",), "full": ()}[word_choice]
     profile = {k: v for k, v in profile.items() if k not in drop}
-    return style_targets_section(profile, words, word_list=word_choice == "full")
+    return style_targets_section(profile, words, word_list=word_choice == "full",
+                                 sentence_counts=shape, word_origin=shape)
 
 
 def write_arm(scene_id, arm, brief, names, foundation, llm_factory):
@@ -310,10 +315,11 @@ def write_arm(scene_id, arm, brief, names, foundation, llm_factory):
         ctx["scene_length_guidance"] = ctx["scene_length_guidance"].replace(
             old, S.skeleton_prompt_section(kinds, notes))
         ctx["paragraph_notes"] = notes
-        if arm in ("dsl_style", "dsl_words", "dsl_rate"):
+        if arm in ("dsl_style", "dsl_words", "dsl_rate", "dsl_shape"):
             ctx["scene_length_guidance"] += style_section(
                 brief["novel"], total,
-                word_choice={"dsl_words": "full", "dsl_rate": "rate"}.get(arm))
+                word_choice={"dsl_words": "full", "dsl_rate": "rate", "dsl_shape": "rate"}.get(arm),
+                shape=arm == "dsl_shape")
     if ARMS[arm]["generation.paragraph_plan_by_model"]:
         stub = SimpleNamespace(config=config, memory=memory, writer=writer, state=state)
         stub._known_names = lambda: StoryAgent._known_names(stub)

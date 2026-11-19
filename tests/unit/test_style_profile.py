@@ -290,3 +290,19 @@ def test_agent_style_check_is_none_without_a_profile_and_never_raises():
     assert agent._style_check("") is None
     agent.config = Cfg(**{"generation.style_profile": "no_such_profile"})
     assert agent._style_check(_plain_scene()) is None
+
+
+def test_sentence_count_and_word_origin_lines_are_off_by_default():
+    profile = sp.load_profile("marriage")
+    plain = sp.style_targets_section(profile, 1150)
+    assert "Sentence count" not in plain and "Word origin" not in plain
+    both = sp.style_targets_section(profile, 1150, sentence_counts=True, word_origin=True)
+    assert both.startswith(plain)
+    # 1150 words at Ferrier's 24.7-word mean is about 47 sentences.
+    assert "about 47 sentences" in both
+    assert f"about {round(profile['latinate_pct'])}% of all words" in both
+
+
+def test_word_origin_line_needs_a_measured_share():
+    profile = {k: v for k, v in sp.load_profile("marriage").items() if k != "latinate_pct"}
+    assert "Word origin" not in sp.style_targets_section(profile, 1000, word_origin=True)

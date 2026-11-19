@@ -202,7 +202,8 @@ def load_profile(name: str) -> dict:
 
 def style_targets_section(profile: dict, words: int,
                           measured_from: str = "the period's own novels",
-                          word_list: bool = False) -> str:
+                          word_list: bool = False, sentence_counts: bool = False,
+                          word_origin: bool = False) -> str:
     """The targets as plain lines, turned into counts for a scene of ``words``.
 
     A profile's ``favourite_words`` stay out of the prompt unless
@@ -210,7 +211,12 @@ def style_targets_section(profile: dict, words: int,
     reproduce its 2026-11-12 run). Sent to the writer, the list was overused
     (12-14 list words in a scene where Ferrier uses 5) and the long-word rate
     alone did the work with no overuse (2026-11-13). The list stays in the
-    profile for reference."""
+    profile for reference.
+
+    ``sentence_counts`` and ``word_origin`` add two lines under test
+    (2026-11-19, off by default): the after-writing check found every styled
+    Ferrier scene still under her range on sentence length and spread and on
+    the French/Latin share, with the percentages above already in the prompt."""
     def count(rate):
         return max(1, round(rate * words / 1000))
 
@@ -230,7 +236,33 @@ def style_targets_section(profile: dict, words: int,
 - {contractions}
 - Speech: about {profile['speech_word_pct']}% of the scene's words inside quotation marks.
 - "said" for about {round(profile['said_share'] * 100)}% of speech tags; otherwise "replied", "cried", "answered" and the like.
-- Avoid "seemed", "felt", "as if", "as though", "suddenly", "somehow": at most {count(profile['seemed_felt_per_1k'])} in the whole scene.{_word_choice_lines(profile, count, word_list)}"""
+- Avoid "seemed", "felt", "as if", "as though", "suddenly", "somehow": at most {count(profile['seemed_felt_per_1k'])} in the whole scene.{_word_choice_lines(profile, count, word_list)}{_sentence_count_line(profile, words) if sentence_counts else ""}{_word_origin_line(profile) if word_origin else ""}"""
+
+
+def _sentence_count_line(profile: dict, words: int) -> str:
+    """The sentence targets as counts for this scene: told only the mean and
+    the shares, Opus still wrote Ferrier scenes at 14-20 words a sentence
+    against her 25 (2026-11-19 style check)."""
+    sentences = max(1, round(words / profile["sentence_mean_words"]))
+    short = round(sentences * profile["short_sentence_pct"] / 100)
+    long = round(sentences * profile["long_sentence_pct"] / 100)
+    return (f"\n- Sentence count: a scene of {words} words at this length is only about "
+            f"{sentences} sentences in all. At most {short} of them 6 words or fewer; about "
+            f"{long} of them 30 words or more. This holds in speech too: a speaker's turn "
+            "is often one long sentence of several clauses, not several short ones.")
+
+
+def _word_origin_line(profile: dict) -> str:
+    """The French/Latin share, for profiles measured with it."""
+    pct = profile.get("latinate_pct")
+    if not pct:
+        return ""
+    return (f"\n- Word origin: about {round(pct)}% of all words (one in "
+            f"{round(100 / pct)}) come from French or Latin; plain modern prose has about "
+            "13%. Where a plain Old English word and a French or Latin one would both "
+            "serve, take the French or Latin one more often than modern prose would "
+            "(certain for sure, enquire for ask, assist for help), above all in narration "
+            "and in the speech of educated characters.")
 
 
 def _word_choice_lines(profile: dict, count, word_list: bool = False) -> str:
