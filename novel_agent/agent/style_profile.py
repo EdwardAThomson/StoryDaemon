@@ -23,6 +23,7 @@ import statistics
 from pathlib import Path
 from typing import Callable, Iterable, Optional
 
+from novel_agent.agent.line_faults import measure as line_fault_counts
 from novel_agent.agent.word_origin import origin_shares
 
 STYLES_DIR = Path(__file__).resolve().parent.parent / "data" / "styles"
@@ -100,6 +101,11 @@ def measure(text: str) -> dict:
         # Ferrier about 20%), and over content words only.
         **{k: v for k, v in origin_shares(text).items()
            if k in ("latinate_pct", "latinate_content_pct")},
+        # Feelings named outright in narration (she was angry, his fear), per
+        # 1,000 words of narration (2026-11-19, from line_faults). Modern advice
+        # calls it a fault; older novels do it freely, so each profile carries
+        # its own figure and range rather than a rule that it is on or off.
+        "named_feelings_per_1k": line_fault_counts(text)["named_feelings_per_1k"],
     }
 
 

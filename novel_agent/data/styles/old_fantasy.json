@@ -1,7 +1,7 @@
 {
  "name": "old_fantasy",
  "source": "William Morris, The Wood Beyond the World (1894, PG 3055); Lord Dunsany, The King of Elfland's Daughter (1924, PG 61077); E. R. Eddison, The Worm Ouroboros (1922, PG 67090); 102 chapters (pg3055 36, pg61077 34, pg67090 32)",
- "measured": "2026-11-14",
+ "measured": "2026-11-19",
  "sentence_mean_words": 25.4,
  "sentence_spread": 19.2,
  "short_sentence_pct": 10,
@@ -17,6 +17,7 @@
  "long_words_per_1k": 12.9,
  "latinate_pct": 9.9,
  "latinate_content_pct": 22.5,
+ "named_feelings_per_1k": 0.19,
  "favourite_words": [
   "wrastling",
   "moustachios",
@@ -119,6 +120,10 @@
   "latinate_content_pct": [
    14.3,
    26.7
+  ],
+  "named_feelings_per_1k": [
+   0.0,
+   0.8
   ]
  }
 }

@@ -1,7 +1,7 @@
 {
  "name": "pride",
  "source": "Jane Austen, Pride and Prejudice (1813), Project Gutenberg 1342; 58 chapters, leaving out the chapters holding: fifty miles of good road",
- "measured": "2026-11-14",
+ "measured": "2026-11-19",
  "sentence_mean_words": 18.2,
  "sentence_spread": 15.0,
  "short_sentence_pct": 20,
@@ -17,6 +17,7 @@
  "long_words_per_1k": 42.1,
  "latinate_pct": 18.7,
  "latinate_content_pct": 45.8,
+ "named_feelings_per_1k": 1.02,
  "favourite_words": [
   "gentlemanlike",
   "complaisance",
@@ -119,6 +120,10 @@
   "latinate_content_pct": [
    39.0,
    51.5
+  ],
+  "named_feelings_per_1k": [
+   0.0,
+   2.6
   ]
  }
 }

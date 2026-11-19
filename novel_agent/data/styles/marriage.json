@@ -1,7 +1,7 @@
 {
  "name": "marriage",
  "source": "Susan Ferrier, Marriage (1818), Project Gutenberg 12669; 66 chapters, leaving out the chapters holding: put on your Lennox face; Poor Mary was indeed shocked, epigraphs removed",
- "measured": "2026-11-14",
+ "measured": "2026-11-19",
  "sentence_mean_words": 24.7,
  "sentence_spread": 17.9,
  "short_sentence_pct": 11,
@@ -17,6 +17,7 @@
  "long_words_per_1k": 38.1,
  "latinate_pct": 19.5,
  "latinate_content_pct": 45.5,
+ "named_feelings_per_1k": 0.58,
  "favourite_words": [
   "equipages",
   "spinsters",
@@ -119,6 +120,10 @@
   "latinate_content_pct": [
    40.7,
    51.3
+  ],
+  "named_feelings_per_1k": [
+   0.0,
+   1.9
   ]
  }
 }

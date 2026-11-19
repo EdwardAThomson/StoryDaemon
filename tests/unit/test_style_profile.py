@@ -42,6 +42,24 @@ def test_measure_counts_punctuation_speech_and_contractions():
     assert set(sp.TARGET_KEYS) <= set(m)
 
 
+def test_measure_counts_named_feelings_in_narration_only():
+    told = 'She was very angry. "I am so angry," she said. He felt a surge of fear and went out.'
+    m = sp.measure(told)
+    assert m["named_feelings_per_1k"] > 0
+    # A character may name a feeling in speech; only narration is counted.
+    spoken = '"I am so angry," she said, and walked out into the rain.'
+    assert sp.measure(spoken)["named_feelings_per_1k"] == 0
+    assert "named_feelings_per_1k" not in sp.TARGET_KEYS          # measured, not sent
+
+
+def test_shipped_profiles_record_named_feelings_with_a_range():
+    for name in ("marriage", "pride", "old_fantasy"):
+        profile = json.loads((sp.STYLES_DIR / f"{name}.json").read_text())
+        assert profile["named_feelings_per_1k"] >= 0
+        low, high = profile["ranges"]["named_feelings_per_1k"]
+        assert low <= high
+
+
 def test_measure_refuses_an_empty_text():
     with pytest.raises(ValueError):
         sp.measure("  \n ")
