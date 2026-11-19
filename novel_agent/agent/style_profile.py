@@ -195,8 +195,16 @@ def load_profile(name: str) -> dict:
 
 
 def style_targets_section(profile: dict, words: int,
-                          measured_from: str = "the period's own novels") -> str:
-    """The targets as plain lines, turned into counts for a scene of ``words``."""
+                          measured_from: str = "the period's own novels",
+                          word_list: bool = False) -> str:
+    """The targets as plain lines, turned into counts for a scene of ``words``.
+
+    A profile's ``favourite_words`` stay out of the prompt unless
+    ``word_list`` is set (only the blind test's ``dsl_words`` arm does, to
+    reproduce its 2026-11-12 run). Sent to the writer, the list was overused
+    (12-14 list words in a scene where Ferrier uses 5) and the long-word rate
+    alone did the work with no overuse (2026-11-13). The list stays in the
+    profile for reference."""
     def count(rate):
         return max(1, round(rate * words / 1000))
 
@@ -216,10 +224,10 @@ def style_targets_section(profile: dict, words: int,
 - {contractions}
 - Speech: about {profile['speech_word_pct']}% of the scene's words inside quotation marks.
 - "said" for about {round(profile['said_share'] * 100)}% of speech tags; otherwise "replied", "cried", "answered" and the like.
-- Avoid "seemed", "felt", "as if", "as though", "suddenly", "somehow": at most {count(profile['seemed_felt_per_1k'])} in the whole scene.{_word_choice_lines(profile, count)}"""
+- Avoid "seemed", "felt", "as if", "as though", "suddenly", "somehow": at most {count(profile['seemed_felt_per_1k'])} in the whole scene.{_word_choice_lines(profile, count, word_list)}"""
 
 
-def _word_choice_lines(profile: dict, count) -> str:
+def _word_choice_lines(profile: dict, count, word_list: bool = False) -> str:
     """The word-choice targets, for profiles measured with them (older
     profiles without them render exactly as before)."""
     lines = ""
@@ -228,7 +236,7 @@ def _word_choice_lines(profile: dict, count) -> str:
                   f"letters or more in this scene ({profile['long_words_per_1k']} per 1,000 "
                   "words). Most should be abstract words of judgement, feeling and manners, "
                   "not names of objects.")
-    if profile.get("favourite_words"):
+    if word_list and profile.get("favourite_words"):
         lines += ("\n- Words of this kind the period favours, to reach for where they fit "
                   "(each at most once, and never strung together): "
                   + ", ".join(profile["favourite_words"]) + ".")
