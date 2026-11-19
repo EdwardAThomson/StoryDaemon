@@ -253,7 +253,7 @@ def style_section(novel, words, word_choice=None):
     drop = {None: ("long_words_per_1k", "favourite_words"),
             "rate": ("favourite_words",), "full": ()}[word_choice]
     profile = {k: v for k, v in profile.items() if k not in drop}
-    return style_targets_section(profile, words)
+    return style_targets_section(profile, words, word_list=word_choice == "full")
 
 
 def write_arm(scene_id, arm, brief, names, foundation, llm_factory):

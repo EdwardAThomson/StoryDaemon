@@ -42,6 +42,24 @@ def test_measure_counts_punctuation_speech_and_contractions():
     assert set(sp.TARGET_KEYS) <= set(m)
 
 
+def test_measure_counts_named_feelings_in_narration_only():
+    told = 'She was very angry. "I am so angry," she said. He felt a surge of fear and went out.'
+    m = sp.measure(told)
+    assert m["named_feelings_per_1k"] > 0
+    # A character may name a feeling in speech; only narration is counted.
+    spoken = '"I am so angry," she said, and walked out into the rain.'
+    assert sp.measure(spoken)["named_feelings_per_1k"] == 0
+    assert "named_feelings_per_1k" not in sp.TARGET_KEYS          # measured, not sent
+
+
+def test_shipped_profiles_record_named_feelings_with_a_range():
+    for name in ("marriage", "pride", "old_fantasy"):
+        profile = json.loads((sp.STYLES_DIR / f"{name}.json").read_text())
+        assert profile["named_feelings_per_1k"] >= 0
+        low, high = profile["ranges"]["named_feelings_per_1k"]
+        assert low <= high
+
+
 def test_measure_refuses_an_empty_text():
     with pytest.raises(ValueError):
         sp.measure("  \n ")
@@ -218,7 +236,15 @@ def test_word_choice_lines_only_for_profiles_that_have_them():
     p = sp.load_profile("marriage")
     with_words = sp.style_targets_section(p, 1000)
     assert "words of ten letters or more" in with_words
-    assert p["favourite_words"][0] in with_words
+    assert "favours" not in with_words                       # the list stays out
+    assert p["favourite_words"][0] in sp.style_targets_section(p, 1000, word_list=True)
     bare = {k: v for k, v in p.items() if k not in ("long_words_per_1k", "favourite_words")}
     text = sp.style_targets_section(bare, 1000)
     assert "ten letters" not in text and "favours" not in text
+
+
+def test_no_profile_sends_its_word_list_to_the_writer():
+    for name in sp.available_profiles():
+        p = sp.load_profile(name)
+        text = sp.style_targets_section(p, 1500)
+        assert not any(w in text for w in p.get("favourite_words", []))
