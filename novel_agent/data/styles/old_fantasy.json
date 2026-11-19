@@ -1,0 +1,124 @@
+{
+ "name": "old_fantasy",
+ "source": "William Morris, The Wood Beyond the World (1894, PG 3055); Lord Dunsany, The King of Elfland's Daughter (1924, PG 61077); E. R. Eddison, The Worm Ouroboros (1922, PG 67090); 102 chapters (pg3055 36, pg61077 34, pg67090 32)",
+ "measured": "2026-11-14",
+ "sentence_mean_words": 25.4,
+ "sentence_spread": 19.2,
+ "short_sentence_pct": 10,
+ "long_sentence_pct": 32,
+ "speech_word_pct": 37,
+ "semicolons_per_1k": 7.6,
+ "dashes_per_1k": 0.3,
+ "said_share": 0.79,
+ "contractions_per_1k": 0.5,
+ "seemed_felt_per_1k": 2.2,
+ "ly_per_1k": 8.5,
+ "paragraph_median_words": 49.0,
+ "long_words_per_1k": 12.9,
+ "latinate_pct": 9.9,
+ "latinate_content_pct": 22.5,
+ "favourite_words": [
+  "wrastling",
+  "moustachios",
+  "grammarie",
+  "conturbat",
+  "mountained",
+  "meseemeth",
+  "mantichores",
+  "therewithal",
+  "hippogriffs",
+  "goodliness",
+  "thralldom",
+  "fosterling",
+  "broidered",
+  "unenchanted",
+  "thitherward",
+  "murthering",
+  "murthered",
+  "fortalice",
+  "ashipboard",
+  "affecteth",
+  "aforetime",
+  "transmarine",
+  "appeareth",
+  "otherwhere",
+  "bethought",
+  "watersmeet",
+  "remaineth",
+  "straightway",
+  "hippogriff",
+  "greensward",
+  "therewith",
+  "ultramontane",
+  "methought",
+  "shipmaster",
+  "precipices",
+  "hereabout",
+  "shamefaced",
+  "followeth",
+  "unhallowed",
+  "stablished"
+ ],
+ "ranges": {
+  "sentence_mean_words": [
+   20.2,
+   37.9
+  ],
+  "sentence_spread": [
+   14.4,
+   24.8
+  ],
+  "short_sentence_pct": [
+   2.0,
+   15.3
+  ],
+  "long_sentence_pct": [
+   21.4,
+   58.6
+  ],
+  "speech_word_pct": [
+   1.0,
+   58.0
+  ],
+  "semicolons_per_1k": [
+   3.6,
+   17.1
+  ],
+  "dashes_per_1k": [
+   0.0,
+   0.9
+  ],
+  "said_share": [
+   0.6,
+   1.0
+  ],
+  "contractions_per_1k": [
+   0.0,
+   1.3
+  ],
+  "seemed_felt_per_1k": [
+   0.9,
+   5.0
+  ],
+  "ly_per_1k": [
+   5.5,
+   12.1
+  ],
+  "paragraph_median_words": [
+   30.1,
+   109.3
+  ],
+  "long_words_per_1k": [
+   6.1,
+   17.5
+  ],
+  "latinate_pct": [
+   5.9,
+   11.7
+  ],
+  "latinate_content_pct": [
+   14.3,
+   26.7
+  ]
+ }
+}
