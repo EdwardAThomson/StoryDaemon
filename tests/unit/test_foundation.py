@@ -217,3 +217,65 @@ def test_format_foundation_display_no_themes():
     assert "📚 Story Foundation" in display
     assert "literary" in display
     assert "Themes:" not in display  # No themes section
+
+
+class TestBookFields:
+    """The kind of book: declared by the author, optional, never guessed."""
+
+    def _foundation(self, **extra):
+        from novel_agent.cli.foundation import StoryFoundation
+        return StoryFoundation(
+            genre="mystery", premise="A clerk finds a ledger that should not exist.",
+            protagonist_archetype="a careful clerk", setting="a harbour town",
+            tone="dry", **extra)
+
+    def test_unset_by_default_and_round_trips(self):
+        from novel_agent.cli.foundation import StoryFoundation
+        f = self._foundation()
+        assert (f.book_kind, f.reader_age, f.cruel_world) == (None, None, None)
+        again = StoryFoundation.from_dict(f.to_dict())
+        assert (again.book_kind, again.reader_age, again.cruel_world) == (None, None, None)
+
+    def test_values_are_normalised_and_round_trip(self):
+        from novel_agent.cli.foundation import StoryFoundation
+        f = self._foundation(book_kind=" Literary ", reader_age="young-adult", cruel_world="yes")
+        assert (f.book_kind, f.reader_age, f.cruel_world) == ("literary", "young_adult", True)
+        again = StoryFoundation.from_dict(f.to_dict())
+        assert (again.book_kind, again.reader_age, again.cruel_world) == ("literary", "young_adult", True)
+
+    def test_unknown_values_raise(self):
+        import pytest
+        with pytest.raises(ValueError):
+            self._foundation(book_kind="pulp")
+        with pytest.raises(ValueError):
+            self._foundation(reader_age="toddlers")
+        with pytest.raises(ValueError):
+            self._foundation(cruel_world="sometimes")
+
+    def test_old_foundation_without_the_fields_loads(self):
+        from novel_agent.cli.foundation import StoryFoundation
+        data = self._foundation().to_dict()
+        for key in ("book_kind", "reader_age", "cruel_world"):
+            del data[key]
+        assert StoryFoundation.from_dict(data).book_kind is None
+
+    def test_command_line_fields_are_applied_and_must_agree(self):
+        import pytest
+        from novel_agent.cli.foundation import apply_book_fields
+        f = self._foundation(book_kind="literary")
+        apply_book_fields(f, book_kind="literary", reader_age="adult", cruel_world=False)
+        assert (f.book_kind, f.reader_age, f.cruel_world) == ("literary", "adult", False)
+        with pytest.raises(ValueError):
+            apply_book_fields(f, book_kind="commercial")
+
+    def test_file_and_display(self, tmp_path):
+        from novel_agent.cli.foundation import load_foundation_from_file, format_foundation_display
+        path = tmp_path / "f.yaml"
+        path.write_text(
+            "genre: mystery\npremise: A clerk finds a ledger.\n"
+            "protagonist_archetype: a careful clerk\nsetting: a harbour town\n"
+            "tone: dry\nbook_kind: upmarket\nreader_age: adult\ncruel_world: true\n")
+        f = load_foundation_from_file(path)
+        assert (f.book_kind, f.reader_age, f.cruel_world) == ("upmarket", "adult", True)
+        shown = format_foundation_display(f)
+        assert "Kind of book: upmarket" in shown and "Cruel world: yes" in shown
