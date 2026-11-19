@@ -7,6 +7,40 @@ from pathlib import Path
 from typing import Optional, Dict, Any, List
 
 
+# The kind of book, declared by the author and never guessed. Several
+# structure rules depend on it (how much a lead must change, how tidy an
+# ending must be, how much chance misfortune a story may hold), so a judge
+# that is not told applies none of them. Optional: an unset field means "not
+# declared", and a judge reports its finding without scoring it.
+BOOK_KINDS = ("literary", "upmarket", "commercial")
+READER_AGES = ("middle_grade", "young_adult", "adult")
+
+
+def _one_of(value, allowed, field: str):
+    """A declared value held to its list, or None when not declared."""
+    if value is None or str(value).strip() == "":
+        return None
+    text = str(value).strip().lower().replace("-", "_").replace(" ", "_")
+    if text not in allowed:
+        raise ValueError(
+            f"Unknown {field} {value!r}. Choose one of: {', '.join(allowed)}.")
+    return text
+
+
+def _flag(value, field: str):
+    """A declared yes/no, or None when not declared."""
+    if value is None or isinstance(value, bool):
+        return value
+    text = str(value).strip().lower()
+    if text in ("true", "yes", "1"):
+        return True
+    if text in ("false", "no", "0"):
+        return False
+    if text == "":
+        return None
+    raise ValueError(f"Unknown {field} {value!r}. Use true or false.")
+
+
 class StoryFoundation:
     """Represents the immutable story foundation."""
     
@@ -21,7 +55,10 @@ class StoryFoundation:
         primary_goal: Optional[str] = None,
         protagonist_name: Optional[str] = None,
         protagonist_gender: Optional[str] = None,
-        protagonist_age: Optional[str] = None
+        protagonist_age: Optional[str] = None,
+        book_kind: Optional[str] = None,
+        reader_age: Optional[str] = None,
+        cruel_world: Optional[bool] = None
     ):
         self.genre = genre
         self.premise = premise
@@ -45,6 +82,14 @@ class StoryFoundation:
         # young | adult | old: required like the gender (2026-11-04), since it
         # decides which personas the protagonist can have.
         self.protagonist_age = (protagonist_age or "").strip().lower() or None
+        # literary | upmarket | commercial ("upmarket" is the in-between kind:
+        # a commercial story told with literary care).
+        self.book_kind = _one_of(book_kind, BOOK_KINDS, "book_kind")
+        # Who the book is for: middle_grade | young_adult | adult.
+        self.reader_age = _one_of(reader_age, READER_AGES, "reader_age")
+        # True when the story promises a world where misfortune strikes
+        # without cause; it lifts the limit on setbacks that come from chance.
+        self.cruel_world = _flag(cruel_world, "cruel_world")
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for state.json."""
@@ -58,7 +103,10 @@ class StoryFoundation:
             "primary_goal": self.primary_goal,
             "protagonist_name": self.protagonist_name,
             "protagonist_gender": self.protagonist_gender,
-            "protagonist_age": self.protagonist_age
+            "protagonist_age": self.protagonist_age,
+            "book_kind": self.book_kind,
+            "reader_age": self.reader_age,
+            "cruel_world": self.cruel_world
         }
     
     @classmethod
@@ -75,7 +123,10 @@ class StoryFoundation:
             # Absent on foundations created before the field existed.
             protagonist_name=data.get("protagonist_name"),
             protagonist_gender=data.get("protagonist_gender"),
-            protagonist_age=data.get("protagonist_age")
+            protagonist_age=data.get("protagonist_age"),
+            book_kind=data.get("book_kind"),
+            reader_age=data.get("reader_age"),
+            cruel_world=data.get("cruel_world")
         )
 
 
@@ -325,7 +376,10 @@ def load_foundation_from_file(file_path: Path) -> StoryFoundation:
         primary_goal=primary_goal,
         protagonist_name=data.get("protagonist_name"),
         protagonist_gender=data.get("protagonist_gender"),
-        protagonist_age=data.get("protagonist_age")
+        protagonist_age=data.get("protagonist_age"),
+        book_kind=data.get("book_kind"),
+        reader_age=data.get("reader_age"),
+        cruel_world=data.get("cruel_world")
     )
 
 
@@ -373,6 +427,29 @@ def create_foundation_from_args(
     )
 
 
+def apply_book_fields(foundation: StoryFoundation, book_kind=None,
+                      reader_age=None, cruel_world=None) -> None:
+    """Record command-line book fields on a foundation.
+
+    Raises ValueError on an unknown value, or when a field is given twice and
+    the two disagree (the same rule as the protagonist's gender).
+    """
+    given = (
+        ("book_kind", _one_of(book_kind, BOOK_KINDS, "book_kind")),
+        ("reader_age", _one_of(reader_age, READER_AGES, "reader_age")),
+        ("cruel_world", _flag(cruel_world, "cruel_world")),
+    )
+    for field, value in given:
+        if value is None:
+            continue
+        stated = getattr(foundation, field, None)
+        if stated is not None and stated != value:
+            raise ValueError(
+                f"{field} is given twice and disagrees: {value!r} on the "
+                f"command line, {stated!r} in the foundation.")
+        setattr(foundation, field, value)
+
+
 def format_foundation_display(foundation: StoryFoundation) -> str:
     """Format foundation for display in status command.
     
@@ -394,5 +471,11 @@ def format_foundation_display(foundation: StoryFoundation) -> str:
     
     if foundation.themes:
         lines.append(f"Themes: {', '.join(foundation.themes)}")
+    if getattr(foundation, "book_kind", None):
+        lines.append(f"Kind of book: {foundation.book_kind}")
+    if getattr(foundation, "reader_age", None):
+        lines.append(f"Readers: {foundation.reader_age.replace('_', ' ')}")
+    if getattr(foundation, "cruel_world", None):
+        lines.append("Cruel world: yes")
     
     return "\n".join(lines)

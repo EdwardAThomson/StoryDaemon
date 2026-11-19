@@ -438,6 +438,28 @@ def new(
             "it decides which personas fit and is never guessed."
         )
     ),
+    book_kind: Optional[str] = typer.Option(
+        None,
+        "--book-kind",
+        help=(
+            "Kind of book: literary, upmarket (in between) or commercial. "
+            "Optional; recorded in the foundation for the structure checks "
+            "that depend on it, and never guessed."
+        )
+    ),
+    reader_age: Optional[str] = typer.Option(
+        None,
+        "--reader-age",
+        help="Who the book is for: middle_grade, young_adult or adult. Optional."
+    ),
+    cruel_world: Optional[bool] = typer.Option(
+        None,
+        "--cruel-world/--no-cruel-world",
+        help=(
+            "The story promises a world where misfortune strikes without "
+            "cause. Optional."
+        )
+    ),
     setting: Optional[str] = typer.Option(
         None,
         "--setting",
@@ -586,6 +608,18 @@ def new(
                 themes=themes
             )
         
+        # The kind of book, when given on the command line, is recorded on the
+        # foundation (a value there already must agree).
+        if any(v is not None for v in (book_kind, reader_age, cruel_world)):
+            if foundation is None:
+                typer.echo(
+                    "❌ --book-kind, --reader-age and --cruel-world describe a "
+                    "story foundation; give one (--foundation, the wizard, or "
+                    "the foundation options).", err=True)
+                raise typer.Exit(1)
+            from .foundation import apply_book_fields
+            apply_book_fields(foundation, book_kind, reader_age, cruel_world)
+
         # Create project with optional foundation, LLM overrides, and plot config
         project_dir = create_novel_project(
             name,
