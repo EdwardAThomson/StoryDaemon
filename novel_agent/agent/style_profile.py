@@ -203,7 +203,7 @@ def load_profile(name: str) -> dict:
 def style_targets_section(profile: dict, words: int,
                           measured_from: str = "the period's own novels",
                           word_list: bool = False, sentence_counts: bool = False,
-                          word_origin: bool = False) -> str:
+                          word_origin: bool = True) -> str:
     """The targets as plain lines, turned into counts for a scene of ``words``.
 
     A profile's ``favourite_words`` stay out of the prompt unless
@@ -213,10 +213,12 @@ def style_targets_section(profile: dict, words: int,
     alone did the work with no overuse (2026-11-13). The list stays in the
     profile for reference.
 
-    ``sentence_counts`` and ``word_origin`` add two lines under test
-    (2026-11-19, off by default): the after-writing check found every styled
-    Ferrier scene still under her range on sentence length and spread and on
-    the French/Latin share, with the percentages above already in the prompt."""
+    ``word_origin`` (on by default since 2026-11-21) adds the French/Latin
+    share for a profile well above modern prose: on the two Ferrier scenes it
+    took the share from 16.4% to 22.0% and 18.0% (her passages: 19.3%, 22.0%),
+    with no overuse of its example words. ``sentence_counts`` (off) gives the
+    sentence targets as counts; it pushed both scenes' sentences past
+    Ferrier's own passages, which run shorter than her book's average."""
     def count(rate):
         return max(1, round(rate * words / 1000))
 
@@ -252,10 +254,20 @@ def _sentence_count_line(profile: dict, words: int) -> str:
             "is often one long sentence of several clauses, not several short ones.")
 
 
+# Plain Opus writes about 13-14% French/Latin words in any period scene
+# (2026-11-14), and 7-8% in fantasy unprompted, already at Tolkien's level.
+MODERN_LATINATE_PCT = 13.5
+
+
 def _word_origin_line(profile: dict) -> str:
-    """The French/Latin share, for profiles measured with it."""
+    """The French/Latin share, only for a profile well above modern prose.
+
+    The line asks for more French and Latin words, which is the only way it
+    has been tested. A profile at or below modern prose (``old_fantasy``,
+    9.9%) gets no line: Opus already writes fantasy at 7-8% unprompted, and
+    telling it to prefer the French word would push the wrong way."""
     pct = profile.get("latinate_pct")
-    if not pct:
+    if not pct or pct < MODERN_LATINATE_PCT + 3:
         return ""
     return (f"\n- Word origin: about {round(pct)}% of all words (one in "
             f"{round(100 / pct)}) come from French or Latin; plain modern prose has about "

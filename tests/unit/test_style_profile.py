@@ -292,15 +292,23 @@ def test_agent_style_check_is_none_without_a_profile_and_never_raises():
     assert agent._style_check(_plain_scene()) is None
 
 
-def test_sentence_count_and_word_origin_lines_are_off_by_default():
+def test_word_origin_line_is_on_and_sentence_counts_off_by_default():
     profile = sp.load_profile("marriage")
-    plain = sp.style_targets_section(profile, 1150)
-    assert "Sentence count" not in plain and "Word origin" not in plain
+    default = sp.style_targets_section(profile, 1150)
+    assert "Word origin" in default and "Sentence count" not in default
+    plain = sp.style_targets_section(profile, 1150, word_origin=False)
+    assert "Word origin" not in plain
     both = sp.style_targets_section(profile, 1150, sentence_counts=True, word_origin=True)
     assert both.startswith(plain)
     # 1150 words at Ferrier's 24.7-word mean is about 47 sentences.
     assert "about 47 sentences" in both
     assert f"about {round(profile['latinate_pct'])}% of all words" in both
+
+
+def test_no_word_origin_line_for_a_profile_near_or_below_modern_prose():
+    # old_fantasy (9.9%) is below plain Opus already; the line only asks for more.
+    assert "Word origin" not in sp.style_targets_section(sp.load_profile("old_fantasy"), 1000)
+    assert "Word origin" in sp.style_targets_section(sp.load_profile("pride"), 1000)
 
 
 def test_word_origin_line_needs_a_measured_share():

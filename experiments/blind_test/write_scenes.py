@@ -258,7 +258,7 @@ def style_section(novel, words, word_choice=None, shape=False):
             "rate": ("favourite_words",), "full": ()}[word_choice]
     profile = {k: v for k, v in profile.items() if k not in drop}
     return style_targets_section(profile, words, word_list=word_choice == "full",
-                                 sentence_counts=shape, word_origin=shape)
+                                 sentence_counts=shape, word_origin=shape)    # older arms stay as run
 
 
 def write_arm(scene_id, arm, brief, names, foundation, llm_factory):
