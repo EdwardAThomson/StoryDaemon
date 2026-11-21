@@ -484,6 +484,15 @@ class StoryAgent:
                     print(f"        ⚠️  Unminted names from the foundation in this scene: "
                           f"{', '.join(names_gauge['foundation_names_in_prose'])} "
                           f"({names_gauge['foundation_name_mentions']} mentions)")
+            # Style check (gauge only, 2026-11-19): with a style profile set,
+            # which of the scene's counts fall outside the profile's chapter
+            # ranges. Recorded in metrics, read by nothing.
+            style_check = self._style_check(scene_data.get("text", ""))
+            if style_check:
+                scene_data["style_check"] = style_check
+                if style_check["outside"]:
+                    print(f"        Style ({style_check['profile']}): outside the book's range on "
+                          + ", ".join(f"{k} ({v['side']})" for k, v in style_check["outside"].items()))
             if self.config.get('generation.auto_detect_characters', True):
                 print("   8.6. Detecting new characters...")
                 new_characters = self.character_detector.find_new_characters(scene_data["text"])
@@ -800,6 +809,9 @@ class StoryAgent:
             names_gauge = self._names_gauge(scene_data.get("text", ""))
             if names_gauge:
                 scene_data["names_gauge"] = names_gauge
+            style_check = self._style_check(scene_data.get("text", ""))
+            if style_check:
+                scene_data["style_check"] = style_check
 
             if eval_result:
                 try:
@@ -1882,6 +1894,7 @@ class StoryAgent:
                 construction_result=construction_result,
                 loop_ids_shown=loop_ids_shown,
                 names_gauge=scene_data.get("names_gauge"),
+                style_check=scene_data.get("style_check"),
             )
         except Exception as e:
             logging.getLogger(__name__).warning(f"Coherence metrics failed (tick {tick}): {e}")
@@ -2058,6 +2071,20 @@ class StoryAgent:
             return prose_gauge(scene_text or "", roster, self.state.get("story_foundation") or {})
         except Exception as e:
             logging.getLogger(__name__).debug("Names gauge skipped: %s", e)
+            return None
+
+    def _style_check(self, scene_text):
+        """Per-scene style check against ``generation.style_profile``, or None
+        when no profile is set. Thin wrapped hook over the pure
+        ``style_profile.profile_check``; a failure costs the gauge, not the tick."""
+        try:
+            from .style_profile import profile_check, profile_from_config
+            profile = profile_from_config(self.config)
+            if not profile or not (scene_text or "").strip():
+                return None
+            return profile_check(scene_text, profile)
+        except Exception as e:  # noqa: BLE001
+            logging.getLogger(__name__).debug("Style check skipped: %s", e)
             return None
 
     def _loop_ids_shown(self):

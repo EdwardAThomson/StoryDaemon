@@ -112,6 +112,7 @@ class CoherenceMetrics:
         construction_result: Optional[Dict[str, Any]] = None,
         loop_ids_shown: Optional[List[str]] = None,
         names_gauge: Optional[Dict[str, Any]] = None,
+        style_check: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Compute one coherence record, append it to the JSONL log, and return it."""
         loops = self.memory.load_open_loops()
@@ -267,6 +268,14 @@ class CoherenceMetrics:
                 names_gauge.get("foundation_names_in_prose") if names_gauge else None),
             "foundation_name_mentions": (
                 names_gauge.get("foundation_name_mentions") if names_gauge else None),
+            # Style check (gauge only, 2026-11-19): the scene's style counts and
+            # which fall outside the profile's p10-p90 chapter ranges ("above" or
+            # "below"). All None when no style profile is set.
+            "style_profile": style_check.get("profile") if style_check else None,
+            "style_outside": (
+                {k: v["side"] for k, v in style_check["outside"].items()}
+                if style_check else None),
+            "style_counts": style_check.get("counts") if style_check else None,
             # Loop-aging gauge (Phase 3, loop-aging Slice L1, instrument-only).
             # Scalars are flattened for plotting, following this file's
             # convention; the id lists ride in loop_shown / loop_overdue_ids so a

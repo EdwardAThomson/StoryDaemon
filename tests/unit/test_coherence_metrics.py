@@ -357,3 +357,16 @@ def test_construction_fields_default_none(project):
     rec = cm.record_tick(tick=1, scene_id="S001", tension_result=None)
     assert rec["construction_would_fire"] is None
     assert rec["construction_trigger"] is None
+
+
+def test_style_check_recorded_when_given(project):
+    cm = _metrics(project)
+    check = {"profile": "marriage", "outside": {"semicolons_per_1k": {"value": 0.0, "range": [11.9, 20.4],
+                                                                      "side": "below"}},
+             "counts": {"semicolons_per_1k": 0.0}}
+    rec = cm.record_tick(tick=1, scene_id="S001", style_check=check)
+    assert rec["style_profile"] == "marriage"
+    assert rec["style_outside"] == {"semicolons_per_1k": "below"}
+    assert rec["style_counts"] == {"semicolons_per_1k": 0.0}
+    none = cm.record_tick(tick=2, scene_id="S002")
+    assert none["style_profile"] is None and none["style_outside"] is None
