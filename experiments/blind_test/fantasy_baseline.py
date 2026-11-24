@@ -15,6 +15,11 @@ wrapper: spend cap, usage log, stop on a cut-off response.
 
     venv/bin/python experiments/blind_test/fantasy_baseline.py --fake
     venv/bin/python experiments/blind_test/fantasy_baseline.py --max-usd 0.25
+
+--arm styled (2026-11-24) writes the same scenes with the old_fantasy style
+profile set (generation.style_profile), through the production writer path,
+to <scene>_styled.md: the plain scenes landed far under the shelf's sentence
+length, long-sentence share and semicolons.
 """
 import argparse
 import json
@@ -109,12 +114,12 @@ def make_project(sid, brief):
     return path, memory, pov_id, lid, {k: v["full_name"] for k, v in minted.items()}, place
 
 
-def write(sid, brief, llm_factory):
+def write(sid, brief, llm_factory, arm="plain"):
     from novel_agent.agent.writer import SceneWriter
     from novel_agent.agent.writer_context import WriterContextBuilder
     from novel_agent.cli.project import get_project_config
 
-    ws.STATE["arm"], ws.STATE["scene"] = "plain", f"fantasy_{sid}"
+    ws.STATE["arm"], ws.STATE["scene"] = arm, f"fantasy_{sid}"
     path, memory, pov_id, lid, names, place = make_project(sid, brief)
     config = get_project_config(str(path))
     total = round(brief["words"] * 0.85)
@@ -123,6 +128,9 @@ def write(sid, brief, llm_factory):
                  "generation.scene_word_targets": {"brief": 300, "short": total,
                                                    "long": total, "extended": total}}.items():
         config.set(k, v)
+    if arm == "styled":
+        config.set("generation.style_profile", "old_fantasy")
+    stem = sid if arm == "plain" else f"{sid}_{arm}"
     state = json.loads((path / "state.json").read_text())
     state["current_tick"] = 6
     plan = {"scene_intention": brief["intention"], "key_change": brief["key_change"],
@@ -132,10 +140,10 @@ def write(sid, brief, llm_factory):
     ctx["recent_context"] = ctx["recent_context"].replace(
         "This is the first scene of the novel.", "This scene comes from the middle of the novel.")
     OUT.mkdir(parents=True, exist_ok=True)
-    (OUT / f"{sid}_prompt.txt").write_text(writer._format_writer_prompt(ctx))
+    (OUT / f"{stem}_prompt.txt").write_text(writer._format_writer_prompt(ctx))
     text = writer.write_scene(ctx).get("text", "")
-    (OUT / f"{sid}.md").write_text(text)
-    (OUT / f"{sid}.json").write_text(json.dumps({"names": names, "place": place,
+    (OUT / f"{stem}.md").write_text(text)
+    (OUT / f"{stem}.json").write_text(json.dumps({"names": names, "place": place,
                                                  "project": str(path)}, indent=1))
     return text
 
@@ -144,6 +152,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--max-usd", type=float, default=0.0)
     ap.add_argument("--fake", action="store_true")
+    ap.add_argument("--arm", choices=("plain", "styled"), default="plain")
     args = ap.parse_args()
     if not args.fake and args.max_usd <= 0:
         raise SystemExit("a real run needs --max-usd")
@@ -158,7 +167,7 @@ def main():
     try:
         for sid, brief in SCENES.items():
             print(f"[fantasy] {sid}", flush=True)
-            text = write(sid, brief, llm_factory)
+            text = write(sid, brief, llm_factory, args.arm)
             m = measure(text)
             print(f"  {len(text.split())} words, latinate {m['latinate_pct']}% "
                   f"(content {m['latinate_content_pct']}%), long words {m['long_words_per_1k']}/1k",
